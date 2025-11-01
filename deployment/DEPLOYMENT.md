@@ -10,9 +10,11 @@ This guide covers **Route 1: Fresh Installation** - deploying OK Monitor from sc
 ## Features
 
 - ✅ Auto-start after network is available
-- ✅ Automatic daily restart at 2:00 AM for updates
+- ✅ **Hybrid update strategy**: Pre-start + scheduled updates
+  - Updates before every boot/restart (always runs latest code)
+  - Daily 2 AM scheduled updates (for long-running devices)
 - ✅ USB webcam support
-- ✅ Automatic git pull for software updates
+- ✅ Automatic git pull and dependency updates
 - ✅ Systemd service management
 - ✅ Comprehensive logging
 - ✅ **Tailscale remote access** (pre-installed for secure SSH/VNC)
@@ -474,6 +476,56 @@ sudo dpkg-reconfigure -plow unattended-upgrades
 
 ## Monitoring & Maintenance
 
+### Update Policy
+
+OK Monitor uses a **hybrid update strategy** to ensure devices always run the latest code:
+
+#### Mechanism 1: Pre-Start Updates (Boot/Restart)
+- Runs **before** the service starts (via `ExecStartPre` in systemd)
+- Automatically updates code and dependencies on:
+  - Device boot
+  - Manual service restart (`systemctl restart okmonitor-device`)
+  - Crash recovery (service auto-restart)
+- **Fail-safe**: Service won't start if update fails (prevents running outdated code)
+- Script location: `/opt/okmonitor/deployment/pre-start-update.sh`
+
+#### Mechanism 2: Scheduled Updates (Long-Running Devices)
+- Runs daily at **2:00 AM** (configurable)
+- Updates code, then restarts the service
+- Ensures devices that run continuously for days/weeks stay updated
+- Includes random 0-5 minute delay to avoid simultaneous updates across devices
+- If device is offline at 2 AM, runs on next boot (via `Persistent=true`)
+
+#### Update Scenarios
+
+**Scenario A: Device boots at 8 AM**
+1. Pre-start update runs → pulls latest code
+2. Service starts with updated code
+3. Continues running until next restart or 2 AM update
+
+**Scenario B: Device runs continuously for 3 days**
+1. Day 1, 2 AM: Scheduled update → restart → pre-start update → latest code
+2. Day 2, 2 AM: Scheduled update → restart → pre-start update → latest code
+3. Day 3, 2 AM: Scheduled update → restart → pre-start update → latest code
+
+**Scenario C: Device offline at 2 AM, boots at 9 AM**
+1. Pre-start update runs → pulls latest code
+2. Service starts with updated code
+3. (Scheduled update will run next day at 2 AM)
+
+#### Monitoring Updates
+
+Check update logs:
+
+```bash
+# Pre-start update logs (part of service logs)
+journalctl -u okmonitor-device -n 50
+
+# Scheduled update logs
+journalctl -u okmonitor-update -n 50
+sudo tail -f /var/log/okmonitor-update.log
+```
+
 ### Log Rotation
 
 Logs are automatically managed by systemd's journald. To check space:
@@ -526,9 +578,9 @@ sudo chmod +x /opt/okmonitor/health_check.sh
 
 ## Advanced Configuration
 
-### Change Update Time
+### Change Scheduled Update Time
 
-Edit the timer file to change update time from 02:00:
+To change the daily scheduled update time from 2:00 AM:
 
 ```bash
 sudo nano /etc/systemd/system/okmonitor-update.timer
@@ -536,6 +588,8 @@ sudo nano /etc/systemd/system/okmonitor-update.timer
 sudo systemctl daemon-reload
 sudo systemctl restart okmonitor-update.timer
 ```
+
+**Note**: This only affects the scheduled daily update. Pre-start updates (on boot/restart) will still run automatically.
 
 ### Multiple Devices
 

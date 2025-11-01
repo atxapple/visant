@@ -212,8 +212,9 @@ sed -i "s/Group=pi/Group=$USER_NAME/" /etc/systemd/system/okmonitor-device.servi
 cp deployment/okmonitor-update.service /etc/systemd/system/
 cp deployment/okmonitor-update.timer /etc/systemd/system/
 
-# Make update script executable
+# Make update scripts executable
 chmod +x deployment/update_device.sh
+chmod +x deployment/pre-start-update.sh
 
 # Reload systemd
 systemctl daemon-reload

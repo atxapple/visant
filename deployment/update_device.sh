@@ -1,18 +1,17 @@
 #!/bin/bash
-# OK Monitor Device Update Script
-# Automatically pulls latest code and restarts the service
+# OK Monitor Scheduled Update Script
+#
+# Runs at 2 AM daily to update long-running devices.
+# Updates code, then restarts the service to run the latest version.
+#
+# Note: The service restart will also trigger pre-start-update.sh,
+# but this script does the update first for better logging and error handling.
 
 set -e
 
 INSTALL_DIR="/opt/okmonitor"
 SERVICE_NAME="okmonitor-device"
 LOG_FILE="/var/log/okmonitor-update.log"
-
-# Detect the user from the service file
-SERVICE_USER=$(systemctl show -p User "$SERVICE_NAME" | cut -d= -f2)
-if [ -z "$SERVICE_USER" ] || [ "$SERVICE_USER" = "[not set]" ]; then
-    SERVICE_USER="pi"  # Fallback
-fi
 
 # Logging function
 log() {
@@ -33,38 +32,40 @@ if [ ! -d ".git" ]; then
     exit 1
 fi
 
-# Stash any local changes
-log "Stashing local changes (if any)..."
-sudo -u "$SERVICE_USER" git stash
-
 # Fetch latest changes
 log "Fetching latest changes from remote..."
-sudo -u "$SERVICE_USER" git fetch origin
+git fetch origin main || {
+    log "ERROR: Failed to fetch from remote"
+    exit 1
+}
 
 # Get current and remote commit hashes
-CURRENT_COMMIT=$(sudo -u "$SERVICE_USER" git rev-parse HEAD)
-REMOTE_COMMIT=$(sudo -u "$SERVICE_USER" git rev-parse origin/main)
+CURRENT_COMMIT=$(git rev-parse HEAD)
+REMOTE_COMMIT=$(git rev-parse origin/main)
 
 if [ "$CURRENT_COMMIT" = "$REMOTE_COMMIT" ]; then
-    log "Already up to date. No changes to pull."
+    log "Already up to date (${CURRENT_COMMIT:0:7}). No restart needed."
     exit 0
 fi
 
-log "New changes detected. Current: ${CURRENT_COMMIT:0:7}, Remote: ${REMOTE_COMMIT:0:7}"
+log "Update available: ${CURRENT_COMMIT:0:7} -> ${REMOTE_COMMIT:0:7}"
 
-# Pull latest code from main branch
-log "Pulling latest code..."
-sudo -u "$SERVICE_USER" git pull origin main
+# Reset to latest code (hard reset ensures clean state)
+log "Updating to latest code..."
+git reset --hard origin/main || {
+    log "ERROR: Failed to reset to origin/main"
+    exit 1
+}
 
-# Update Python dependencies if requirements.txt changed
-if sudo -u "$SERVICE_USER" git diff --name-only "$CURRENT_COMMIT" "$REMOTE_COMMIT" | grep -q "requirements.txt"; then
-    log "requirements.txt changed, updating dependencies..."
-    sudo -u "$SERVICE_USER" "$INSTALL_DIR/venv/bin/pip" install -r requirements.txt
-else
-    log "requirements.txt unchanged, skipping dependency update"
-fi
+# Update Python dependencies (always run to ensure consistency)
+log "Updating Python dependencies..."
+"$INSTALL_DIR/venv/bin/pip" install --quiet --upgrade pip
+"$INSTALL_DIR/venv/bin/pip" install --quiet -r requirements.txt || {
+    log "ERROR: Failed to install dependencies"
+    exit 1
+}
 
-# Restart the service
+# Restart the service (this will also trigger pre-start-update.sh via ExecStartPre)
 log "Restarting $SERVICE_NAME service..."
 systemctl restart "$SERVICE_NAME"
 
@@ -72,13 +73,13 @@ systemctl restart "$SERVICE_NAME"
 sleep 3
 if systemctl is-active --quiet "$SERVICE_NAME"; then
     log "Service restarted successfully"
-    NEW_COMMIT=$(sudo -u "$SERVICE_USER" git rev-parse HEAD)
-    log "Updated to commit: ${NEW_COMMIT:0:7}"
+    NEW_COMMIT=$(git rev-parse HEAD)
+    log "Now running commit: ${NEW_COMMIT:0:7}"
 else
     log "WARNING: Service failed to start after update"
     systemctl status "$SERVICE_NAME" --no-pager | tee -a "$LOG_FILE"
     exit 1
 fi
 
-log "===== Update completed successfully ====="
+log "===== Scheduled update completed successfully ====="
 exit 0

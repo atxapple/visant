@@ -13,6 +13,10 @@ Group=pi
 WorkingDirectory=/opt/okmonitor
 EnvironmentFile=/opt/okmonitor/.env.device
 
+# Update code before starting (ensures latest version)
+# The + prefix runs with elevated privileges (needed for git/pip operations)
+ExecStartPre=+/opt/okmonitor/deployment/pre-start-update.sh
+
 # Use the virtual environment Python
 ExecStart=/opt/okmonitor/venv/bin/python -m device.main \
     --camera opencv \

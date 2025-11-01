@@ -363,21 +363,27 @@ When you want to update the entire fleet with new software:
 
 ### Rolling Updates (Recommended)
 
-Instead of re-cloning, use the built-in update mechanism:
+Instead of re-cloning, use the built-in **hybrid update mechanism**:
+
+**Automatic Updates:**
+- **Pre-start updates**: Every boot/restart pulls latest code
+- **Scheduled updates**: Daily at 2:00 AM for long-running devices
+- See [DEPLOYMENT.md - Update Policy](DEPLOYMENT.md#update-policy) for details
+
+**Manual Fleet Update:**
 
 ```bash
-# Update happens automatically at 2:00 AM via okmonitor-update.timer
-
-# Or manually trigger update on all devices:
+# Trigger updates across all devices by restarting services:
 DEVICES=("okmonitor-okmonitor1" "okmonitor-okmonitor2" "okmonitor-okmonitor3")
 
 for device in "${DEVICES[@]}"; do
     echo "Updating $device..."
-    ssh mok@$device 'cd /opt/okmonitor && git pull && sudo systemctl restart okmonitor-device'
+    # Restart triggers pre-start update (git pull + pip install)
+    ssh mok@$device 'sudo systemctl restart okmonitor-device'
 done
 ```
 
-This is much faster than re-imaging!
+This is much faster than re-imaging and ensures all devices run identical code!
 
 ---
 
