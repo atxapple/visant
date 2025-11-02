@@ -14,6 +14,10 @@ INSTALL_TAILSCALE=false
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --branch)
+            BRANCH="$2"
+            shift 2
+            ;;
         --tailscale-key)
             TAILSCALE_KEY="$2"
             shift 2
@@ -30,16 +34,19 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
+            echo "  --branch BRANCH        Git branch to install from (default: main)"
             echo "  --tailscale-key KEY    Tailscale auth key for automatic remote access setup"
             echo "  --skip-tailscale       Skip Tailscale installation/configuration (safe for reinstalls)"
             echo "  --install-tailscale    Force Tailscale installation/reconfiguration"
             echo "  --help                 Show this help message"
             echo ""
             echo "Examples:"
-            echo "  sudo $0                                    # Fresh install with Tailscale"
+            echo "  sudo $0                                    # Fresh install from main branch"
+            echo "  sudo $0 --branch dev                       # Install from dev branch"
+            echo "  sudo $0 --branch feature/new-feature       # Install from feature branch"
             echo "  sudo $0 --tailscale-key tskey-auth-xxxxx  # Fresh install with auto-connect"
             echo "  sudo $0 --skip-tailscale                  # Reinstall, keep existing Tailscale"
-            echo "  sudo $0 --install-tailscale               # Reinstall and reconfigure Tailscale"
+            echo "  sudo $0 --branch dev --skip-tailscale     # Install dev branch, skip Tailscale"
             exit 0
             ;;
         *)
