@@ -54,6 +54,9 @@ else
         exit 1
     }
 
+    # Ensure all deployment scripts are executable (defensive fix for git permission issues)
+    chmod +x "$INSTALL_DIR"/deployment/*.sh 2>/dev/null || true
+
     # Update Python dependencies
     echo "$LOG_PREFIX Updating Python dependencies..."
     venv/bin/pip install --quiet --upgrade pip

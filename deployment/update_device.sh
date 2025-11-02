@@ -64,6 +64,9 @@ git reset --hard "origin/$CURRENT_BRANCH" || {
     exit 1
 }
 
+# Ensure all deployment scripts are executable (defensive fix for git permission issues)
+chmod +x "$INSTALL_DIR"/deployment/*.sh 2>/dev/null || true
+
 # Update Python dependencies (always run to ensure consistency)
 log "Updating Python dependencies..."
 "$INSTALL_DIR/venv/bin/pip" install --quiet --upgrade pip
