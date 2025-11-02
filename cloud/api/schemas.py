@@ -10,6 +10,7 @@ class CaptureRequest(BaseModel):
     trigger_label: str = Field(..., description="Label provided by trigger source")
     image_base64: str = Field(..., description="Base64 encoded image")
     thumbnail_base64: str | None = Field(default=None, description="Base64 encoded thumbnail (optional)")
+    device_version: str | None = Field(default=None, description="Device software version (for tracking)")
     metadata: Dict[str, Any] = Field(default_factory=dict)
     captured_at: str | None = Field(
         default=None, description="ISO8601 timestamp supplied by the device"

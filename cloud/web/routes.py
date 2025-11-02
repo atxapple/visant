@@ -30,6 +30,7 @@ from .capture_utils import (
     load_capture_summary,
     parse_capture_timestamp,
 )
+from version import __version__ as CLOUD_VERSION
 
 
 logger = logging.getLogger(__name__)
@@ -189,6 +190,9 @@ async def ui_state(request: Request) -> dict[str, Any]:
         "threshold": int(getattr(request.app.state, "dedupe_threshold", 3)),
         "keep_every": int(getattr(request.app.state, "dedupe_keep_every", 5)),
     }
+    # Get version information
+    device_versions = getattr(request.app.state, "device_versions", {})
+    device_version = device_versions.get(device_id, None)
     return {
         "normal_description": normal_description,
         "normal_description_file": getattr(
@@ -210,6 +214,10 @@ async def ui_state(request: Request) -> dict[str, Any]:
         },
         "notifications": notifications_payload,
         "dedupe": dedupe_settings,
+        "version": {
+            "cloud": CLOUD_VERSION,
+            "device": device_version,
+        },
     }
 
 

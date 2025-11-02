@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse, FileResponse
@@ -29,6 +29,7 @@ from ..ai import Classifier, SimpleThresholdModel
 from ..datalake.storage import FileSystemDatalake
 from ..web import register_ui
 from ..web.preferences import UIPreferences, load_preferences
+from version import __version__ as CLOUD_VERSION
 
 
 logger = logging.getLogger(__name__)
@@ -410,6 +411,12 @@ def create_app(
         # This updates the UI header to show the actual device instead of "ui-device"
         app.state.device_id = request.device_id
 
+        # Track device version if provided
+        if request.device_version:
+            if not hasattr(app.state, "device_versions"):
+                app.state.device_versions = {}
+            app.state.device_versions[request.device_id] = request.device_version
+
         return InferenceResponse(**result)
 
     @app.get("/v1/device-config", response_model=DeviceConfigResponse)
@@ -436,6 +443,15 @@ def create_app(
             normal_description_file=getattr(app.state, "normal_description_file", None),
             manual_trigger_counter=app.state.manual_trigger_counter,
         )
+
+    @app.get("/v1/version")
+    def get_version() -> dict[str, Any]:
+        """Get version information for cloud and connected devices."""
+        device_versions = getattr(app.state, "device_versions", {})
+        return {
+            "cloud_version": CLOUD_VERSION,
+            "devices": device_versions,
+        }
 
     @app.post("/v1/manual-trigger", response_model=dict[str, int])
     async def manual_trigger(

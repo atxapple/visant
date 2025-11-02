@@ -9,6 +9,7 @@ from typing import Any, Dict
 import requests
 
 from device.capture import Frame
+from version import __version__
 
 
 @dataclass
@@ -16,6 +17,7 @@ class OkApiHttpClient:
     base_url: str
     timeout: float = 20.0
     session: requests.Session = field(default_factory=requests.Session)
+    _version_sent: bool = field(default=False, init=False, repr=False)
 
     def classify(self, frame: Frame, metadata: Dict[str, str]) -> Dict[str, str | None]:
         captured_at = metadata.get("captured_at")
@@ -45,6 +47,11 @@ class OkApiHttpClient:
                 if k not in {"device_id", "trigger_label", "captured_at"}
             },
         }
+
+        # Send version only on first capture per session (reduces redundant data)
+        if not self._version_sent:
+            payload["device_version"] = __version__
+            self._version_sent = True
 
         # Add timing debug timestamps if enabled
         if debug_timestamps:
