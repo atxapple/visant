@@ -32,16 +32,20 @@ if [ ! -d ".git" ]; then
     exit 1
 fi
 
+# Detect current branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+log "Current branch: $CURRENT_BRANCH"
+
 # Fetch latest changes
 log "Fetching latest changes from remote..."
-git fetch origin main || {
+git fetch origin "$CURRENT_BRANCH" || {
     log "ERROR: Failed to fetch from remote"
     exit 1
 }
 
 # Get current and remote commit hashes
 CURRENT_COMMIT=$(git rev-parse HEAD)
-REMOTE_COMMIT=$(git rev-parse origin/main)
+REMOTE_COMMIT=$(git rev-parse "origin/$CURRENT_BRANCH")
 
 if [ "$CURRENT_COMMIT" = "$REMOTE_COMMIT" ]; then
     log "Already up to date (${CURRENT_COMMIT:0:7}). No restart needed."
@@ -52,8 +56,8 @@ log "Update available: ${CURRENT_COMMIT:0:7} -> ${REMOTE_COMMIT:0:7}"
 
 # Reset to latest code (hard reset ensures clean state)
 log "Updating to latest code..."
-git reset --hard origin/main || {
-    log "ERROR: Failed to reset to origin/main"
+git reset --hard "origin/$CURRENT_BRANCH" || {
+    log "ERROR: Failed to reset to origin/$CURRENT_BRANCH"
     exit 1
 }
 

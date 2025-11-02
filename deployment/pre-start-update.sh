@@ -24,16 +24,20 @@ cd "$INSTALL_DIR" || {
     exit 1
 }
 
+# Detect current branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+echo "$LOG_PREFIX Current branch: $CURRENT_BRANCH"
+
 # Fetch latest code from remote
-echo "$LOG_PREFIX Fetching latest code from origin/main..."
-git fetch origin main || {
+echo "$LOG_PREFIX Fetching latest code from origin/$CURRENT_BRANCH..."
+git fetch origin "$CURRENT_BRANCH" || {
     echo "$LOG_PREFIX ERROR: Failed to fetch from remote"
     exit 1
 }
 
 # Check if we're behind
 LOCAL_HASH=$(git rev-parse HEAD)
-REMOTE_HASH=$(git rev-parse origin/main)
+REMOTE_HASH=$(git rev-parse "origin/$CURRENT_BRANCH")
 
 if [ "$LOCAL_HASH" = "$REMOTE_HASH" ]; then
     echo "$LOG_PREFIX Already up to date (${LOCAL_HASH:0:7})"
@@ -42,8 +46,8 @@ else
 
     # Reset to latest code (hard reset to ensure clean state)
     echo "$LOG_PREFIX Updating to latest code..."
-    git reset --hard origin/main || {
-        echo "$LOG_PREFIX ERROR: Failed to reset to origin/main"
+    git reset --hard "origin/$CURRENT_BRANCH" || {
+        echo "$LOG_PREFIX ERROR: Failed to reset to origin/$CURRENT_BRANCH"
         exit 1
     }
 
