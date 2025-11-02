@@ -168,6 +168,9 @@ if [ ! -d "$INSTALL_DIR" ]; then
     git clone --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
     chown -R "$USER_NAME:$USER_NAME" "$INSTALL_DIR"
 
+    # Mark directory as safe for git operations (fixes ownership check when running as root)
+    git config --global --add safe.directory "$INSTALL_DIR"
+
     # Restore .env.device backup if it exists
     if [ -f "/tmp/.env.device.backup" ]; then
         echo "Restoring your .env.device configuration..."
@@ -177,6 +180,9 @@ if [ ! -d "$INSTALL_DIR" ]; then
         echo "✓ Configuration restored successfully"
     fi
 fi
+
+# Ensure directory is always marked as safe for git operations (even if not freshly cloned)
+git config --global --add safe.directory "$INSTALL_DIR" 2>/dev/null || true
 
 cd "$INSTALL_DIR"
 
