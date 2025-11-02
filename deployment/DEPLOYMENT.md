@@ -420,9 +420,9 @@ sudo systemctl restart okmonitor-device
 
 ### Systemd Service Files
 
-- **okmonitor-device.service**: Main device service (auto-starts on boot)
-- **okmonitor-update.service**: Update execution service
-- **okmonitor-update.timer**: Schedules updates (daily at 02:00 + 5 min after boot)
+- **okmonitor-device.service**: Main device service (auto-starts on boot, includes pre-start update via ExecStartPre)
+- **okmonitor-update.service**: Scheduled update execution service
+- **okmonitor-update.timer**: Triggers daily updates at 02:00 (with Persistent=true for missed runs)
 
 ### File Locations
 
@@ -479,6 +479,25 @@ sudo dpkg-reconfigure -plow unattended-upgrades
 ### Update Policy
 
 OK Monitor uses a **hybrid update strategy** to ensure devices always run the latest code:
+
+#### How It Works
+
+The system uses TWO independent update mechanisms that work together:
+
+**ExecStartPre in Service File:**
+```ini
+[Service]
+ExecStartPre=+/opt/okmonitor/deployment/pre-start-update.sh
+```
+The `+` prefix runs the script with elevated privileges. This runs BEFORE the main service starts, on every service start attempt.
+
+**Timer-Based Scheduled Updates:**
+```ini
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+```
+The timer triggers daily updates for long-running devices. When triggered, it updates code and restarts the service (which then runs ExecStartPre again).
 
 #### Mechanism 1: Pre-Start Updates (Boot/Restart)
 - Runs **before** the service starts (via `ExecStartPre` in systemd)
@@ -670,11 +689,18 @@ For issues or questions:
 
 ## Changelog
 
-- **2025-01-XX**: Enhanced update policy
-  - Hybrid update strategy (daily at 2 AM + 5 min after boot)
-  - Ensures devices stay updated even if offline at scheduled time
-  - Zero impact on service startup time
-- **2025-01-XX**: Initial deployment documentation
+- **2025-11**: Enhanced hybrid update strategy
+  - Pre-start updates: Runs before every service start (boot/restart) via ExecStartPre
+  - Scheduled updates: Daily at 2:00 AM for long-running devices
+  - Fail-safe: Service won't start if update fails (prevents running outdated code)
+  - Branch awareness: Updates respect the installed branch
+  - Ensures devices always run the latest code
+- **2025-11**: Deployment improvements
+  - Added `--branch` flag to installer for flexible branch selection
+  - Smart Tailscale auto-detection during installation
+  - Comprehensive uninstall script with Tailscale preservation
+  - Git ownership fix for secure root operations
+- **2025-01**: Initial deployment documentation
   - Systemd service with network dependency
   - Automatic updates
   - USB webcam support

@@ -93,7 +93,10 @@ Both deployment methods install:
 
 - ✅ **OK Monitor device software** (camera capture and cloud sync)
 - ✅ **Auto-start on boot** (systemd service)
-- ✅ **Hybrid automatic updates** (pre-start + scheduled at 2:00 AM)
+- ✅ **Hybrid automatic updates** (dual-layer approach)
+  - Pre-start updates: Every boot/restart automatically pulls latest code
+  - Scheduled updates: Daily at 2:00 AM for long-running devices
+  - Fail-safe: Service won't start if update fails (never runs outdated code)
 - ✅ **Comitup WiFi hotspot** (web-based WiFi setup, no SSH needed)
 - ✅ **addwifi.sh script** (backup WiFi configuration tool via SSH)
 - ✅ **Tailscale remote access** (pre-installed, connect with auth key)

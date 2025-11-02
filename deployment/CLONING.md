@@ -363,7 +363,7 @@ When you want to update the entire fleet with new software:
 
 ### Rolling Updates (Recommended)
 
-Instead of re-cloning, use the built-in **hybrid update mechanism**:
+Instead of re-cloning, use the built-in **hybrid update strategy**:
 
 **Automatic Updates:**
 - **Pre-start updates**: Every boot/restart pulls latest code
@@ -662,7 +662,3 @@ For issues with:
 ---
 
 Happy cloning! 🚀
-
-<function_calls>
-<invoke name="Read">
-<parameter name="file_path">D:\dev\okmonitor\deployment\.env.device
