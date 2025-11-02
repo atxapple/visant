@@ -1109,9 +1109,11 @@
                     card.className = 'capture-card';
                     const img = document.createElement('img');
                     img.alt = `Capture ${item.record_id}`;
-                    if (item.image_url) {
-                        const cacheSeparator = item.image_url.includes('?') ? '&' : '?';
-                        img.src = `${item.image_url}${cacheSeparator}_=${Date.now()}`;
+                    // Use thumbnail for gallery display, fallback to full image if thumbnail unavailable
+                    const displayUrl = item.thumbnail_url || item.image_url;
+                    if (displayUrl) {
+                        const cacheSeparator = displayUrl.includes('?') ? '&' : '?';
+                        img.src = `${displayUrl}${cacheSeparator}_=${Date.now()}`;
                     } else {
                         img.alt = `Capture ${item.record_id} (image unavailable)`;
                         img.classList.add('muted');

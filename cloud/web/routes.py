@@ -83,10 +83,13 @@ _EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 def _serialize_capture_summary(summary: CaptureSummary, request: Request) -> dict[str, Any]:
     image_url = None
     download_url = None
+    thumbnail_url = None
     if summary.image_available and summary.image_path is not None:
         image_route = request.url_for("serve_capture_image", record_id=summary.record_id)
         image_url = image_route.path or str(image_route)
         download_url = f"{image_url}?download=1"
+        # Thumbnail URL (uses API endpoint)
+        thumbnail_url = f"/v1/captures/{summary.record_id}/thumbnail"
     return {
         "record_id": summary.record_id,
         "captured_at": summary.captured_at,
@@ -98,6 +101,7 @@ def _serialize_capture_summary(summary: CaptureSummary, request: Request) -> dic
         "normal_description_file": summary.normal_description_file,
         "image_available": summary.image_available,
         "image_url": image_url,
+        "thumbnail_url": thumbnail_url,
         "download_url": download_url,
         "agent_details": summary.agent_details,
     }
