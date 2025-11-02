@@ -184,6 +184,9 @@ fi
 # Ensure directory is always marked as safe for git operations (even if not freshly cloned)
 git config --global --add safe.directory "$INSTALL_DIR" 2>/dev/null || true
 
+# Also configure safe.directory for root user (needed for pre-start-update.sh and update_device.sh)
+sudo git config --global --add safe.directory "$INSTALL_DIR" 2>/dev/null || true
+
 cd "$INSTALL_DIR"
 
 echo ""

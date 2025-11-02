@@ -13,6 +13,9 @@ INSTALL_DIR="/opt/okmonitor"
 SERVICE_NAME="okmonitor-device"
 LOG_FILE="/var/log/okmonitor-update.log"
 
+# Configure git safe.directory to avoid ownership issues when running as root
+git config --global --add safe.directory "$INSTALL_DIR" 2>/dev/null || true
+
 # Logging function
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"

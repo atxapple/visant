@@ -16,6 +16,9 @@ set -e  # Exit immediately if any command fails
 INSTALL_DIR="/opt/okmonitor"
 LOG_PREFIX="[PRE-START-UPDATE]"
 
+# Configure git safe.directory to avoid ownership issues when running as root
+git config --global --add safe.directory "$INSTALL_DIR" 2>/dev/null || true
+
 echo "$LOG_PREFIX Starting pre-start update check..."
 
 # Change to installation directory
