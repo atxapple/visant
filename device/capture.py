@@ -177,8 +177,9 @@ class OpenCVCamera:
         # Generate full image bytes
         full_image = buffer.tobytes()
 
-        # Generate thumbnail
-        thumbnail = create_thumbnail(full_image, max_size=(400, 300), quality=85)
+        # Thumbnail generation moved to cloud (saves 300ms on device)
+        # Cloud will generate thumbnail from full image
+        thumbnail = None
 
         # Timing debug: Record thumbnail complete time
         t1 = time.time() if timing_enabled else None

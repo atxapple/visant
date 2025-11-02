@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 import re
 import uuid
@@ -7,6 +8,46 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+from PIL import Image
+
+try:
+    _RESAMPLE = Image.Resampling.LANCZOS  # type: ignore[attr-defined]
+except AttributeError:  # pragma: no cover - Pillow < 9 fallback
+    _RESAMPLE = Image.LANCZOS  # type: ignore[attr-defined]
+
+
+def _generate_thumbnail(image_bytes: bytes, max_size: tuple[int, int] = (400, 300), quality: int = 85) -> bytes:
+    """Generate a thumbnail from image bytes.
+
+    Args:
+        image_bytes: Original image data
+        max_size: Maximum dimensions (width, height) for thumbnail
+        quality: JPEG quality (0-100)
+
+    Returns:
+        Thumbnail image as JPEG bytes
+
+    Raises:
+        ValueError: If image cannot be loaded or processed
+    """
+    try:
+        # Load image from bytes
+        img = Image.open(io.BytesIO(image_bytes))
+
+        # Convert to RGB if necessary (handles RGBA, grayscale, etc.)
+        if img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
+
+        # Calculate new dimensions while preserving aspect ratio
+        img.thumbnail(max_size, _RESAMPLE)
+
+        # Save as JPEG with specified quality
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG", quality=quality, optimize=True)
+        return buffer.getvalue()
+    except Exception as e:
+        raise ValueError(f"Failed to generate thumbnail: {e}") from e
 
 
 @dataclass
@@ -67,10 +108,26 @@ class FileSystemDatalake:
                 raise ValueError("image_bytes must be provided when store_image=True")
             image_path.write_bytes(image_bytes)
 
-        # Store thumbnail if provided
-        thumbnail_stored = bool(thumbnail_bytes is not None)
+        # Generate and store thumbnail
+        # If device provided thumbnail, use it (backward compatibility)
+        # Otherwise, generate from full image
+        thumbnail_stored = False
         if thumbnail_bytes is not None:
+            # Use device-provided thumbnail
             thumbnail_path.write_bytes(thumbnail_bytes)
+            thumbnail_stored = True
+        elif image_bytes is not None:
+            # Generate thumbnail from full image
+            try:
+                generated_thumbnail = _generate_thumbnail(image_bytes)
+                thumbnail_path.write_bytes(generated_thumbnail)
+                thumbnail_stored = True
+            except ValueError as e:
+                # Log error but don't fail the entire capture
+                import logging
+                logging.getLogger(__name__).warning(
+                    "Failed to generate thumbnail for %s: %s", record_id, e
+                )
 
         payload = {
             "record_id": record_id,
