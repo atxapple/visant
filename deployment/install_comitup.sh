@@ -84,7 +84,7 @@ cat > /etc/comitup.conf <<EOF
 
 # Access Point name when no WiFi is configured
 # Format: okmonitor-NNNN where NNNN is based on device ID
-ap_name: okmonitor
+ap_name: okmonitor_wifi_setup
 
 # Access Point password
 # Leave empty for open/passwordless access point
