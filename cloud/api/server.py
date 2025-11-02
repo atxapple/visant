@@ -405,6 +405,11 @@ def create_app(
             result.get("state"),
             result.get("score", 0.0),
         )
+
+        # Update global device ID to reflect most recently active device
+        # This updates the UI header to show the actual device instead of "ui-device"
+        app.state.device_id = request.device_id
+
         return InferenceResponse(**result)
 
     @app.get("/v1/device-config", response_model=DeviceConfigResponse)
