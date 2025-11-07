@@ -341,38 +341,207 @@ GET /v1/captures/{record_id}/status  # Poll until evaluation completes
 ---
 
 ### Phase 5: Dashboard Updates 🔄 IN PROGRESS
-**Status**: 🔄 In Progress
+**Status**: 🔄 In Progress (Week 1: Authentication Foundation)
 **Goal**: Adapt existing UI for multi-user/multi-device
+**Duration**: 5 weeks (25 days)
 
-**Remaining Tasks**:
-- [ ] Migrate old UI to new multi-tenant API
-- [ ] Add user login page (integrate with Supabase)
-- [ ] Add device selector/filter dropdown
-- [ ] Show device status (online/offline based on last_seen)
-- [ ] Build device registration wizard (step-by-step)
-- [ ] Add share link management panel
-- [ ] Update WebSocket to filter by org_id
-- [ ] Add user profile/settings page
-- [ ] Create organization settings page
-- [ ] Update capture gallery to show device name
+---
+
+#### Week 1: Authentication Foundation (Days 1-5) 🔄 Current
+
+**Tasks**:
+- [ ] Day 1-2: Create login & signup pages
+  - [ ] Create `cloud/web/templates/login.html`
+  - [ ] Create `cloud/web/templates/signup.html`
+  - [ ] Create `cloud/web/static/js/auth.js` (JWT management)
+  - [ ] Implement sessionStorage for tokens
+- [ ] Day 3: Auth middleware
+  - [ ] Add JWT verification to UI routes
+  - [ ] Redirect unauthenticated users to login
+  - [ ] Handle token expiration
+- [ ] Day 4-5: Testing & polish
+  - [ ] Test login flow end-to-end
+  - [ ] Error handling (invalid credentials, network errors)
+  - [ ] Mobile responsive design
 
 **Deliverables**:
-- [ ] Multi-device dashboard
-- [ ] Device management UI
-- [ ] Share link management
-- [ ] User/org settings
+- [ ] Working login/signup flow
+- [ ] JWT stored in sessionStorage
+- [ ] Auth middleware protecting dashboard
 
-**Files to Create/Modify**:
-- `cloud/web/templates/login.html` - Login page (NEW)
-- `cloud/web/templates/dashboard.html` - Add device selector (MODIFY)
-- `cloud/web/routes.py` - Update to filter by org_id (MODIFY)
-- `cloud/api/server.py` - Update WebSocket filtering (MODIFY)
+---
+
+#### Week 2: Multi-Device Support (Days 6-10) ⏳ Pending
+
+**Tasks**:
+- [ ] Day 1-2: Device selector
+  - [ ] Add device dropdown to dashboard header
+  - [ ] Fetch devices from `/v1/devices` API
+  - [ ] Device switching logic
+  - [ ] Display device status (online/offline)
+- [ ] Day 3: API migration
+  - [ ] Update all API calls to use new endpoints
+  - [ ] Add auth headers to all requests
+  - [ ] Handle 401 errors (redirect to login)
+- [ ] Day 4: Capture gallery
+  - [ ] Migrate to `/v1/captures` API
+  - [ ] Handle S3 presigned URLs
+  - [ ] Support pending evaluations (polling)
+- [ ] Day 5: WebSocket updates
+  - [ ] Add JWT auth to WebSocket connections
+  - [ ] Filter by selected device
+  - [ ] Reconnection logic
+
+**Deliverables**:
+- [ ] Device selector dropdown working
+- [ ] Capture gallery shows device-specific captures
+- [ ] WebSocket filtered by device
+
+---
+
+#### Week 3: Per-Device Configuration (Days 11-15) ⏳ Pending
+
+**Tasks**:
+- [ ] Day 1-2: Device config API
+  - [ ] Create `cloud/api/routes/device_config.py`
+  - [ ] Endpoints: GET/PUT `/v1/devices/{id}/config`
+  - [ ] Migrate config storage to `device.config` JSON
+  - [ ] Normal description per device
+- [ ] Day 3: Trigger configuration
+  - [ ] Update trigger UI to save per device
+  - [ ] Sync config when switching devices
+- [ ] Day 4: Notification settings
+  - [ ] Email notification config per device
+  - [ ] Cooldown settings
+- [ ] Day 5: Testing
+  - [ ] Test config persistence
+  - [ ] Test device switching
+  - [ ] Verify no data leakage between devices
+
+**Deliverables**:
+- [ ] Per-device normal descriptions
+- [ ] Per-device trigger configuration
+- [ ] Per-device notification settings
+
+---
+
+#### Week 4: Share Links & Device Management (Days 16-20) ⏳ Pending
+
+**Tasks**:
+- [ ] Day 1-2: Share modal
+  - [ ] Create share link modal component
+  - [ ] Integrate with `/v1/devices/{id}/share` API
+  - [ ] QR code generation
+- [ ] Day 3: Share management
+  - [ ] List existing share links
+  - [ ] Revoke functionality
+  - [ ] View analytics (view count)
+- [ ] Day 4-5: Device registration
+  - [ ] Device management page (`cloud/web/templates/devices.html`)
+  - [ ] Add device wizard
+  - [ ] Display API key (one-time)
+  - [ ] Config file download
+
+**Deliverables**:
+- [ ] Share link creation modal
+- [ ] Share link management page
+- [ ] Device registration wizard
+
+---
+
+#### Week 5: Polish & Testing (Days 21-25) ⏳ Pending
+
+**Tasks**:
+- [ ] Day 1: User profile
+  - [ ] User menu dropdown
+  - [ ] Organization name display
+  - [ ] Logout functionality
+- [ ] Day 2: Settings page
+  - [ ] Create `cloud/web/templates/settings.html`
+  - [ ] Organization settings
+  - [ ] User profile
+- [ ] Day 3-4: Bug fixes & polish
+  - [ ] Error handling improvements
+  - [ ] Loading states
+  - [ ] Mobile responsive design
+  - [ ] Cross-browser testing
+- [ ] Day 5: End-to-end testing
+  - [ ] Complete user journey testing
+  - [ ] Performance optimization
+  - [ ] Security audit
+
+**Deliverables**:
+- [ ] User profile & settings page
+- [ ] Production-ready UI
+- [ ] All tests passing
+
+---
+
+**Files to Create**:
+```
+cloud/web/templates/
+  - login.html              # Week 1
+  - signup.html             # Week 1
+  - devices.html            # Week 4
+  - shares.html             # Week 4
+  - settings.html           # Week 5
+
+cloud/web/static/js/
+  - auth.js                 # Week 1
+
+cloud/api/routes/
+  - device_config.py        # Week 3
+```
+
+**Files to Modify**:
+```
+cloud/web/templates/
+  - index.html              # Week 2 (device selector, API updates)
+
+cloud/web/
+  - routes.py               # Week 1 (auth middleware)
+
+cloud/api/
+  - server.py               # Week 2 (WebSocket auth)
+```
+
+**Technical Approach**:
+
+1. **Authentication Flow**:
+   ```
+   User → Login → POST /v1/auth/login → JWT Token
+        → sessionStorage.setItem('access_token', token)
+        → Redirect to /ui
+        → All API calls include Authorization: Bearer {token}
+   ```
+
+2. **Multi-Device Support**:
+   ```
+   Load Dashboard → GET /v1/devices → Show device selector
+                  → Select device → Load device config
+                  → GET /v1/captures?device_id={id}
+                  → Connect WebSocket with device filter
+   ```
+
+3. **Per-Device Config**:
+   ```sql
+   devices.config = {
+     "normal_description": "...",
+     "trigger": { "enabled": true, "interval_seconds": 10 },
+     "notifications": { "email": { ... } }
+   }
+   ```
 
 **Completion Criteria**:
-- [ ] Can manage multiple devices from single dashboard
-- [ ] Can create and revoke share links from UI
-- [ ] Device status updates in real-time
-- [ ] All existing features work (triggers, config, alerts)
+- [ ] User can signup, login, logout
+- [ ] Dashboard shows only user's organization devices
+- [ ] Can switch between devices seamlessly
+- [ ] All existing features work (captures, triggers, notifications)
+- [ ] Share links can be created and accessed publicly
+- [ ] WebSocket updates work per device
+- [ ] No cross-org data leakage
+- [ ] Mobile responsive
+- [ ] Production-ready security
 
 ---
 
