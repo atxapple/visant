@@ -1,6 +1,8 @@
-# OK Monitor
+# Visant
 
 AI-powered visual monitoring system for detecting environmental anomalies through continuous camera surveillance.
+
+*Forked from [OK Monitor](https://github.com/atxapple/okmonitor)*
 
 ## Quick Start
 
