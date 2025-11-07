@@ -1,0 +1,46 @@
+Alembic Database Migrations for Visant
+======================================
+
+This directory contains Alembic migrations for the Visant database schema.
+
+## Creating a New Migration
+
+After modifying models in `cloud/api/database/models.py`:
+
+```bash
+# Auto-generate migration from model changes
+alembic revision --autogenerate -m "Description of changes"
+
+# Or create empty migration for manual changes
+alembic revision -m "Description of changes"
+```
+
+## Running Migrations
+
+```bash
+# Upgrade to latest version
+alembic upgrade head
+
+# Upgrade by one version
+alembic upgrade +1
+
+# Downgrade by one version
+alembic downgrade -1
+
+# Show current version
+alembic current
+
+# Show migration history
+alembic history
+```
+
+## Environment Variables
+
+Set `DATABASE_URL` before running migrations:
+
+```bash
+export DATABASE_URL="postgresql://user:pass@localhost/visant"
+alembic upgrade head
+```
+
+Railway will automatically set this for production.

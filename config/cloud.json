@@ -3,8 +3,23 @@
     "host": "0.0.0.0",
     "port": 8000
   },
+  "database": {
+    "url_env": "DATABASE_URL",
+    "pool_size": 20,
+    "max_overflow": 10
+  },
   "storage": {
-    "datalake_root": "/mnt/data/datalake"
+    "backend": "filesystem",
+    "filesystem": {
+      "datalake_root": "/mnt/data/datalake"
+    },
+    "s3": {
+      "bucket_env": "S3_BUCKET",
+      "region_env": "S3_REGION",
+      "endpoint_url_env": "S3_ENDPOINT_URL",
+      "access_key_env": "AWS_ACCESS_KEY_ID",
+      "secret_key_env": "AWS_SECRET_ACCESS_KEY"
+    }
   },
   "classifier": {
     "backend": "consensus",

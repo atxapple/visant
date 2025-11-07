@@ -1,0 +1,405 @@
+"""Capture upload and management endpoints."""
+
+import uuid
+import base64
+from datetime import datetime
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form, BackgroundTasks
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from cloud.api.database import get_db, Capture, Device, Organization
+from cloud.api.auth.dependencies import verify_device_api_key
+from cloud.api.service import InferenceService
+from cloud.api.workers.ai_evaluator import evaluate_capture_async
+
+router = APIRouter(prefix="/v1/captures", tags=["Captures"])
+
+
+# Request/Response Models
+class CaptureUploadRequest(BaseModel):
+    """Capture metadata for upload (Cloud AI - no state/score/reason from device)."""
+    device_id: str
+    captured_at: datetime
+    image_base64: str  # Base64-encoded image for Cloud AI evaluation
+    trigger_label: Optional[str] = None
+    metadata: Optional[dict] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "device_id": "camera-01",
+                "captured_at": "2025-11-07T12:00:00Z",
+                "image_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+                "trigger_label": "motion_detected",
+                "metadata": {"temperature": 22.5}
+            }
+        }
+
+
+class CaptureResponse(BaseModel):
+    record_id: str
+    device_id: str
+    captured_at: datetime
+    ingested_at: datetime
+    evaluation_status: str  # pending, processing, completed, failed
+    state: Optional[str]  # null until evaluation completes
+    score: Optional[float]
+    reason: Optional[str]
+    evaluated_at: Optional[datetime]
+    image_stored: bool
+    thumbnail_stored: bool
+
+
+class CaptureListResponse(BaseModel):
+    captures: List[CaptureResponse]
+    total: int
+
+
+@router.post("", response_model=CaptureResponse, status_code=status.HTTP_201_CREATED)
+async def upload_capture(
+    request: CaptureUploadRequest,
+    background_tasks: BackgroundTasks,
+    device: Device = Depends(verify_device_api_key),
+    db: Session = Depends(get_db)
+):
+    """
+    Upload a new capture from a device (Cloud AI - async evaluation).
+
+    **Authentication**: Requires device API key in Authorization header.
+
+    **Process (Cloud AI)**:
+    1. Validates device API key
+    2. Decodes image from base64
+    3. Creates capture record with evaluation_status="pending"
+    4. Triggers background AI evaluation
+    5. Returns immediately with record_id (device should poll for results)
+
+    **Device Flow**:
+    1. Upload image + metadata → Get record_id, status="pending"
+    2. Poll GET /v1/captures/{record_id}/status until status="completed"
+    3. Get final state/score/reason from poll response
+
+    **Device Authentication**:
+    ```
+    Authorization: Bearer <device_api_key>
+    ```
+    """
+    # Verify device_id matches authenticated device
+    if request.device_id != device.device_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Device ID mismatch. Authenticated as '{device.device_id}' but trying to upload for '{request.device_id}'"
+        )
+
+    # Decode image from base64
+    try:
+        image_bytes = base64.b64decode(request.image_base64)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid base64 image: {str(e)}"
+        )
+
+    # Generate unique record_id
+    record_id = f"{device.device_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+
+    # Create capture record with pending evaluation
+    capture = Capture(
+        record_id=record_id,
+        org_id=device.org_id,  # Automatically set from device's org
+        device_id=device.device_id,
+        captured_at=request.captured_at,
+        ingested_at=datetime.utcnow(),
+        trigger_label=request.trigger_label,
+        capture_metadata=request.metadata or {},
+        # Cloud AI fields - initially null/pending
+        evaluation_status="pending",
+        state=None,  # Will be set by Cloud AI
+        score=None,
+        reason=None,
+        evaluated_at=None,
+        # Image storage
+        image_stored=True,  # We have the image bytes (not in S3 yet, but available)
+        thumbnail_stored=False
+    )
+
+    db.add(capture)
+    db.commit()
+    db.refresh(capture)
+
+    # Update device last_seen_at
+    device.last_seen_at = datetime.utcnow()
+    db.commit()
+
+    # Get global InferenceService instance (set by test_auth_server.py or main server)
+    # This is a workaround for dependency injection - in production use proper DI
+    import cloud.api.routes.captures as captures_module
+    inference_service = getattr(captures_module, 'global_inference_service', None)
+
+    if inference_service is None:
+        # Fallback: try to initialize with defaults (may not work without proper setup)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="InferenceService not initialized. Server configuration error."
+        )
+
+    # Trigger async AI evaluation in background
+    background_tasks.add_task(
+        evaluate_capture_async,
+        record_id=record_id,
+        image_bytes=image_bytes,
+        inference_service=inference_service,
+        db=db
+    )
+
+    return {
+        "record_id": capture.record_id,
+        "device_id": capture.device_id,
+        "captured_at": capture.captured_at,
+        "ingested_at": capture.ingested_at,
+        "evaluation_status": capture.evaluation_status,
+        "state": capture.state,  # None initially
+        "score": capture.score,  # None initially
+        "reason": capture.reason,  # None initially
+        "evaluated_at": capture.evaluated_at,  # None initially
+        "image_stored": capture.image_stored,
+        "thumbnail_stored": capture.thumbnail_stored
+    }
+
+
+@router.get("", response_model=CaptureListResponse)
+def list_captures(
+    device_id: Optional[str] = Query(None, description="Filter by device"),
+    state: Optional[str] = Query(None, description="Filter by state (normal, abnormal, uncertain)"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    device: Device = Depends(verify_device_api_key),
+    db: Session = Depends(get_db)
+):
+    """
+    List captures for the authenticated device's organization.
+
+    **Authentication**: Requires device API key.
+
+    Returns captures filtered by organization, optionally by device and state.
+    """
+    # Base query - filter by organization
+    query = db.query(Capture).filter(Capture.org_id == device.org_id)
+
+    # Apply optional filters
+    if device_id:
+        query = query.filter(Capture.device_id == device_id)
+
+    if state:
+        if state not in ["normal", "abnormal", "uncertain"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid state. Must be: normal, abnormal, or uncertain"
+            )
+        query = query.filter(Capture.state == state)
+
+    # Count total
+    total = query.count()
+
+    # Get paginated results
+    captures = query.order_by(
+        Capture.captured_at.desc()
+    ).limit(limit).offset(offset).all()
+
+    return {
+        "captures": [
+            {
+                "record_id": c.record_id,
+                "device_id": c.device_id,
+                "captured_at": c.captured_at,
+                "ingested_at": c.ingested_at,
+                "evaluation_status": c.evaluation_status,
+                "state": c.state,
+                "score": c.score,
+                "reason": c.reason,
+                "evaluated_at": c.evaluated_at,
+                "image_stored": c.image_stored,
+                "thumbnail_stored": c.thumbnail_stored
+            }
+            for c in captures
+        ],
+        "total": total
+    }
+
+
+@router.get("/{record_id}", response_model=CaptureResponse)
+def get_capture(
+    record_id: str,
+    device: Device = Depends(verify_device_api_key),
+    db: Session = Depends(get_db)
+):
+    """
+    Get details for a specific capture.
+
+    **Authentication**: Requires device API key.
+
+    Only returns captures from the authenticated device's organization.
+    """
+    capture = db.query(Capture).filter(
+        Capture.record_id == record_id,
+        Capture.org_id == device.org_id  # Ensure org isolation
+    ).first()
+
+    if not capture:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Capture not found"
+        )
+
+    return {
+        "record_id": capture.record_id,
+        "device_id": capture.device_id,
+        "captured_at": capture.captured_at,
+        "ingested_at": capture.ingested_at,
+        "evaluation_status": capture.evaluation_status,
+        "state": capture.state,
+        "score": capture.score,
+        "reason": capture.reason,
+        "evaluated_at": capture.evaluated_at,
+        "image_stored": capture.image_stored,
+        "thumbnail_stored": capture.thumbnail_stored
+    }
+
+
+@router.get("/{record_id}/status", response_model=CaptureResponse)
+def get_capture_status(
+    record_id: str,
+    device: Device = Depends(verify_device_api_key),
+    db: Session = Depends(get_db)
+):
+    """
+    Poll for capture evaluation status (for Cloud AI async flow).
+
+    **Authentication**: Requires device API key.
+
+    **Device Polling Loop**:
+    ```python
+    # 1. Upload capture
+    response = upload_capture(...)
+    record_id = response["record_id"]
+
+    # 2. Poll until evaluation completes
+    while True:
+        status = get_capture_status(record_id)
+        if status["evaluation_status"] == "completed":
+            print(f"Result: {status['state']} ({status['score']})")
+            break
+        elif status["evaluation_status"] == "failed":
+            print(f"Evaluation failed: {status['reason']}")
+            break
+        time.sleep(1)  # Wait 1 second before polling again
+    ```
+
+    **Returns**: Same as GET /{record_id} - full capture details with evaluation status
+    """
+    capture = db.query(Capture).filter(
+        Capture.record_id == record_id,
+        Capture.org_id == device.org_id
+    ).first()
+
+    if not capture:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Capture not found"
+        )
+
+    return {
+        "record_id": capture.record_id,
+        "device_id": capture.device_id,
+        "captured_at": capture.captured_at,
+        "ingested_at": capture.ingested_at,
+        "evaluation_status": capture.evaluation_status,
+        "state": capture.state,
+        "score": capture.score,
+        "reason": capture.reason,
+        "evaluated_at": capture.evaluated_at,
+        "image_stored": capture.image_stored,
+        "thumbnail_stored": capture.thumbnail_stored
+    }
+
+
+@router.delete("/{record_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_capture(
+    record_id: str,
+    device: Device = Depends(verify_device_api_key),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a capture.
+
+    **Authentication**: Requires device API key.
+
+    Only allows deleting captures from the authenticated device's organization.
+    """
+    capture = db.query(Capture).filter(
+        Capture.record_id == record_id,
+        Capture.org_id == device.org_id
+    ).first()
+
+    if not capture:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Capture not found"
+        )
+
+    # TODO: Delete S3 images if they exist
+
+    db.delete(capture)
+    db.commit()
+
+    return None
+
+
+@router.post("/{record_id}/image", status_code=status.HTTP_200_OK)
+async def upload_capture_image(
+    record_id: str,
+    image: UploadFile = File(...),
+    device: Device = Depends(verify_device_api_key),
+    db: Session = Depends(get_db)
+):
+    """
+    Upload image for a capture.
+
+    **Authentication**: Requires device API key.
+
+    **Process**:
+    1. Validates capture belongs to device's org
+    2. Uploads image to S3 (or local storage for dev)
+    3. Updates capture.image_stored = True
+    4. Returns S3 key
+
+    **Future Enhancement**: Generate thumbnail automatically
+    """
+    # Verify capture exists and belongs to org
+    capture = db.query(Capture).filter(
+        Capture.record_id == record_id,
+        Capture.org_id == device.org_id
+    ).first()
+
+    if not capture:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Capture not found"
+        )
+
+    # TODO: Upload to S3
+    # For now, just mark as stored
+    # s3_key = f"{device.org_id}/devices/{device.device_id}/captures/{record_id}.jpg"
+    # upload_to_s3(image, s3_key)
+
+    # Update capture
+    capture.image_stored = True
+    # capture.s3_image_key = s3_key
+    db.commit()
+
+    return {
+        "record_id": record_id,
+        "image_stored": True,
+        "message": "Image upload endpoint ready. S3 integration pending."
+    }
