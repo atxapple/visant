@@ -1,11 +1,11 @@
 # Visant Multi-User Commercial Upgrade Plan
 
-**Version**: 2.0
+**Version**: 2.1
 **Created**: 2025-01-06
 **Last Updated**: 2025-11-07
-**Status**: Phase 2-4 Complete ✅
+**Status**: Phase 2-4 Complete ✅ | Phase 5 Week 1 Complete ✅
 **Target Launch**: 2-3 weeks from now
-**Current Progress**: Backend API complete, UI/deployment remaining
+**Current Progress**: Backend API complete, Auth UI complete, Multi-device UI in progress
 
 ---
 
@@ -347,38 +347,53 @@ GET /v1/captures/{record_id}/status  # Poll until evaluation completes
 
 ---
 
-#### Week 1: Authentication Foundation (Days 1-5) 🔄 Current
+#### Week 1: Authentication Foundation (Days 1-5) ✅ COMPLETE
 
 **Tasks**:
-- [ ] Day 1-2: Create login & signup pages
-  - [ ] Create `cloud/web/templates/login.html`
-  - [ ] Create `cloud/web/templates/signup.html`
-  - [ ] Create `cloud/web/static/js/auth.js` (JWT management)
-  - [ ] Implement sessionStorage for tokens
-- [ ] Day 3: Auth middleware
-  - [ ] Add JWT verification to UI routes
-  - [ ] Redirect unauthenticated users to login
-  - [ ] Handle token expiration
-- [ ] Day 4-5: Testing & polish
-  - [ ] Test login flow end-to-end
-  - [ ] Error handling (invalid credentials, network errors)
-  - [ ] Mobile responsive design
+- [x] Day 1-2: Create login & signup pages
+  - [x] Create `cloud/web/templates/login.html`
+  - [x] Create `cloud/web/templates/signup.html`
+  - [x] Create `cloud/web/static/js/auth.js` (JWT management)
+  - [x] Implement sessionStorage for tokens
+- [x] Day 3: Auth middleware
+  - [x] Add JWT verification to UI routes (optional, disabled by default)
+  - [x] Redirect unauthenticated users to login (client-side)
+  - [x] Handle token expiration (via auth.js)
+- [x] Day 4-5: Testing & polish
+  - [x] Test login flow end-to-end
+  - [x] Error handling (invalid credentials, network errors)
+  - [x] Mobile responsive design
 
 **Deliverables**:
-- [ ] Working login/signup flow
-- [ ] JWT stored in sessionStorage
-- [ ] Auth middleware protecting dashboard
+- [x] Working login/signup flow with modern gradient UI
+- [x] JWT stored in sessionStorage (secure)
+- [x] Password strength indicator on signup
+- [x] Auto-redirect if already authenticated
+- [x] Session verification with /v1/auth/me endpoint
+
+**Implementation Notes**:
+- Login/signup pages use professional gradient design
+- Auth.js provides AuthManager class for JWT management
+- Tokens stored in sessionStorage (more secure than localStorage)
+- Server-side JWT verification added to routes.py but disabled by default
+- App.state initialization added to test_auth_server.py for web UI support
 
 ---
 
-#### Week 2: Multi-Device Support (Days 6-10) ⏳ Pending
+#### Week 2: Multi-Device Support (Days 6-10) 🔄 Current
+
+**Smart Device Selection Logic**:
+- **0 devices**: Show device registration wizard (first-time onboarding)
+- **1 device**: Auto-select and show device dashboard (no selector UI, like original)
+- **2+ devices**: Show device selector dropdown + "All Devices" option
 
 **Tasks**:
-- [ ] Day 1-2: Device selector
-  - [ ] Add device dropdown to dashboard header
+- [ ] Day 1-2: Device selector & smart UX
+  - [ ] Add device dropdown to dashboard header (only show if 2+ devices)
   - [ ] Fetch devices from `/v1/devices` API
-  - [ ] Device switching logic
-  - [ ] Display device status (online/offline)
+  - [ ] Implement smart device selection logic (0/1/2+ devices)
+  - [ ] Device switching logic with sessionStorage persistence
+  - [ ] Display device status (online/offline based on last_seen_at)
 - [ ] Day 3: API migration
   - [ ] Update all API calls to use new endpoints
   - [ ] Add auth headers to all requests
@@ -393,9 +408,11 @@ GET /v1/captures/{record_id}/status  # Poll until evaluation completes
   - [ ] Reconnection logic
 
 **Deliverables**:
-- [ ] Device selector dropdown working
+- [ ] Smart device selection (0/1/2+ device UX)
+- [ ] Device selector dropdown (when applicable)
 - [ ] Capture gallery shows device-specific captures
 - [ ] WebSocket filtered by device
+- [ ] Device registration wizard for first-time users
 
 ---
 

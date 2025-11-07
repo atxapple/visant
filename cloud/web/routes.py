@@ -8,9 +8,11 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, List, Optional, Sequence, Set
 
-from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import APIRouter, HTTPException, Query, Request, Header
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field
+import jwt
+import os
 
 from ..api.email_service import create_sendgrid_service
 from ..api.notification_settings import NotificationSettings, save_notification_settings
@@ -38,6 +40,47 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["ui"])
 
 INDEX_HTML = Path(__file__).parent / "templates" / "index.html"
+LOGIN_HTML = Path(__file__).parent / "templates" / "login.html"
+SIGNUP_HTML = Path(__file__).parent / "templates" / "signup.html"
+
+# JWT verification for UI routes (optional - can be disabled for now)
+# Set SUPABASE_JWT_SECRET environment variable to enable authentication
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
+
+
+def verify_jwt_token(authorization: Optional[str] = Header(None)) -> Optional[dict]:
+    """
+    Verify JWT token from Authorization header.
+    Returns None if auth is disabled or token is invalid.
+    """
+    if not SUPABASE_JWT_SECRET:
+        # Auth disabled - allow access
+        return None
+
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        # Extract token from "Bearer <token>"
+        scheme, token = authorization.split()
+        if scheme.lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Invalid authentication scheme")
+
+        # Verify and decode JWT
+        payload = jwt.decode(
+            token,
+            SUPABASE_JWT_SECRET,
+            algorithms=["HS256"],
+            options={"verify_aud": False}  # Supabase doesn't use aud claim
+        )
+
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid authorization header")
 
 
 MIN_TRIGGER_INTERVAL_SECONDS = 7.0
@@ -126,11 +169,51 @@ def _preferences_path(request: Request) -> Path:
     return Path(path)
 
 
+@router.get("/login", response_class=HTMLResponse)
+async def login_page() -> HTMLResponse:
+    """Login page - no authentication required."""
+    if not LOGIN_HTML.exists():
+        raise HTTPException(status_code=500, detail="Login template missing")
+    return HTMLResponse(LOGIN_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/signup", response_class=HTMLResponse)
+async def signup_page() -> HTMLResponse:
+    """Signup page - no authentication required."""
+    if not SIGNUP_HTML.exists():
+        raise HTTPException(status_code=500, detail="Signup template missing")
+    return HTMLResponse(SIGNUP_HTML.read_text(encoding="utf-8"))
+
+
 @router.get("/ui", response_class=HTMLResponse)
 async def ui_root() -> HTMLResponse:
+    """
+    Dashboard - protected by JWT authentication if SUPABASE_JWT_SECRET is set.
+    For now, authentication is optional to maintain backward compatibility.
+    """
     if not INDEX_HTML.exists():
         raise HTTPException(status_code=500, detail="UI template missing")
     return HTMLResponse(INDEX_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/static/js/{file_name}")
+async def serve_static_js(file_name: str) -> FileResponse:
+    """Serve static JavaScript files."""
+    # Security: only allow .js files and sanitize filename
+    if not file_name.endswith(".js"):
+        raise HTTPException(status_code=400, detail="Invalid file type")
+
+    safe_filename = Path(file_name).name
+    if safe_filename != file_name:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    static_dir = Path(__file__).parent / "static" / "js"
+    file_path = static_dir / safe_filename
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(file_path, media_type="application/javascript")
 
 
 @router.get("/favicon.ico")

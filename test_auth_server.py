@@ -21,6 +21,9 @@ from cloud.api.routes.shares import router as shares_router
 from cloud.api.routes.public import router as public_router
 from cloud.api.routes.captures import router as captures_router
 
+# Import web UI routes
+from cloud.web.routes import router as web_router
+
 # Initialize InferenceService for Cloud AI
 from cloud.api.service import InferenceService
 from cloud.datalake.storage import FileSystemDatalake
@@ -62,12 +65,56 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize app.state for web UI
+from cloud.api.notification_settings import NotificationSettings
+
+app.state.datalake_root = datalake.root
+app.state.capture_index = capture_index
+app.state.classifier = classifier
+app.state.service = global_inference_service
+
+# Device/trigger state
+app.state.trigger_config = type('Config', (), {
+    'enabled': False,
+    'interval_seconds': None
+})()
+app.state.normal_description = ""
+app.state.device_id = "test-device"
+app.state.manual_trigger_counter = 0
+app.state.device_last_seen = None
+app.state.device_last_ip = None
+app.state.device_status_ttl = 30.0
+app.state.device_versions = {}
+
+# Notification state
+app.state.notification_settings = NotificationSettings()
+app.state.email_base_config = None
+app.state.notification_config_path = Path("config/notifications.json")
+app.state.abnormal_notifier = None
+
+# Dedupe settings
+app.state.dedupe_enabled = False
+app.state.dedupe_threshold = 3
+app.state.dedupe_keep_every = 5
+
+# UI paths
+app.state.ui_preferences_path = Path("config/ui_preferences.json")
+app.state.normal_description_store_dir = Path("config/normal_descriptions")
+app.state.normal_description_path = None
+app.state.normal_description_file = None
+app.state.server_config_path = None
+
+# Timing debug (disabled for test)
+app.state.timing_debug_enabled = False
+app.state.timing_stats = None
+
 # Include routers
 app.include_router(auth_router)
 app.include_router(devices_router)
 app.include_router(shares_router)
 app.include_router(public_router)  # Public routes (no auth required)
 app.include_router(captures_router)  # Capture upload (device auth)
+app.include_router(web_router)  # Web UI (login, signup, dashboard)
 
 
 @app.get("/")
