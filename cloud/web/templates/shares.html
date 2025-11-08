@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Share Links - Visant</title>
+    <link rel="icon" type="image/png" href="/ui/static/favicon.png" />
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0 1.5rem 2rem 1.5rem;
+            background: #f6f8fa;
+            color: #101820;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem 0;
+        }
+        h1 {
+            margin: 0;
+            font-size: 1.75rem;
+        }
+        main {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .card h2 {
+            margin: 0;
+            font-size: 1.25rem;
+        }
+        button {
+            align-self: flex-start;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            border: none;
+            background: #2563eb;
+            color: #ffffff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: #6b7280;
+        }
+        .btn-danger {
+            background: #dc2626;
+        }
+        .share-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .share-table th,
+        .share-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .share-table th {
+            background: #f9fafb;
+            font-weight: 600;
+        }
+        .share-table input[type="text"] {
+            width: 100%;
+            max-width: 350px;
+            padding: 0.5rem;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+        .share-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.875rem;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: #e0e7ff;
+            color: #3730a3;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        #emptyState {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+        select {
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid #d0d7de;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Share Links</h1>
+        <div style="display: flex; gap: 0.5rem;">
+            <button onclick="window.location.href='/ui/'">Back to Dashboard</button>
+        </div>
+    </header>
+
+    <main>
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Active Share Links</h2>
+                <select id="deviceFilter" onchange="loadShareLinks()">
+                    <option value="">All Devices</option>
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+
+            <table class="share-table" id="shareTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Device</th>
+                        <th>Created</th>
+                        <th>Expires</th>
+                        <th>Share URL</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="shareLinksBody">
+                    <!-- Populated dynamically -->
+                </tbody>
+            </table>
+
+            <div id="emptyState" style="display: none;">
+                <p>No share links found. Create one from the dashboard!</p>
+            </div>
+
+            <div id="loadingState" style="text-align: center; padding: 2rem; color: #6b7280;">
+                <p>Loading share links...</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/share_manager.js"></script>
+    <script>
+        let devices = [];
+
+        async function loadDevices() {
+            try {
+                const response = await fetch('/v1/devices', {
+                    headers: {
+                        'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    devices = data.devices;
+
+                    // Populate filter
+                    const filter = document.getElementById('deviceFilter');
+                    devices.forEach(device => {
+                        const option = document.createElement('option');
+                        option.value = device.device_id;
+                        option.textContent = device.friendly_name || device.device_id;
+                        filter.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading devices:', error);
+            }
+        }
+
+        async function loadShareLinks() {
+            const deviceId = document.getElementById('deviceFilter').value;
+            const tbody = document.getElementById('shareLinksBody');
+            const emptyState = document.getElementById('emptyState');
+            const loadingState = document.getElementById('loadingState');
+            const shareTable = document.getElementById('shareTable');
+
+            // Show loading
+            loadingState.style.display = 'block';
+            emptyState.style.display = 'none';
+            shareTable.style.display = 'none';
+
+            try {
+                const shareLinks = await shareManager.listShareLinks(deviceId || null);
+
+                loadingState.style.display = 'none';
+
+                if (shareLinks.length === 0) {
+                    tbody.innerHTML = '';
+                    emptyState.style.display = 'block';
+                    return;
+                }
+
+                shareTable.style.display = 'table';
+
+                tbody.innerHTML = shareLinks.map(link => {
+                    const device = devices.find(d => d.device_id === link.device_id);
+                    const deviceName = device ? (device.friendly_name || device.device_id) : link.device_id;
+                    const created = new Date(link.created_at).toLocaleDateString();
+                    const expires = new Date(link.expires_at).toLocaleDateString();
+
+                    return `
+                        <tr>
+                            <td>${deviceName}</td>
+                            <td>${created}</td>
+                            <td>${expires}</td>
+                            <td>
+                                <input type="text" value="${link.share_url}" readonly />
+                            </td>
+                            <td class="share-actions">
+                                <button class="btn-sm" onclick="copyUrl('${link.share_url}')">Copy</button>
+                                <button class="btn-sm btn-secondary" onclick="window.open('${link.share_url}', '_blank')">Open</button>
+                                <button class="btn-sm btn-danger" onclick="revokeLink('${link.token}')">Remove</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                loadingState.style.display = 'none';
+                emptyState.style.display = 'block';
+                console.error('Error loading share links:', error);
+            }
+        }
+
+        async function revokeLink(token) {
+            if (!confirm('Are you sure you want to remove this share link? The link will no longer work.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/v1/share-links/${token}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    alert('Share link removed successfully!');
+                    await loadShareLinks();
+                } else {
+                    alert('Failed to remove share link');
+                }
+            } catch (error) {
+                alert('Error removing share link: ' + error.message);
+            }
+        }
+
+        function copyUrl(url) {
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Share URL copied to clipboard!');
+            }).catch(() => {
+                // Fallback
+                const input = document.createElement('input');
+                input.value = url;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                alert('Share URL copied to clipboard!');
+            });
+        }
+
+        // Initialize on load
+        (async () => {
+            await loadDevices();
+            await loadShareLinks();
+        })();
+    </script>
+</body>
+</html>

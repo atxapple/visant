@@ -42,6 +42,7 @@ router = APIRouter(tags=["ui"])
 INDEX_HTML = Path(__file__).parent / "templates" / "index.html"
 LOGIN_HTML = Path(__file__).parent / "templates" / "login.html"
 SIGNUP_HTML = Path(__file__).parent / "templates" / "signup.html"
+SHARES_HTML = Path(__file__).parent / "templates" / "shares.html"
 
 # JWT verification for UI routes (optional - can be disabled for now)
 # Set SUPABASE_JWT_SECRET environment variable to enable authentication
@@ -183,6 +184,14 @@ async def signup_page() -> HTMLResponse:
     if not SIGNUP_HTML.exists():
         raise HTTPException(status_code=500, detail="Signup template missing")
     return HTMLResponse(SIGNUP_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/ui/shares", response_class=HTMLResponse)
+async def shares_page() -> HTMLResponse:
+    """Share links management page."""
+    if not SHARES_HTML.exists():
+        raise HTTPException(status_code=500, detail="Shares template missing")
+    return HTMLResponse(SHARES_HTML.read_text(encoding="utf-8"))
 
 
 @router.get("/ui", response_class=HTMLResponse)
