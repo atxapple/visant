@@ -681,6 +681,12 @@
             <a href="/ui/settings" style="color: #2563eb; text-decoration: none; font-weight: 600; padding: 0.6rem 1.2rem; border-radius: 8px; background: #eff6ff; transition: background 0.2s;">
                 Settings
             </a>
+            <div id="userInfo" style="display: none; padding: 0.4rem 1rem; border-radius: 8px; background: #f9fafb; border: 1px solid #e5e7eb;">
+                <div style="font-size: 0.875rem; color: #6b7280;">
+                    <strong id="userEmail" style="color: #101820;"></strong>
+                </div>
+                <div style="font-size: 0.75rem; color: #9ca3af;" id="orgName"></div>
+            </div>
             <button onclick="handleLogout()" style="padding: 0.6rem 1.2rem; border-radius: 8px; background: transparent; border: 1px solid #dc2626; color: #dc2626; font-weight: 600; cursor: pointer; transition: background 0.2s;">
                 Logout
             </button>
@@ -876,6 +882,21 @@
         function handleLogout() {
             auth.logout();
         }
+
+        // Load and display user info
+        function loadUserInfo() {
+            if (auth.isAuthenticated()) {
+                const user = auth.getUser();
+                const org = auth.getOrganization();
+
+                if (user && org) {
+                    document.getElementById('userEmail').textContent = user.email || 'User';
+                    document.getElementById('orgName').textContent = org.name || 'Organization';
+                    document.getElementById('userInfo').style.display = 'block';
+                }
+            }
+        }
+
         const CAPTURE_REFRESH_DEBOUNCE_MS = 300;
         let suppressPreferenceSave = false;
         let preferenceSaveTimer = null;
@@ -1786,11 +1807,12 @@
             persistPreferences();
         });
 
-        // Initialize AuthManager for device wizard
-        const auth = new AuthManager();
+        // Use global auth instance from auth.js (already initialized)
+        // auth variable is available globally
 
         (async () => {
             await loadPreferences();
+            loadUserInfo();
             loadState();
             loadCaptures();
             scheduleStateRefresh();
