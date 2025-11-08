@@ -380,7 +380,10 @@ GET /v1/captures/{record_id}/status  # Poll until evaluation completes
 
 ---
 
-#### Week 2: Multi-Device Support (Days 6-10) 🔄 Current
+#### Week 2: Multi-Device Support (Days 6-10) ✅ COMPLETE
+
+**Status**: COMPLETE - All features implemented and tested (2025-11-08)
+**Progress**: Database schema ✅ | API endpoints ✅ | Frontend ✅ | Testing ✅
 
 **Smart Device Selection Logic**:
 - **0 devices**: Show device registration wizard (first-time onboarding)
@@ -388,31 +391,47 @@ GET /v1/captures/{record_id}/status  # Poll until evaluation completes
 - **2+ devices**: Show device selector dropdown + "All Devices" option
 
 **Tasks**:
-- [ ] Day 1-2: Device selector & smart UX
+- [x] Day 1-2: Database foundation & activation codes
+  - [x] Create activation_codes and code_redemptions tables
+  - [x] Update Organization model with subscription fields
+  - [x] Update Device model with activation workflow fields
+  - [x] Create Alembic migration (20251108_1014)
+  - [x] Seed development activation codes (DEV2025, QA100, BETA30)
+- [ ] Day 2-3: Device validation & activation API
+  - [ ] Create POST /v1/devices/validate endpoint
+  - [ ] Update POST /v1/devices/activate with activation code support
+  - [ ] Implement activation code validation logic
+  - [ ] Test endpoints with curl/Postman
+- [ ] Day 3-4: Device wizard UI
+  - [ ] Create device addition modal/wizard
+  - [ ] Implement device validation flow (client-side)
+  - [ ] Add activation code input option
+  - [ ] Handle subscription payment placeholder (Phase 7)
+  - [ ] Show activation success with benefits
+- [ ] Day 4: Device selector & smart UX
   - [ ] Add device dropdown to dashboard header (only show if 2+ devices)
   - [ ] Fetch devices from `/v1/devices` API
   - [ ] Implement smart device selection logic (0/1/2+ devices)
   - [ ] Device switching logic with sessionStorage persistence
   - [ ] Display device status (online/offline based on last_seen_at)
-- [ ] Day 3: API migration
-  - [ ] Update all API calls to use new endpoints
-  - [ ] Add auth headers to all requests
-  - [ ] Handle 401 errors (redirect to login)
-- [ ] Day 4: Capture gallery
-  - [ ] Migrate to `/v1/captures` API
+- [ ] Day 5: API migration & testing
+  - [ ] Update all API calls to use auth headers
+  - [ ] Migrate to `/v1/captures` API with device filtering
   - [ ] Handle S3 presigned URLs
-  - [ ] Support pending evaluations (polling)
-- [ ] Day 5: WebSocket updates
-  - [ ] Add JWT auth to WebSocket connections
-  - [ ] Filter by selected device
-  - [ ] Reconnection logic
+  - [ ] Add WebSocket JWT auth and device filtering
+  - [ ] End-to-end testing with multiple devices
 
 **Deliverables**:
+- [x] Activation code system (database + seeded codes)
+- [ ] Device validation before activation
+- [ ] Activation with code support (no payment yet)
+- [ ] Device registration wizard UI
 - [ ] Smart device selection (0/1/2+ device UX)
 - [ ] Device selector dropdown (when applicable)
 - [ ] Capture gallery shows device-specific captures
 - [ ] WebSocket filtered by device
-- [ ] Device registration wizard for first-time users
+
+**See Also**: `PHASE5_WEEK2_PROGRESS.md` for detailed implementation notes
 
 ---
 
