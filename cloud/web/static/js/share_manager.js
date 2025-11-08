@@ -1,20 +1,21 @@
 /**
- * ShareManager - Handles share link creation and management
+ * ShareManager - Simple public link sharing
  *
  * Features:
- * - Create share links (device/capture/date_range)
- * - List existing share links
- * - Revoke share links
- * - Generate and display QR codes
- * - Copy share URLs to clipboard
+ * - One permanent public link per device
+ * - Copy link to clipboard
+ * - Open link in new tab
+ * - Revoke/remove link
+ *
+ * Advanced features (QR codes, expiration, analytics) available in backend
+ * but hidden in UI for simplicity. See documentation to re-enable.
  */
 
 class ShareManager {
     constructor() {
         this.modal = null;
-        this.qrModal = null;
         this.currentDeviceId = null;
-        this.currentCaptureId = null;
+        this.currentShareLink = null;
     }
 
     /**
@@ -22,83 +23,50 @@ class ShareManager {
      */
     init() {
         this.createShareModal();
-        this.createQRModal();
     }
 
     /**
-     * Create the share link modal HTML
+     * Create the simplified share link modal HTML
      */
     createShareModal() {
         const modalHTML = `
             <div id="shareModal" class="modal" style="display: none;">
-                <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-content" style="max-width: 500px;">
                     <div class="modal-header">
-                        <h2>Create Share Link</h2>
+                        <h2 id="shareModalTitle">Share Camera</h2>
                         <button class="modal-close" onclick="shareManager.closeModal()">&times;</button>
                     </div>
                     <div class="modal-body">
-                        <form id="shareForm">
-                            <div class="form-group">
-                                <label>Share Type</label>
-                                <select id="shareType" class="form-control" onchange="shareManager.onShareTypeChange()">
-                                    <option value="device">Entire Device (all captures)</option>
-                                    <option value="capture">Single Capture</option>
-                                    <option value="date_range">Date Range</option>
-                                </select>
+                        <div id="shareLoading" style="text-align: center; padding: 2rem;">
+                            <p>Loading share link...</p>
+                        </div>
+
+                        <div id="shareContent" style="display: none;">
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Public Link:</label>
+                                <input type="text" id="shareUrl" class="form-control" readonly
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-family: monospace; font-size: 0.875rem;" />
                             </div>
 
-                            <div id="captureIdGroup" class="form-group" style="display: none;">
-                                <label>Capture ID</label>
-                                <input type="text" id="captureId" class="form-control" readonly />
-                            </div>
-
-                            <div id="dateRangeGroup" class="form-group" style="display: none;">
-                                <label>Start Date</label>
-                                <input type="datetime-local" id="startDate" class="form-control" />
-                                <label style="margin-top: 0.5rem;">End Date</label>
-                                <input type="datetime-local" id="endDate" class="form-control" />
-                            </div>
-
-                            <div class="form-group">
-                                <label>Expires In (days)</label>
-                                <input type="number" id="expiresInDays" class="form-control" value="7" min="1" max="365" />
-                                <small>Link will expire after this many days</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="enableMaxViews" onchange="shareManager.toggleMaxViews()" />
-                                    Limit number of views
-                                </label>
-                                <input type="number" id="maxViews" class="form-control" value="100" min="1" disabled style="margin-top: 0.5rem;" />
-                            </div>
-
-                            <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="shareManager.closeModal()">Cancel</button>
-                                <button type="button" class="btn btn-primary" onclick="shareManager.createShareLink()" id="createShareBtn">
-                                    Create Share Link
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <button class="btn btn-primary" onclick="shareManager.copyToClipboard()" style="flex: 1;">
+                                    Copy Link
+                                </button>
+                                <button class="btn btn-secondary" onclick="shareManager.openShareLink()" style="flex: 1;">
+                                    Open Link
+                                </button>
+                                <button class="btn btn-danger" onclick="shareManager.removeLink()" style="flex: 1;">
+                                    Remove Link
                                 </button>
                             </div>
-                        </form>
 
-                        <div id="shareResult" style="display: none; margin-top: 1.5rem;">
-                            <div style="padding: 1rem; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #0ea5e9;">
-                                <h3 style="margin: 0 0 1rem 0; font-size: 1rem;">Share Link Created!</h3>
-
-                                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                                    <input type="text" id="shareUrl" class="form-control" readonly style="flex: 1;" />
-                                    <button class="btn btn-primary" onclick="shareManager.copyToClipboard()">Copy</button>
-                                </div>
-
-                                <div style="text-align: center; margin-bottom: 1rem;">
-                                    <img id="shareQRCode" src="" alt="QR Code" style="max-width: 200px; border: 1px solid #ddd; border-radius: 8px;" />
-                                </div>
-
-                                <div style="display: flex; gap: 0.5rem;">
-                                    <button class="btn btn-secondary" onclick="shareManager.openShareLink()">Open Public Page</button>
-                                    <button class="btn btn-secondary" onclick="shareManager.downloadQRCode()">Download QR</button>
-                                </div>
+                            <div style="margin-top: 1rem; padding: 0.75rem; background: #f3f4f6; border-radius: 6px; font-size: 0.875rem; color: #6b7280;">
+                                <p style="margin: 0;"><strong>Note:</strong> This link is permanent and allows anyone to view all captures from this camera. Click "Remove Link" to revoke access.</p>
                             </div>
+                        </div>
+
+                        <div id="shareError" style="display: none; padding: 1rem; background: #fee2e2; border-radius: 6px; color: #991b1b;">
+                            <p id="shareErrorMessage" style="margin: 0;"></p>
                         </div>
                     </div>
                 </div>
@@ -113,120 +81,57 @@ class ShareManager {
     }
 
     /**
-     * Create QR code preview modal
-     */
-    createQRModal() {
-        const modalHTML = `
-            <div id="qrModal" class="modal" style="display: none;">
-                <div class="modal-content" style="max-width: 400px;">
-                    <div class="modal-header">
-                        <h2>QR Code</h2>
-                        <button class="modal-close" onclick="shareManager.closeQRModal()">&times;</button>
-                    </div>
-                    <div class="modal-body" style="text-align: center;">
-                        <img id="qrModalImage" src="" alt="QR Code" style="max-width: 100%; border: 1px solid #ddd; border-radius: 8px;" />
-                        <div style="margin-top: 1rem;">
-                            <button class="btn btn-primary" onclick="shareManager.downloadQRFromModal()">Download</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = modalHTML.trim();
-        document.body.appendChild(tempDiv.firstChild);
-        this.qrModal = document.getElementById('qrModal');
-    }
-
-    /**
      * Open share modal for device
      */
-    openShareModal(deviceId, captureId = null) {
+    async openShareModal(deviceId, deviceName = null) {
         this.currentDeviceId = deviceId;
-        this.currentCaptureId = captureId;
 
-        // Reset form
-        document.getElementById('shareForm').reset();
-        document.getElementById('shareResult').style.display = 'none';
-        document.getElementById('expiresInDays').value = 7;
+        // Update modal title
+        const title = deviceName ? `Share ${deviceName}` : 'Share Camera';
+        document.getElementById('shareModalTitle').textContent = title;
 
-        // Set capture ID if provided
-        if (captureId) {
-            document.getElementById('shareType').value = 'capture';
-            document.getElementById('captureId').value = captureId;
-            this.onShareTypeChange();
-        }
-
+        // Show modal with loading state
+        document.getElementById('shareLoading').style.display = 'block';
+        document.getElementById('shareContent').style.display = 'none';
+        document.getElementById('shareError').style.display = 'none';
         this.modal.style.display = 'flex';
+
+        // Check if share link already exists
+        await this.loadOrCreateShareLink();
     }
 
     /**
-     * Close share modal
+     * Load existing share link or create new one
      */
-    closeModal() {
-        if (this.modal) {
-            this.modal.style.display = 'none';
+    async loadOrCreateShareLink() {
+        try {
+            // First, try to get existing share links for this device
+            const existingLinks = await this.listShareLinks(this.currentDeviceId);
+
+            if (existingLinks.length > 0) {
+                // Use the first existing link
+                this.currentShareLink = existingLinks[0];
+                this.displayShareLink(this.currentShareLink);
+            } else {
+                // Create a new share link
+                await this.createShareLink();
+            }
+        } catch (error) {
+            this.showError('Failed to load share link: ' + error.message);
         }
     }
 
     /**
-     * Close QR modal
-     */
-    closeQRModal() {
-        if (this.qrModal) {
-            this.qrModal.style.display = 'none';
-        }
-    }
-
-    /**
-     * Handle share type change
-     */
-    onShareTypeChange() {
-        const shareType = document.getElementById('shareType').value;
-        const captureIdGroup = document.getElementById('captureIdGroup');
-        const dateRangeGroup = document.getElementById('dateRangeGroup');
-
-        captureIdGroup.style.display = shareType === 'capture' ? 'block' : 'none';
-        dateRangeGroup.style.display = shareType === 'date_range' ? 'block' : 'none';
-    }
-
-    /**
-     * Toggle max views input
-     */
-    toggleMaxViews() {
-        const enabled = document.getElementById('enableMaxViews').checked;
-        document.getElementById('maxViews').disabled = !enabled;
-    }
-
-    /**
-     * Create share link via API
+     * Create a new share link (simplified - always device type, permanent)
      */
     async createShareLink() {
-        const btn = document.getElementById('createShareBtn');
-        btn.disabled = true;
-        btn.textContent = 'Creating...';
-
         try {
-            const shareType = document.getElementById('shareType').value;
-            const expiresInDays = parseInt(document.getElementById('expiresInDays').value);
-            const enableMaxViews = document.getElementById('enableMaxViews').checked;
-            const maxViews = enableMaxViews ? parseInt(document.getElementById('maxViews').value) : null;
-
             const payload = {
                 device_id: this.currentDeviceId,
-                share_type: shareType,
-                expires_in_days: expiresInDays,
-                max_views: maxViews
+                share_type: 'device',  // Always share entire device
+                expires_in_days: 365,  // Permanent (1 year, can be longer)
+                max_views: null        // No view limit
             };
-
-            // Add type-specific fields
-            if (shareType === 'capture') {
-                payload.capture_id = this.currentCaptureId || document.getElementById('captureId').value;
-            } else if (shareType === 'date_range') {
-                payload.start_date = document.getElementById('startDate').value;
-                payload.end_date = document.getElementById('endDate').value;
-            }
 
             const response = await fetch(`/v1/devices/${this.currentDeviceId}/share`, {
                 method: 'POST',
@@ -243,40 +148,39 @@ class ShareManager {
             }
 
             const result = await response.json();
-            this.showShareResult(result);
+            this.currentShareLink = result;
+            this.displayShareLink(result);
 
         } catch (error) {
-            alert('Error creating share link: ' + error.message);
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Create Share Link';
+            this.showError('Failed to create share link: ' + error.message);
         }
     }
 
     /**
-     * Display share link result with QR code
+     * Display the share link in the modal
      */
-    async showShareResult(result) {
-        document.getElementById('shareUrl').value = result.share_url;
+    displayShareLink(shareLink) {
+        document.getElementById('shareUrl').value = shareLink.share_url;
+        document.getElementById('shareLoading').style.display = 'none';
+        document.getElementById('shareContent').style.display = 'block';
+    }
 
-        // Load QR code
-        try {
-            const qrResponse = await fetch(`/v1/share-links/${result.token}/qrcode`, {
-                headers: {
-                    'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`
-                }
-            });
+    /**
+     * Show error message
+     */
+    showError(message) {
+        document.getElementById('shareErrorMessage').textContent = message;
+        document.getElementById('shareLoading').style.display = 'none';
+        document.getElementById('shareError').style.display = 'block';
+    }
 
-            if (qrResponse.ok) {
-                const blob = await qrResponse.blob();
-                const qrUrl = URL.createObjectURL(blob);
-                document.getElementById('shareQRCode').src = qrUrl;
-            }
-        } catch (error) {
-            console.error('Error loading QR code:', error);
+    /**
+     * Close share modal
+     */
+    closeModal() {
+        if (this.modal) {
+            this.modal.style.display = 'none';
         }
-
-        document.getElementById('shareResult').style.display = 'block';
     }
 
     /**
@@ -306,36 +210,44 @@ class ShareManager {
     }
 
     /**
-     * Download QR code image
+     * Remove/revoke the share link
      */
-    downloadQRCode() {
-        const img = document.getElementById('shareQRCode');
-        const link = document.createElement('a');
-        link.href = img.src;
-        link.download = 'share-qr-code.png';
-        link.click();
-    }
+    async removeLink() {
+        if (!confirm('Are you sure you want to remove this share link? The link will no longer work and you will need to create a new one to share again.')) {
+            return;
+        }
 
-    /**
-     * Download QR code from modal
-     */
-    downloadQRFromModal() {
-        const img = document.getElementById('qrModalImage');
-        const link = document.createElement('a');
-        link.href = img.src;
-        link.download = 'share-qr-code.png';
-        link.click();
-    }
+        if (!this.currentShareLink) {
+            alert('No share link to remove');
+            return;
+        }
 
-    /**
-     * List all share links for current organization
-     */
-    async listShareLinks(deviceId = null) {
         try {
-            let url = '/v1/share-links';
-            if (deviceId) {
-                url += `?device_id=${deviceId}`;
+            const response = await fetch(`/v1/share-links/${this.currentShareLink.token}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to remove share link');
             }
+
+            alert('Share link has been removed successfully!');
+            this.closeModal();
+
+        } catch (error) {
+            alert('Error removing share link: ' + error.message);
+        }
+    }
+
+    /**
+     * List all share links for a device (used internally)
+     */
+    async listShareLinks(deviceId) {
+        try {
+            const url = `/v1/share-links?device_id=${deviceId}`;
 
             const response = await fetch(url, {
                 headers: {
@@ -353,59 +265,6 @@ class ShareManager {
         } catch (error) {
             console.error('Error listing share links:', error);
             return [];
-        }
-    }
-
-    /**
-     * Revoke a share link
-     */
-    async revokeShareLink(token) {
-        if (!confirm('Are you sure you want to revoke this share link? It will no longer be accessible.')) {
-            return false;
-        }
-
-        try {
-            const response = await fetch(`/v1/share-links/${token}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to revoke share link');
-            }
-
-            return true;
-
-        } catch (error) {
-            alert('Error revoking share link: ' + error.message);
-            return false;
-        }
-    }
-
-    /**
-     * Show QR code in modal
-     */
-    async showQRCode(token) {
-        try {
-            const response = await fetch(`/v1/share-links/${token}/qrcode`, {
-                headers: {
-                    'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to load QR code');
-            }
-
-            const blob = await response.blob();
-            const qrUrl = URL.createObjectURL(blob);
-            document.getElementById('qrModalImage').src = qrUrl;
-            this.qrModal.style.display = 'flex';
-
-        } catch (error) {
-            alert('Error loading QR code: ' + error.message);
         }
     }
 }
