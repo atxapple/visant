@@ -4,11 +4,11 @@ Laptop Camera Test - Device ID Authentication
 Tests the device registration and upload flow using your laptop webcam.
 
 Requirements:
-1. Start test server: .venv\Scripts\python test_auth_server.py
+1. Start test server: .venv/Scripts/python test_auth_server.py
 2. Login to dashboard: http://localhost:8000
 3. Activate a device (e.g., TEST2) with code "DEV2025"
 4. Update DEVICE_ID below to match your activated device
-5. Run this script: .venv\Scripts\python laptop_camera_test.py
+5. Run this script: .venv/Scripts/python laptop_camera_test.py
 
 No API key needed - device authentication is by device_id only!
 """
@@ -16,7 +16,7 @@ No API key needed - device authentication is by device_id only!
 import requests
 import base64
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 import cv2
 import sys
 
@@ -82,7 +82,7 @@ def upload_capture(device_id, image_base64):
         f"{API_URL}/v1/captures",
         json={
             "device_id": device_id,
-            "captured_at": datetime.utcnow().isoformat() + "Z",
+            "captured_at": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
             "image_base64": image_base64,
             "trigger_label": "laptop_webcam_test",
             "metadata": {
