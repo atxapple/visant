@@ -681,6 +681,9 @@
             <a href="/ui/settings" style="color: #2563eb; text-decoration: none; font-weight: 600; padding: 0.6rem 1.2rem; border-radius: 8px; background: #eff6ff; transition: background 0.2s;">
                 Settings
             </a>
+            <button onclick="handleLogout()" style="padding: 0.6rem 1.2rem; border-radius: 8px; background: transparent; border: 1px solid #dc2626; color: #dc2626; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+                Logout
+            </button>
             <button class="btn-add-device" onclick="deviceWizard.openModal()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -868,6 +871,11 @@
         let captureWebSocket = null;
         let captureEventDeviceId = null;
         let captureRefreshTimer = null;
+
+        // Logout function
+        function handleLogout() {
+            auth.logout();
+        }
         const CAPTURE_REFRESH_DEBOUNCE_MS = 300;
         let suppressPreferenceSave = false;
         let preferenceSaveTimer = null;
