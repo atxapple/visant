@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Settings - Visant</title>
+    <link rel="icon" type="image/png" href="/ui/static/favicon.png" />
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0 1.5rem 2rem 1.5rem;
+            background: #f6f8fa;
+            color: #101820;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem 0;
+        }
+        h1 {
+            margin: 0;
+            font-size: 1.75rem;
+        }
+        h2 {
+            margin: 0 0 1rem 0;
+            font-size: 1.25rem;
+        }
+        main {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-width: 800px;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #6b7280;
+        }
+        .info-value {
+            color: #101820;
+            font-family: monospace;
+        }
+        button {
+            align-self: flex-start;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            border: none;
+            background: #2563eb;
+            color: #ffffff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-danger {
+            background: #dc2626;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Settings</h1>
+        <div style="display: flex; gap: 0.5rem;">
+            <button onclick="window.location.href='/ui/'">Back to Dashboard</button>
+        </div>
+    </header>
+
+    <main>
+        <div class="card">
+            <h2>User Information</h2>
+            <div class="info-row">
+                <span class="info-label">Email</span>
+                <span class="info-value" id="userEmail">Loading...</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">User ID</span>
+                <span class="info-value" id="userId">Loading...</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Joined</span>
+                <span class="info-value" id="userJoined">Loading...</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Organization</h2>
+            <div class="info-row">
+                <span class="info-label">Organization Name</span>
+                <span class="info-value" id="orgName">Loading...</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Organization ID</span>
+                <span class="info-value" id="orgId">Loading...</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Plan</span>
+                <span class="info-value" id="orgPlan">Free</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Account Actions</h2>
+            <div style="display: flex; gap: 0.75rem;">
+                <button onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/auth.js"></script>
+    <script>
+        async function loadUserInfo() {
+            try {
+                const response = await fetch('/v1/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`
+                    }
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('userEmail').textContent = user.email || 'N/A';
+                    document.getElementById('userId').textContent = user.user_id || 'N/A';
+                    document.getElementById('userJoined').textContent = user.created_at
+                        ? new Date(user.created_at).toLocaleDateString()
+                        : 'N/A';
+                    document.getElementById('orgName').textContent = user.org_name || 'Default Organization';
+                    document.getElementById('orgId').textContent = user.org_id || 'N/A';
+                } else {
+                    showError();
+                }
+            } catch (error) {
+                console.error('Error loading user info:', error);
+                showError();
+            }
+        }
+
+        function showError() {
+            document.getElementById('userEmail').textContent = 'Error loading';
+            document.getElementById('userId').textContent = 'Error loading';
+            document.getElementById('userJoined').textContent = 'Error loading';
+            document.getElementById('orgName').textContent = 'Error loading';
+            document.getElementById('orgId').textContent = 'Error loading';
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                sessionStorage.clear();
+                window.location.href = '/ui/login';
+            }
+        }
+
+        // Load user info on page load
+        loadUserInfo();
+    </script>
+</body>
+</html>
