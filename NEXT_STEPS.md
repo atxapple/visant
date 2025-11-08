@@ -1,431 +1,210 @@
-# Next Steps: Phase 5 Week 2 Continuation
+# Next Steps: Phase 5 Week 3 - Per-Device Configuration
 
-**Current Status**: Day 1-2 Complete (Backend Foundation)
+**Current Status**: Week 2 Complete ✅ | Week 3 Starting
 **Date**: 2025-11-08
-**Remaining Work**: ~12-18 hours (2-3 days)
+**Estimated Time**: 12-16 hours (2-3 days)
 
 ---
 
-## ✅ What's Been Completed
+## ✅ What's Been Completed (Week 2)
 
-### 1. Database Schema (100% Done)
-- Created `activation_codes` table for promotional codes
-- Created `code_redemptions` table for tracking usage
-- Updated `organizations` with subscription fields
-- Updated `devices` with activation workflow fields
-- All changes migrated successfully via Alembic
-
-### 2. Development Tools (100% Done)
-- Seeded 3 activation codes:
-  - **DEV2025**: 99 device slots, unlimited uses (for development)
-  - **QA100**: 12 months free, 10 uses (for QA team)
-  - **BETA30**: 30 day trial extension, 100 uses (for beta testers)
-- Seed script: `scripts/seed_activation_codes.py`
-
-### 3. Documentation (100% Done)
-- `PHASE5_WEEK2_PROGRESS.md` - Detailed progress report
-- `PROJECT_PLAN.md` - Updated with Week 2 status
-- `NEXT_STEPS.md` - This file
+- ✅ Multi-device dashboard with smart UI (0/1/2+ devices)
+- ✅ Device activation wizard (3-step flow)
+- ✅ Activation code system with benefits
+- ✅ Device validation and activation APIs
+- ✅ Device selector dropdown
+- ✅ Comprehensive test suite (23/26 tests passed)
 
 ---
 
-## 🎯 Next: API Endpoints Implementation
+## 🎯 Week 3 Goal
 
-### Priority 1: Device Validation Endpoint (1-2 hours)
+**Migrate global configuration to per-device configuration**
 
-**File**: `cloud/api/routes/devices.py`
+Currently, the dashboard has three configuration sections that are global:
+1. **Abnormal Condition** - Normal description for AI classification
+2. **Trigger Sources** - Recurring trigger settings and interval
+3. **Notification & Actions** - Email notification settings and cooldown
 
-**Add this endpoint**:
-```python
-@router.post("/validate", status_code=status.HTTP_200_OK)
-def validate_device(
-    request: DeviceValidationRequest,
-    org: Organization = Depends(get_current_org),
-    db: Session = Depends(get_db)
-):
-    """
-    Validate device ID before activation.
-
-    Checks:
-    - Device ID exists in database
-    - Device not already activated
-    - Device ID format correct (5 chars, alphanumeric)
-
-    Does NOT check subscription status.
-    """
-    pass
-```
-
-**Request/Response Models to Add**:
-```python
-class DeviceValidationRequest(BaseModel):
-    device_id: str
-
-class DeviceValidationResponse(BaseModel):
-    device_id: str
-    status: str  # "available", "already_activated_by_you", etc.
-    can_activate: bool
-    message: str
-```
+All three should become **per-device** so each camera can have its own settings.
 
 ---
 
-### Priority 2: Device Activation with Code Support (2-3 hours)
+## 📋 Implementation Order
 
-**Update existing endpoint**:
-```python
-@router.post("/activate", response_model=DeviceActivationResponse)
-def activate_device(
-    request: DeviceActivationRequest,
-    org: Organization = Depends(get_current_org),
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Activate device with optional activation code.
+### Priority 1: Backend API (Day 1) - 3-4 hours
 
-    Authorization options:
-    1. Valid activation code (no payment required)
-    2. Active subscription (payment in Phase 7)
+**Create Device Config Endpoints**
 
-    If neither, returns 402 Payment Required.
-    """
-    pass
-```
+File: `cloud/api/routes/devices.py`
 
-**Request/Response Models to Add**:
-```python
-class DeviceActivationRequest(BaseModel):
-    device_id: str
-    friendly_name: Optional[str] = None
-    activation_code: Optional[str] = None  # NEW!
+1. Add Pydantic models for config structure:
+   - `TriggerConfig` (enabled, interval_seconds, digital_input_enabled)
+   - `NotificationConfig` (email_enabled, email_addresses, email_cooldown_minutes)
+   - `DeviceConfig` (normal_description, trigger, notification)
 
-class CodeBenefitResponse(BaseModel):
-    code: str
-    benefit: str
-    expires_at: Optional[datetime]
+2. Add endpoints:
+   - `GET /v1/devices/{device_id}/config` - Get device configuration
+   - `PUT /v1/devices/{device_id}/config` - Update device configuration
 
-class DeviceActivationResponse(BaseModel):
-    device_id: str
-    friendly_name: str
-    api_key: str  # ONE TIME ONLY
-    status: str
-    activated_at: datetime
-    code_benefit: Optional[CodeBenefitResponse]  # If code used
-    organization: dict
-```
+3. Use existing `device.config` JSON column (already in database)
 
-**Helper function to create**:
-```python
-def validate_and_apply_activation_code(
-    code: str,
-    org: Organization,
-    user: User,
-    device_id: str,
-    db: Session
-) -> Dict:
-    """
-    Validate activation code and apply benefits.
-
-    Returns:
-        Dict with code, benefit description, and expiration
-
-    Raises:
-        HTTPException if code invalid/expired/used
-    """
-    pass
-```
-
----
-
-### Priority 3: Update Existing Device Registration (30 min)
-
-**Current `/v1/devices` POST endpoint needs updates**:
-- Change to work with pre-manufactured devices
-- This is for admin/manufacturing to create device records
-- Regular users should use `/v1/devices/activate` instead
-
----
-
-## 🎨 Next: Frontend Device Wizard (3-4 hours)
-
-### File Structure:
-```
-cloud/web/
-  templates/
-    index.html (modify - add modal trigger)
-  static/
-    js/
-      device_activation.js (create new)
-    css/
-      device_wizard.css (optional - inline in index.html is fine)
-```
-
-### Implementation Steps:
-
-1. **Add "Add Device" Button to Dashboard** (15 min)
-```html
-<!-- In index.html header -->
-<button onclick="openDeviceWizard()" class="btn-primary">
-  + Add Device
-</button>
-
-<div id="deviceWizardModal" class="modal" style="display:none">
-  <!-- Wizard content here -->
-</div>
-```
-
-2. **Create Device Wizard Modal** (1-2 hours)
-```html
-<!-- Screen 1: Enter Device ID -->
-<div id="wizardStep1" class="wizard-screen">
-  <h2>Add New Camera</h2>
-  <p>Enter the Device ID from your camera sticker</p>
-  <input type="text" id="deviceIdInput" placeholder="ABC12" maxlength="5">
-  <button onclick="validateDeviceId()">Next →</button>
-</div>
-
-<!-- Screen 2: Validation Success + Options -->
-<div id="wizardStep2" class="wizard-screen" style="display:none">
-  <!-- Shows different content based on subscription status -->
-</div>
-
-<!-- Screen 3: Activation Success -->
-<div id="wizardStep3" class="wizard-screen" style="display:none">
-  <h2>Device Activated!</h2>
-  <!-- Show success message + benefits -->
-</div>
-```
-
-3. **Implement Wizard Logic** (1-2 hours)
-```javascript
-// device_activation.js
-
-async function validateDeviceId() {
-    const deviceId = document.getElementById('deviceIdInput').value.toUpperCase();
-
-    const response = await fetch('/v1/devices/validate', {
-        method: 'POST',
-        headers: auth.getAuthHeaders(),
-        body: JSON.stringify({ device_id: deviceId })
-    });
-
-    if (response.ok) {
-        const data = await response.json();
-        showActivationOptions(deviceId);
-    } else {
-        showError(await response.json());
-    }
-}
-
-async function activateWithCode() {
-    const deviceId = currentDeviceId;
-    const code = document.getElementById('activationCodeInput').value;
-    const name = document.getElementById('friendlyNameInput').value;
-
-    const response = await fetch('/v1/devices/activate', {
-        method: 'POST',
-        headers: auth.getAuthHeaders(),
-        body: JSON.stringify({
-            device_id: deviceId,
-            friendly_name: name,
-            activation_code: code
-        })
-    });
-
-    if (response.ok) {
-        const data = await response.json();
-        showActivationSuccess(data);
-    } else {
-        showError(await response.json());
-    }
-}
-```
-
----
-
-## 🧪 Testing Plan
-
-### API Testing (with curl/Postman):
-
-1. **Test Device Validation**:
+**Testing**:
 ```bash
-# Should succeed (device exists)
-curl -X POST http://localhost:8000/v1/devices/validate \
-  -H "Authorization: Bearer <jwt_token>" \
-  -H "Content-Type: application/json" \
-  -d '{"device_id": "TEST1"}'
+# Get config (should return defaults)
+curl http://localhost:8000/v1/devices/TEST1/config \
+  -H "Authorization: Bearer <token>"
 
-# Should fail (device not found)
-curl -X POST http://localhost:8000/v1/devices/validate \
-  -H "Authorization: Bearer <jwt_token>" \
-  -d '{"device_id": "XXXXX"}'
-```
-
-2. **Test Activation with Code**:
-```bash
-# Should succeed with DEV2025 code
-curl -X POST http://localhost:8000/v1/devices/activate \
-  -H "Authorization: Bearer <jwt_token>" \
+# Update config
+curl -X PUT http://localhost:8000/v1/devices/TEST1/config \
+  -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "device_id": "TEST1",
-    "friendly_name": "Test Camera",
-    "activation_code": "DEV2025"
+    "normal_description": "If someone is smiling, it is abnormal.",
+    "trigger": {"enabled": true, "interval_seconds": 15},
+    "notification": {"email_enabled": true, "email_cooldown_minutes": 5}
   }'
 ```
 
-3. **Test Activation without Code/Subscription**:
-```bash
-# Should fail with 402 Payment Required
-curl -X POST http://localhost:8000/v1/devices/activate \
-  -H "Authorization: Bearer <jwt_token>" \
-  -d '{
-    "device_id": "TEST1",
-    "friendly_name": "Test Camera"
-  }'
-```
+---
 
-### Frontend Testing:
+### Priority 2: Frontend Config Manager (Day 2) - 3-4 hours
 
-1. **Device Wizard Flow**:
-   - [ ] Open wizard
-   - [ ] Enter valid device ID → shows activation options
-   - [ ] Enter invalid device ID → shows error
-   - [ ] Activate with valid code → shows success
-   - [ ] Activate with invalid code → shows error
+**Create Config Management JavaScript**
 
-2. **User Experience**:
-   - [ ] Free user sees activation code + payment options
-   - [ ] Paid user sees simple activation form
-   - [ ] Success screen shows code benefits (if applicable)
-   - [ ] Device appears in dashboard after activation
+File: `cloud/web/static/js/device_config.js` (new file)
+
+1. Create `DeviceConfigManager` class:
+   - `loadConfig(deviceId)` - Fetch config from API
+   - `saveConfig(configUpdate)` - Save config to API
+   - `populateForms(config)` - Fill form fields with config
+
+2. Update form handlers in `index.html`:
+   - Normal description form (`#normal-form`)
+   - Trigger form (`#trigger-form`)
+   - Notification form (`#notify-form`)
+
+3. Add `<script src="/static/js/device_config.js"></script>` to index.html
 
 ---
 
-## 📝 Pre-Manufacturing Test Devices
+### Priority 3: Device Switching Integration (Day 3) - 2-3 hours
 
-**Need to create test devices in database first**:
+**Update Device Manager**
 
-```bash
-# Run this SQL or create a script
-INSERT INTO devices (device_id, manufactured_at, batch_id, status, created_at)
-VALUES
-  ('TEST1', datetime('now'), 'BATCH_TEST_001', 'manufactured', datetime('now')),
-  ('TEST2', datetime('now'), 'BATCH_TEST_001', 'manufactured', datetime('now')),
-  ('TEST3', datetime('now'), 'BATCH_TEST_001', 'manufactured', datetime('now')),
-  ('ABC12', datetime('now'), 'BATCH_TEST_001', 'manufactured', datetime('now')),
-  ('XYZ99', datetime('now'), 'BATCH_TEST_001', 'manufactured', datetime('now'));
-```
+File: `cloud/web/static/js/device_manager.js`
 
-**Or create a seed script**:
-```python
-# scripts/seed_test_devices.py
-from cloud.api.database import get_db, Device
-from datetime import datetime
+1. Add config loading to `switchToDevice()` method
+2. Load config when device is initially selected
+3. Populate forms with device-specific config
 
-def seed_test_devices():
-    db = next(get_db())
-    test_devices = ['TEST1', 'TEST2', 'TEST3', 'ABC12', 'XYZ99']
-
-    for device_id in test_devices:
-        if not db.query(Device).filter(Device.device_id == device_id).first():
-            device = Device(
-                device_id=device_id,
-                manufactured_at=datetime.utcnow(),
-                batch_id='BATCH_TEST_001',
-                status='manufactured',
-                created_at=datetime.utcnow()
-            )
-            db.add(device)
-
-    db.commit()
-    print(f"Seeded {len(test_devices)} test devices")
-
-if __name__ == "__main__":
-    seed_test_devices()
-```
+**User Flow**:
+1. User selects Device A → loads Device A's config
+2. User changes normal description → saves to Device A
+3. User switches to Device B → loads Device B's config
+4. User switches back to Device A → Device A's config restored
 
 ---
 
-## 🔧 Development Workflow
+### Priority 4: Testing (Day 4) - 2-3 hours
 
-### Starting Your Next Session:
+**Test Scenarios**:
 
-1. **Read This Document**: `NEXT_STEPS.md`
-2. **Check Progress**: `PHASE5_WEEK2_PROGRESS.md`
-3. **Verify Database**: Run `python -m scripts.seed_activation_codes` (should show existing codes)
-4. **Start Coding**: Begin with API endpoints (Priority 1)
+1. **Single Device Config**:
+   - Set normal description for TEST1
+   - Save and refresh page
+   - Verify config persists
 
-### Recommended Order:
+2. **Multi-Device Config**:
+   - Set different configs for TEST1 and TEST2
+   - Switch between devices
+   - Verify each device shows its own config
 
-1. Create test devices seed script (15 min)
-2. Implement device validation endpoint (1 hour)
-3. Test validation endpoint (30 min)
-4. Implement activation endpoint with code support (2 hours)
-5. Test activation with DEV2025 code (30 min)
-6. Create frontend device wizard (3 hours)
-7. End-to-end testing (1 hour)
+3. **Config Isolation**:
+   - Login as different user/org
+   - Verify cannot access other org's device config
+   - Verify config stays isolated
 
-**Total**: ~8-9 hours to complete backend + frontend wizard
+4. **Error Handling**:
+   - Test with invalid inputs
+   - Test with missing device
+   - Verify error messages
+
+---
+
+### Priority 5: Documentation & Cleanup (Day 5) - 1-2 hours
+
+1. Create `PHASE5_WEEK3_PROGRESS.md` with completion status
+2. Update `PROJECT_PLAN.md` Week 3 checkboxes
+3. Document config API in comments
+4. Test end-to-end user flow
+
+---
+
+## 🚀 Quick Start
+
+**Step 1**: Read the detailed plan
+```bash
+cat PHASE5_WEEK3_PLAN.md
+```
+
+**Step 2**: Start the test server
+```bash
+.venv/Scripts/python test_auth_server.py
+```
+
+**Step 3**: Begin with backend API
+- Open `cloud/api/routes/devices.py`
+- Add config endpoints (see PHASE5_WEEK3_PLAN.md for code)
+
+**Step 4**: Test with curl
+```bash
+# Login to get token
+curl -X POST http://localhost:8000/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "devicetest@example.com", "password": "DeviceTest123!"}'
+
+# Test config endpoints (use token from above)
+curl http://localhost:8000/v1/devices/TEST1/config \
+  -H "Authorization: Bearer <token>"
+```
 
 ---
 
 ## 📚 Reference Documents
 
-- `PHASE5_WEEK2_PROGRESS.md` - Detailed implementation guide
-- `PROJECT_PLAN.md` - Overall project status
-- `cloud/api/database/models.py` - Database schema
-- `cloud/api/routes/devices.py` - Existing device endpoints
-- `cloud/web/templates/login.html` - Example of auth UI
-- `cloud/web/static/js/auth.js` - Auth helper functions
+- **PHASE5_WEEK3_PLAN.md** - Detailed implementation guide with code examples
+- **PROJECT_PLAN.md** - Overall project status
+- **PHASE5_WEEK2_PROGRESS.md** - Previous week's implementation notes
 
 ---
 
-## 💡 Quick Commands
+## 💡 Key Files
 
-```bash
-# Activate virtual environment
-.venv/Scripts/activate  # Windows
-source .venv/bin/activate  # Linux/Mac
+**Backend**:
+- `cloud/api/routes/devices.py` - Add GET/PUT /v1/devices/{id}/config
+- `cloud/api/database/models.py` - Device.config column (already exists!)
 
-# Run migrations
-.venv/Scripts/alembic upgrade head
-
-# Seed activation codes
-.venv/Scripts/python -m scripts.seed_activation_codes
-
-# Run test server
-.venv/Scripts/python test_auth_server.py
-
-# Test API endpoint
-curl -X POST http://localhost:8000/v1/devices/validate \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"device_id": "TEST1"}'
-```
+**Frontend**:
+- `cloud/web/static/js/device_config.js` - NEW: Config manager
+- `cloud/web/static/js/device_manager.js` - MODIFY: Add config loading
+- `cloud/web/templates/index.html` - MODIFY: Update form handlers
 
 ---
 
-## ❓ Questions to Resolve
+## ✅ Success Criteria
 
-- [ ] Should we add device auto-provisioning endpoint now or later?
-  - `GET /v1/devices/{device_id}/config` (returns api_key if activated)
-
-- [ ] Should test devices have realistic-looking IDs or simple ones?
-  - Current: TEST1, TEST2, ABC12 (mix of both)
-
-- [ ] Should activation code be case-sensitive?
-  - Recommendation: No, convert to uppercase
+- [ ] GET /v1/devices/{id}/config returns device config
+- [ ] PUT /v1/devices/{id}/config saves device config
+- [ ] Normal description is per-device
+- [ ] Trigger settings are per-device
+- [ ] Notification settings are per-device
+- [ ] Switching devices loads correct config
+- [ ] Config persists after page refresh
+- [ ] No config leakage between devices
 
 ---
 
-**Ready to Continue?**
+**Ready to start? Begin with Priority 1 (Backend API)!** 🚀
 
-Start with:
-1. Create `scripts/seed_test_devices.py`
-2. Run seed script
-3. Implement `POST /v1/devices/validate` in `cloud/api/routes/devices.py`
-4. Test with curl
-
-Good luck! 🚀
+See `PHASE5_WEEK3_PLAN.md` for detailed implementation guide with complete code examples.

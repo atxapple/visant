@@ -5,6 +5,7 @@ from typing import List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from cloud.api.database import get_db, Device, Organization, User
 from cloud.api.database.models import ActivationCode, CodeRedemption
@@ -78,6 +79,36 @@ class DeviceActivationResponse(BaseModel):
     activated_at: datetime
     code_benefit: Optional[CodeBenefitResponse] = None
     organization: dict
+
+
+# Device Configuration Models
+class TriggerConfig(BaseModel):
+    """Trigger configuration for device."""
+    enabled: bool = False
+    interval_seconds: int = 10
+    digital_input_enabled: bool = False
+
+
+class NotificationConfig(BaseModel):
+    """Notification configuration for device."""
+    email_enabled: bool = True
+    email_addresses: List[str] = []
+    email_cooldown_minutes: int = 10
+    digital_output_enabled: bool = False
+
+
+class DeviceConfig(BaseModel):
+    """Complete device configuration."""
+    normal_description: Optional[str] = None
+    trigger: Optional[TriggerConfig] = None
+    notification: Optional[NotificationConfig] = None
+
+
+class DeviceConfigResponse(BaseModel):
+    """Response for device config endpoints."""
+    device_id: str
+    config: dict  # Will contain DeviceConfig data as dict
+    last_updated: Optional[str] = None
 
 
 @router.post("", response_model=DeviceCreateResponse, status_code=status.HTTP_201_CREATED)
@@ -477,6 +508,117 @@ def list_devices(
             for d in devices
         ],
         "total": len(devices)
+    }
+
+
+# Device Configuration Endpoints (MUST be before wildcard routes)
+@router.get("/{device_id}/config", response_model=DeviceConfigResponse)
+def get_device_config(
+    device_id: str,
+    org: Organization = Depends(get_current_org),
+    db: Session = Depends(get_db)
+):
+    """
+    Get device configuration.
+
+    Returns the device's complete config including:
+    - normal_description: AI classification reference
+    - trigger: Recurring trigger settings
+    - notification: Email notification settings
+
+    If no config has been saved, returns default values.
+    """
+    device = db.query(Device).filter(
+        Device.device_id == device_id,
+        Device.org_id == org.id,
+        Device.status == "active"
+    ).first()
+
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+
+    # Return config (defaults to empty dict if not set)
+    config = device.config or {}
+
+    # Ensure config has default structure
+    if "trigger" not in config:
+        config["trigger"] = {"enabled": False, "interval_seconds": 10, "digital_input_enabled": False}
+    if "notification" not in config:
+        config["notification"] = {"email_enabled": True, "email_addresses": [], "email_cooldown_minutes": 10, "digital_output_enabled": False}
+
+    return {
+        "device_id": device.device_id,
+        "config": config,
+        "last_updated": None  # TODO: Add updated_at field to Device model for config tracking
+    }
+
+
+@router.put("/{device_id}/config", response_model=DeviceConfigResponse)
+def update_device_config(
+    device_id: str,
+    config: DeviceConfig,
+    org: Organization = Depends(get_current_org),
+    db: Session = Depends(get_db)
+):
+    """
+    Update device configuration.
+
+    Accepts partial updates - only provided fields will be updated.
+    Existing config is merged with new values.
+
+    Examples:
+    - Update only normal description: {"normal_description": "..."}
+    - Update only trigger: {"trigger": {"enabled": true, "interval_seconds": 15}}
+    - Update multiple: {"normal_description": "...", "trigger": {...}, "notification": {...}}
+    """
+    device = db.query(Device).filter(
+        Device.device_id == device_id,
+        Device.org_id == org.id,
+        Device.status == "active"
+    ).first()
+
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+
+    # Get current config or initialize empty dict
+    current_config = device.config or {}
+
+    # Update config with new values (only fields that were provided)
+    config_update = config.dict(exclude_unset=True)
+
+    # Merge top-level fields
+    if "normal_description" in config_update:
+        current_config["normal_description"] = config_update["normal_description"]
+
+    # Merge trigger config
+    if "trigger" in config_update and config_update["trigger"] is not None:
+        if "trigger" not in current_config:
+            current_config["trigger"] = {}
+        current_config["trigger"].update(config_update["trigger"])
+
+    # Merge notification config
+    if "notification" in config_update and config_update["notification"] is not None:
+        if "notification" not in current_config:
+            current_config["notification"] = {}
+        current_config["notification"].update(config_update["notification"])
+
+    # Save updated config
+    device.config = current_config
+    flag_modified(device, 'config')  # Mark JSON column as modified for SQLAlchemy
+
+    db.commit()
+    db.refresh(device)
+
+    return {
+        "device_id": device.device_id,
+        "config": device.config,
+        "last_updated": None  # TODO: Add updated_at field to Device model for config tracking
     }
 
 

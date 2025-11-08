@@ -57,8 +57,17 @@ class DeviceManager {
     /**
      * Set selected device
      */
-    selectDevice(deviceId) {
+    async selectDevice(deviceId) {
         this.selectedDeviceId = deviceId;
+
+        // Load config for this device
+        if (typeof deviceConfigManager !== 'undefined') {
+            const config = await deviceConfigManager.loadConfig(deviceId);
+            if (config) {
+                deviceConfigManager.populateForms(config);
+            }
+        }
+
         if (this.onDeviceChange) {
             this.onDeviceChange(deviceId);
         }
