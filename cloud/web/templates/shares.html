@@ -169,7 +169,7 @@
             try {
                 const response = await fetch('/v1/devices', {
                     headers: {
-                        'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`
+                        'Authorization': `Bearer ${sessionStorage.getItem('visant_access_token')}`
                     }
                 });
 
@@ -254,7 +254,7 @@
                 const response = await fetch(`/v1/share-links/${token}`, {
                     method: 'DELETE',
                     headers: {
-                        'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`
+                        'Authorization': `Bearer ${sessionStorage.getItem('visant_access_token')}`
                     }
                 });
 

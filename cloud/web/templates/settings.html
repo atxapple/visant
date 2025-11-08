@@ -140,7 +140,7 @@
             try {
                 const response = await fetch('/v1/auth/me', {
                     headers: {
-                        'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`
+                        'Authorization': `Bearer ${sessionStorage.getItem('visant_access_token')}`
                     }
                 });
 
