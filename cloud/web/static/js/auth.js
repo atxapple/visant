@@ -13,7 +13,6 @@ class AuthManager {
         // sessionStorage keys
         this.TOKEN_KEY = 'visant_access_token';
         this.USER_KEY = 'visant_user';
-        this.ORG_KEY = 'visant_organization';
 
         // API base URL (can be overridden for production)
         this.API_URL = window.location.origin;
@@ -45,7 +44,6 @@ class AuthManager {
             // Store tokens and user data in sessionStorage
             sessionStorage.setItem(this.TOKEN_KEY, data.access_token);
             sessionStorage.setItem(this.USER_KEY, JSON.stringify(data.user));
-            sessionStorage.setItem(this.ORG_KEY, JSON.stringify(data.organization));
 
             return data;
         } catch (error) {
@@ -55,13 +53,12 @@ class AuthManager {
     }
 
     /**
-     * Sign up new user with organization
+     * Sign up new user (organization auto-created)
      * @param {string} email - User email
      * @param {string} password - User password
-     * @param {string} orgName - Organization name
-     * @returns {Promise<Object>} User data with organization info
+     * @returns {Promise<Object>} User data
      */
-    async signup(email, password, orgName) {
+    async signup(email, password) {
         try {
             const response = await fetch(`${this.API_URL}/v1/auth/signup`, {
                 method: 'POST',
@@ -70,8 +67,7 @@ class AuthManager {
                 },
                 body: JSON.stringify({
                     email,
-                    password,
-                    org_name: orgName
+                    password
                 })
             });
 
@@ -85,7 +81,6 @@ class AuthManager {
             // Auto-login: store tokens and user data
             sessionStorage.setItem(this.TOKEN_KEY, data.access_token);
             sessionStorage.setItem(this.USER_KEY, JSON.stringify(data.user));
-            sessionStorage.setItem(this.ORG_KEY, JSON.stringify(data.organization));
 
             return data;
         } catch (error) {
@@ -109,15 +104,6 @@ class AuthManager {
     getUser() {
         const userData = sessionStorage.getItem(this.USER_KEY);
         return userData ? JSON.parse(userData) : null;
-    }
-
-    /**
-     * Get current organization data
-     * @returns {Object|null} Organization object or null if not authenticated
-     */
-    getOrganization() {
-        const orgData = sessionStorage.getItem(this.ORG_KEY);
-        return orgData ? JSON.parse(orgData) : null;
     }
 
     /**
@@ -172,9 +158,12 @@ class AuthManager {
 
             const data = await response.json();
 
-            // Update stored user data
-            sessionStorage.setItem(this.USER_KEY, JSON.stringify(data.user));
-            sessionStorage.setItem(this.ORG_KEY, JSON.stringify(data.organization));
+            // Update stored user data (organization info available in response if needed)
+            sessionStorage.setItem(this.USER_KEY, JSON.stringify({
+                id: data.id,
+                email: data.email,
+                role: data.role
+            }));
 
             return data;
         } catch (error) {

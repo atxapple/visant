@@ -685,7 +685,6 @@
                 <div style="font-size: 0.875rem; color: #6b7280;">
                     <strong id="userEmail" style="color: #101820;"></strong>
                 </div>
-                <div style="font-size: 0.75rem; color: #9ca3af;" id="orgName"></div>
             </div>
             <button onclick="handleLogout()" style="padding: 0.6rem 1.2rem; border-radius: 8px; background: transparent; border: 1px solid #dc2626; color: #dc2626; font-weight: 600; cursor: pointer; transition: background 0.2s;">
                 Logout
@@ -887,11 +886,9 @@
         function loadUserInfo() {
             if (auth.isAuthenticated()) {
                 const user = auth.getUser();
-                const org = auth.getOrganization();
 
-                if (user && org) {
+                if (user) {
                     document.getElementById('userEmail').textContent = user.email || 'User';
-                    document.getElementById('orgName').textContent = org.name || 'Organization';
                     document.getElementById('userInfo').style.display = 'block';
                 }
             }

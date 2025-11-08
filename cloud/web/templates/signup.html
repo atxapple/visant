@@ -243,19 +243,6 @@
 
         <form id="signupForm">
             <div class="form-group">
-                <label for="orgName">Organization Name</label>
-                <input
-                    type="text"
-                    id="orgName"
-                    name="orgName"
-                    placeholder="Acme Inc."
-                    required
-                    autocomplete="organization"
-                />
-                <div class="help-text">Your company or team name</div>
-            </div>
-
-            <div class="form-group">
                 <label for="email">Email</label>
                 <input
                     type="email"
@@ -364,7 +351,6 @@
         signupForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const orgName = document.getElementById('orgName').value.trim();
             const email = document.getElementById('email').value.trim();
             const password = passwordInput.value;
             const confirmPassword = confirmPasswordInput.value;
@@ -401,8 +387,8 @@
             signupBtn.textContent = 'Creating account';
 
             try {
-                // Call signup API
-                await auth.signup(email, password, orgName);
+                // Call signup API (organization auto-created from email)
+                await auth.signup(email, password);
 
                 // Success - redirect to dashboard
                 window.location.href = '/ui';

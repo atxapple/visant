@@ -18,14 +18,12 @@ router = APIRouter(prefix="/v1/auth", tags=["Authentication"])
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str
-    org_name: str
 
     class Config:
         json_schema_extra = {
             "example": {
                 "email": "user@example.com",
-                "password": "secure_password_123",
-                "org_name": "Acme Corporation"
+                "password": "secure_password_123"
             }
         }
 
@@ -47,7 +45,7 @@ class AuthResponse(BaseModel):
     access_token: str
     refresh_token: str
     user: dict
-    organization: dict
+    organization: Optional[dict] = None  # Optional for simplified UI
 
 
 class UserMeResponse(BaseModel):
@@ -87,10 +85,14 @@ def signup(
         # Step 1: Create user in Supabase Auth
         supabase_user = create_supabase_user(request.email, request.password)
 
-        # Step 2: Create organization
+        # Step 2: Create organization with auto-generated name
+        # Extract username from email for workspace name
+        email_username = request.email.split('@')[0]
+        org_name = f"{email_username}'s Workspace"
+
         org = Organization(
             id=uuid.uuid4(),
-            name=request.org_name,
+            name=org_name,
             created_at=datetime.utcnow()
         )
         db.add(org)
@@ -120,11 +122,9 @@ def signup(
                 "id": str(user.id),
                 "email": user.email,
                 "role": user.role,
-            },
-            "organization": {
-                "id": str(org.id),
-                "name": org.name,
             }
+            # Organization not included for simplified UI
+            # Available via /v1/auth/me endpoint if needed
         }
 
     except ValueError as e:
@@ -180,11 +180,9 @@ def login(
                 "id": str(user.id),
                 "email": user.email,
                 "role": user.role,
-            },
-            "organization": {
-                "id": str(user.organization.id),
-                "name": user.organization.name,
             }
+            # Organization not included for simplified UI
+            # Available via /v1/auth/me endpoint if needed
         }
 
     except ValueError as e:
