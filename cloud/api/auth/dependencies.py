@@ -158,6 +158,80 @@ def generate_device_api_key() -> str:
     return secrets.token_urlsafe(32)
 
 
+def verify_device_by_id(
+    device_id: str,
+    db: Session = Depends(get_db)
+) -> Device:
+    """
+    FastAPI dependency to verify device by device_id only (no API key required).
+
+    This simpler authentication method is suitable for headless IoT cameras where:
+    - Device ID is unique and pre-assigned during manufacturing
+    - Physical device security is the primary protection
+    - Devices cannot be easily reconfigured
+
+    Security validations:
+    - Device must exist in database
+    - Device must be activated (status="active")
+    - Device must belong to an active organization
+
+    Usage:
+        @app.post("/v1/captures")
+        def upload_capture(
+            request: CaptureUploadRequest,
+            device: Device = Depends(lambda: verify_device_by_id(request.device_id))
+        ):
+            ...
+
+    Args:
+        device_id: Device identifier from request body
+        db: Database session
+
+    Returns:
+        Device object if all validations pass
+
+    Raises:
+        HTTPException: If device not found, not activated, or org inactive
+    """
+    # Look up device by device_id
+    device = db.query(Device).filter(Device.device_id == device_id).first()
+
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Device '{device_id}' not found"
+        )
+
+    # Verify device is activated
+    if device.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Device is {device.status}. Only active devices can upload captures."
+        )
+
+    # Verify device belongs to an organization
+    if not device.org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Device not assigned to any organization. Activate device first."
+        )
+
+    # Verify organization exists and is active
+    org = db.query(Organization).filter(Organization.id == device.org_id).first()
+    if not org:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Device organization not found"
+        )
+
+    # Update device last_seen timestamp
+    from datetime import datetime
+    device.last_seen_at = datetime.utcnow()
+    db.commit()
+
+    return device
+
+
 def require_org_ownership(
     resource_org_id,
     current_org: Organization = Depends(get_current_org)

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from cloud.api.database import get_db, Capture, Device, Organization
-from cloud.api.auth.dependencies import verify_device_api_key
+from cloud.api.auth.dependencies import verify_device_api_key, verify_device_by_id
 from cloud.api.service import InferenceService
 from cloud.api.workers.ai_evaluator import evaluate_capture_async
 
@@ -60,16 +60,20 @@ class CaptureListResponse(BaseModel):
 async def upload_capture(
     request: CaptureUploadRequest,
     background_tasks: BackgroundTasks,
-    device: Device = Depends(verify_device_api_key),
     db: Session = Depends(get_db)
 ):
     """
     Upload a new capture from a device (Cloud AI - async evaluation).
 
-    **Authentication**: Requires device API key in Authorization header.
+    **Authentication**: Device ID only (no API key required).
+
+    Security validations:
+    - Device must exist in database
+    - Device must be activated (status="active")
+    - Device must belong to an active organization
 
     **Process (Cloud AI)**:
-    1. Validates device API key
+    1. Validates device_id from request
     2. Decodes image from base64
     3. Creates capture record with evaluation_status="pending"
     4. Triggers background AI evaluation
@@ -81,16 +85,18 @@ async def upload_capture(
     3. Get final state/score/reason from poll response
 
     **Device Authentication**:
-    ```
-    Authorization: Bearer <device_api_key>
+    No Authorization header required. Device is validated by device_id in request body.
+    ```json
+    {
+      "device_id": "TEST1",
+      "captured_at": "2025-11-08T12:00:00Z",
+      "image_base64": "...",
+      "trigger_label": "motion"
+    }
     ```
     """
-    # Verify device_id matches authenticated device
-    if request.device_id != device.device_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Device ID mismatch. Authenticated as '{device.device_id}' but trying to upload for '{request.device_id}'"
-        )
+    # Validate device by device_id
+    device = verify_device_by_id(request.device_id, db)
 
     # Decode image from base64
     try:
@@ -231,16 +237,28 @@ def list_captures(
 @router.get("/{record_id}", response_model=CaptureResponse)
 def get_capture(
     record_id: str,
-    device: Device = Depends(verify_device_api_key),
+    device_id: Optional[str] = Query(None, description="Device ID for authentication (no API key required)"),
     db: Session = Depends(get_db)
 ):
     """
     Get details for a specific capture.
 
-    **Authentication**: Requires device API key.
+    **Authentication**: Device ID only (from query parameter).
 
     Only returns captures from the authenticated device's organization.
+
+    Usage:
+        GET /v1/captures/{record_id}?device_id=TEST2
     """
+    # Validate device by device_id if provided
+    if device_id:
+        device = verify_device_by_id(device_id, db)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="device_id query parameter required"
+        )
+
     capture = db.query(Capture).filter(
         Capture.record_id == record_id,
         Capture.org_id == device.org_id  # Ensure org isolation
@@ -270,13 +288,13 @@ def get_capture(
 @router.get("/{record_id}/status", response_model=CaptureResponse)
 def get_capture_status(
     record_id: str,
-    device: Device = Depends(verify_device_api_key),
+    device_id: Optional[str] = Query(None, description="Device ID for authentication (no API key required)"),
     db: Session = Depends(get_db)
 ):
     """
     Poll for capture evaluation status (for Cloud AI async flow).
 
-    **Authentication**: Requires device API key.
+    **Authentication**: Device ID only (from query parameter).
 
     **Device Polling Loop**:
     ```python
@@ -286,7 +304,7 @@ def get_capture_status(
 
     # 2. Poll until evaluation completes
     while True:
-        status = get_capture_status(record_id)
+        status = get_capture_status(record_id, device_id="TEST2")
         if status["evaluation_status"] == "completed":
             print(f"Result: {status['state']} ({status['score']})")
             break
@@ -297,7 +315,19 @@ def get_capture_status(
     ```
 
     **Returns**: Same as GET /{record_id} - full capture details with evaluation status
+
+    Usage:
+        GET /v1/captures/{record_id}/status?device_id=TEST2
     """
+    # Validate device by device_id if provided
+    if device_id:
+        device = verify_device_by_id(device_id, db)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="device_id query parameter required"
+        )
+
     capture = db.query(Capture).filter(
         Capture.record_id == record_id,
         Capture.org_id == device.org_id
