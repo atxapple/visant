@@ -437,7 +437,7 @@ GET /v1/captures/{record_id}/status  # Poll until evaluation completes
 #### Week 3: Per-Device Configuration (Days 11-15) ✅ COMPLETE
 
 **Status**: COMPLETE - All features implemented and tested (2025-11-08)
-**Progress**: Backend API ✅ | Frontend ✅ | E2E Testing ✅
+**Progress**: Backend API ✅ | Frontend ✅ | E2E Testing ✅ | Device ID Auth ✅
 
 **Tasks**:
 - [x] Day 1-2: Device config API & Frontend
@@ -459,11 +459,19 @@ GET /v1/captures/{record_id}/status  # Poll until evaluation completes
   - [x] Test device switching (✅ passing)
   - [x] Verify no data leakage between devices (✅ passing)
   - [x] Comprehensive E2E test suite (`test_week3_complete.py`)
+- [x] Device ID Authentication (Bonus)
+  - [x] Implemented `verify_device_by_id()` for headless cameras
+  - [x] Updated capture endpoints to use device_id (no API key required)
+  - [x] Created `laptop_camera_test.py` for webcam testing
+  - [x] All tests passing with real hardware
+  - [x] Comprehensive documentation in `DEVICE_ID_AUTH_IMPLEMENTATION.md`
 
 **Deliverables**:
 - [x] Per-device normal descriptions
 - [x] Per-device trigger configuration
 - [x] Per-device notification settings
+- [x] Device ID authentication (simplified for headless cameras)
+- [x] Webcam test script with end-to-end validation
 
 ---
 
