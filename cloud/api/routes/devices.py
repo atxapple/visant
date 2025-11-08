@@ -169,7 +169,6 @@ def register_device(
         "device_version": device.device_version,
         "api_key": api_key,  # Only shown once!
         "organization": {
-            "id": str(org.id),
             "name": org.name,
         }
     }
@@ -460,7 +459,6 @@ def activate_device(
         "status": device.status,
         "activated_at": device.activated_at,
         "organization": {
-            "id": str(org.id),
             "name": org.name,
         }
     }
@@ -648,7 +646,6 @@ def get_device(
         "last_seen_at": device.last_seen_at,
         "device_version": device.device_version,
         "organization": {
-            "id": str(org.id),
             "name": org.name,
         }
     }
@@ -703,7 +700,6 @@ def update_device(
         "last_seen_at": device.last_seen_at,
         "device_version": device.device_version,
         "organization": {
-            "id": str(org.id),
             "name": org.name,
         }
     }

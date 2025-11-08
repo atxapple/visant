@@ -2,8 +2,8 @@
 
 **Version**: 2.1
 **Created**: 2025-01-06
-**Last Updated**: 2025-11-07
-**Status**: Phase 2-4 Complete ✅ | Phase 5 Week 1 Complete ✅
+**Last Updated**: 2025-11-08
+**Status**: Phase 2-4 Complete ✅ | Phase 5 Week 1 Complete ✅ | UI Simplified ✅
 **Target Launch**: 2-3 weeks from now
 **Current Progress**: Backend API complete, Auth UI complete, Multi-device UI in progress
 
@@ -377,6 +377,15 @@ GET /v1/captures/{record_id}/status  # Poll until evaluation completes
 - Tokens stored in sessionStorage (more secure than localStorage)
 - Server-side JWT verification added to routes.py but disabled by default
 - App.state initialization added to test_auth_server.py for web UI support
+
+**UI Simplification (2025-11-08)**:
+- [x] Simplified signup to email + password only (removed organization name field)
+- [x] Auto-create workspaces with format "{username}'s Workspace"
+- [x] Hidden user IDs and organization IDs from all UI displays
+- [x] Updated API responses to exclude ID fields (backend still uses IDs internally)
+- [x] Settings page shows "Workspace Name" instead of "Organization Name"
+- [x] Removed User ID and Organization ID display from settings page
+- [x] Multi-tenant architecture preserved for future team sharing features
 
 ---
 

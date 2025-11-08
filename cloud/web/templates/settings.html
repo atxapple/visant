@@ -101,10 +101,6 @@
                 <span class="info-value" id="userEmail">Loading...</span>
             </div>
             <div class="info-row">
-                <span class="info-label">User ID</span>
-                <span class="info-value" id="userId">Loading...</span>
-            </div>
-            <div class="info-row">
                 <span class="info-label">Joined</span>
                 <span class="info-value" id="userJoined">Loading...</span>
             </div>
@@ -113,12 +109,8 @@
         <div class="card">
             <h2>Organization</h2>
             <div class="info-row">
-                <span class="info-label">Organization Name</span>
+                <span class="info-label">Workspace Name</span>
                 <span class="info-value" id="orgName">Loading...</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Organization ID</span>
-                <span class="info-value" id="orgId">Loading...</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Plan</span>
@@ -147,12 +139,11 @@
                 if (response.ok) {
                     const user = await response.json();
                     document.getElementById('userEmail').textContent = user.email || 'N/A';
-                    document.getElementById('userId').textContent = user.user_id || 'N/A';
                     document.getElementById('userJoined').textContent = user.created_at
                         ? new Date(user.created_at).toLocaleDateString()
                         : 'N/A';
-                    document.getElementById('orgName').textContent = user.org_name || 'Default Organization';
-                    document.getElementById('orgId').textContent = user.org_id || 'N/A';
+                    document.getElementById('orgName').textContent =
+                        (user.organization && user.organization.name) || 'Default Workspace';
                 } else {
                     showError();
                 }
@@ -164,10 +155,8 @@
 
         function showError() {
             document.getElementById('userEmail').textContent = 'Error loading';
-            document.getElementById('userId').textContent = 'Error loading';
             document.getElementById('userJoined').textContent = 'Error loading';
             document.getElementById('orgName').textContent = 'Error loading';
-            document.getElementById('orgId').textContent = 'Error loading';
         }
 
         function logout() {

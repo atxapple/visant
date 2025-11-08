@@ -49,7 +49,6 @@ class AuthResponse(BaseModel):
 
 
 class UserMeResponse(BaseModel):
-    id: str
     email: str
     role: str
     organization: dict
@@ -119,12 +118,11 @@ def signup(
             "access_token": auth_result["access_token"],
             "refresh_token": auth_result["refresh_token"],
             "user": {
-                "id": str(user.id),
                 "email": user.email,
                 "role": user.role,
             }
-            # Organization not included for simplified UI
-            # Available via /v1/auth/me endpoint if needed
+            # Organization and user ID not included for simplified UI
+            # Available via /v1/auth/me endpoint if needed for backend
         }
 
     except ValueError as e:
@@ -177,12 +175,11 @@ def login(
             "access_token": auth_result["access_token"],
             "refresh_token": auth_result["refresh_token"],
             "user": {
-                "id": str(user.id),
                 "email": user.email,
                 "role": user.role,
             }
-            # Organization not included for simplified UI
-            # Available via /v1/auth/me endpoint if needed
+            # Organization and user ID not included for simplified UI
+            # Available via /v1/auth/me endpoint if needed for backend
         }
 
     except ValueError as e:
@@ -209,11 +206,9 @@ def get_current_user_info(
     Requires valid JWT token in Authorization header.
     """
     return {
-        "id": str(current_user.id),
         "email": current_user.email,
         "role": current_user.role,
         "organization": {
-            "id": str(current_user.organization.id),
             "name": current_user.organization.name,
         },
         "created_at": current_user.created_at,
