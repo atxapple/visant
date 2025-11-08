@@ -43,6 +43,7 @@ INDEX_HTML = Path(__file__).parent / "templates" / "index.html"
 LOGIN_HTML = Path(__file__).parent / "templates" / "login.html"
 SIGNUP_HTML = Path(__file__).parent / "templates" / "signup.html"
 SHARES_HTML = Path(__file__).parent / "templates" / "shares.html"
+DEVICES_HTML = Path(__file__).parent / "templates" / "devices.html"
 
 # JWT verification for UI routes (optional - can be disabled for now)
 # Set SUPABASE_JWT_SECRET environment variable to enable authentication
@@ -192,6 +193,14 @@ async def shares_page() -> HTMLResponse:
     if not SHARES_HTML.exists():
         raise HTTPException(status_code=500, detail="Shares template missing")
     return HTMLResponse(SHARES_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/ui/devices", response_class=HTMLResponse)
+async def devices_page() -> HTMLResponse:
+    """Device management page."""
+    if not DEVICES_HTML.exists():
+        raise HTTPException(status_code=500, detail="Devices template missing")
+    return HTMLResponse(DEVICES_HTML.read_text(encoding="utf-8"))
 
 
 @router.get("/ui", response_class=HTMLResponse)
