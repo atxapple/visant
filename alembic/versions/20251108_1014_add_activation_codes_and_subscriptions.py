@@ -34,7 +34,7 @@ def upgrade() -> None:
         batch_op.alter_column('api_key', existing_type=sa.String(), nullable=True)  # Generated on activation
         batch_op.add_column(sa.Column('manufactured_at', sa.DateTime(), nullable=True))
         batch_op.add_column(sa.Column('batch_id', sa.String(length=50), nullable=True))
-        batch_op.add_column(sa.Column('activated_by_user_id', sa.String(length=36), nullable=True))
+        batch_op.add_column(sa.Column('activated_by_user_id', postgresql.UUID(), nullable=True))
         batch_op.add_column(sa.Column('activated_at', sa.DateTime(), nullable=True))
         batch_op.alter_column('status', existing_type=sa.String(length=50), server_default='manufactured')
         batch_op.create_foreign_key('fk_devices_activated_by', 'users', ['activated_by_user_id'], ['id'])
@@ -44,7 +44,7 @@ def upgrade() -> None:
         'activation_codes',
         sa.Column('code', sa.String(length=50), nullable=False),
         sa.Column('description', sa.String(length=255), nullable=True),
-        sa.Column('created_by_user_id', sa.String(length=36), nullable=True),
+        sa.Column('created_by_user_id', postgresql.UUID(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
         sa.Column('benefit_type', sa.String(length=50), nullable=False),
         sa.Column('benefit_value', sa.Integer(), nullable=False),
@@ -65,10 +65,10 @@ def upgrade() -> None:
     # Create code_redemptions table
     op.create_table(
         'code_redemptions',
-        sa.Column('id', sa.String(length=36), nullable=False),
+        sa.Column('id', postgresql.UUID(), nullable=False),
         sa.Column('code', sa.String(length=50), nullable=False),
-        sa.Column('org_id', sa.String(length=36), nullable=False),
-        sa.Column('user_id', sa.String(length=36), nullable=False),
+        sa.Column('org_id', postgresql.UUID(), nullable=False),
+        sa.Column('user_id', postgresql.UUID(), nullable=False),
         sa.Column('redeemed_at', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
         sa.Column('device_id', sa.String(length=255), nullable=True),
         sa.Column('benefit_applied', sa.String(length=255), nullable=True),

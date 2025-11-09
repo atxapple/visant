@@ -46,7 +46,8 @@ class CaptureUploadRequest(BaseModel):
     device_id: str
     captured_at: datetime
     image_base64: str  # Base64-encoded image for Cloud AI evaluation
-    trigger_label: Optional[str] = None
+    trigger_id: Optional[str] = None  # NEW: Cloud-managed trigger ID
+    trigger_label: Optional[str] = None  # Legacy: device-generated label
     metadata: Optional[dict] = None
 
     class Config:
@@ -55,6 +56,7 @@ class CaptureUploadRequest(BaseModel):
                 "device_id": "camera-01",
                 "captured_at": "2025-11-07T12:00:00Z",
                 "image_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+                "trigger_id": "sched_camera-01_20251107_120000_123456",
                 "trigger_label": "motion_detected",
                 "metadata": {"temperature": 22.5}
             }
@@ -193,6 +195,18 @@ async def upload_capture(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="InferenceService not initialized. Server configuration error."
         )
+
+    # Mark trigger as executed if trigger_id provided (cloud-managed triggers)
+    if request.trigger_id:
+        try:
+            # Get trigger scheduler from app state to mark trigger executed
+            from cloud.api.server import get_trigger_scheduler
+            trigger_scheduler = get_trigger_scheduler()
+            if trigger_scheduler:
+                trigger_scheduler.mark_trigger_executed(request.trigger_id, record_id, db)
+        except Exception as e:
+            # Log error but don't fail the upload
+            print(f"Warning: Failed to mark trigger {request.trigger_id} as executed: {e}")
 
     # Trigger async AI evaluation in background
     # Note: Background task creates its own DB session (request session will be closed)

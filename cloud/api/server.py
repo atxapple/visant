@@ -32,6 +32,11 @@ from ..web import register_ui
 from ..web.preferences import UIPreferences, load_preferences
 from version import __version__ as CLOUD_VERSION
 
+# New imports for cloud-triggered architecture
+from .workers.command_hub import CommandHub as NewCommandHub
+from .workers.trigger_scheduler import TriggerScheduler
+from .routes import device_commands
+
 
 logger = logging.getLogger(__name__)
 
@@ -247,6 +252,10 @@ def create_app(
     trigger_hub = TriggerHub()
     capture_hub = CaptureHub()
 
+    # New cloud-triggered architecture components
+    command_hub = NewCommandHub()
+    trigger_scheduler = TriggerScheduler(command_hub)
+
     description_store_dir = (
         normal_description_path.parent
         if normal_description_path is not None
@@ -306,6 +315,8 @@ def create_app(
     app.state.manual_trigger_counter = 0
     app.state.trigger_hub = trigger_hub
     app.state.capture_hub = capture_hub
+    app.state.command_hub = command_hub  # NEW: Cloud-triggered architecture
+    app.state.trigger_scheduler = trigger_scheduler  # NEW: Cloud-triggered architecture
     app.state.device_id = device_id
     app.state.device_last_seen = None
     app.state.device_last_ip = None
@@ -632,6 +643,9 @@ def create_app(
     async def _init_shutdown_event() -> None:
         if getattr(app.state, "shutdown_event", None) is None:
             app.state.shutdown_event = asyncio.Event()
+        # Start cloud trigger scheduler
+        await trigger_scheduler.start()
+        logger.info("[server] TriggerScheduler started")
 
     @app.on_event("shutdown")
     async def _shutdown_streams() -> None:
@@ -640,12 +654,41 @@ def create_app(
         )
         if shutdown_event is not None:
             shutdown_event.set()
+        # Stop cloud trigger scheduler
+        await trigger_scheduler.stop()
         await trigger_hub.close()
         await capture_hub.close()
 
+    # Register new cloud-triggered device command routes
+    app.include_router(device_commands.router)
+
     register_ui(app)
+
+    # Set global app reference for dependency injection
+    set_current_app(app)
 
     return app
 
 
-__all__ = ["create_app"]
+# Global accessors for dependency injection
+_current_app = None
+
+def set_current_app(app: FastAPI):
+    """Set the current app instance for global access."""
+    global _current_app
+    _current_app = app
+
+def get_command_hub() -> NewCommandHub:
+    """Get CommandHub from current app state."""
+    if _current_app is None:
+        raise RuntimeError("App not initialized. Call set_current_app() first.")
+    return _current_app.state.command_hub
+
+def get_trigger_scheduler() -> TriggerScheduler:
+    """Get TriggerScheduler from current app state."""
+    if _current_app is None:
+        raise RuntimeError("App not initialized. Call set_current_app() first.")
+    return _current_app.state.trigger_scheduler
+
+
+__all__ = ["create_app", "get_command_hub", "get_trigger_scheduler", "set_current_app"]

@@ -284,6 +284,40 @@ class CodeRedemption(Base):
         return f"<CodeRedemption(code={self.code}, org_id={self.org_id}, redeemed_at={self.redeemed_at})>"
 
 
+class ScheduledTrigger(Base):
+    """Cloud-managed trigger tracking for scheduled and manual captures."""
+    __tablename__ = "scheduled_triggers"
+
+    # Trigger identifier
+    trigger_id = Column(String(255), primary_key=True)
+    device_id = Column(String(255), ForeignKey("devices.device_id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # Trigger metadata
+    trigger_type = Column(String(50), nullable=False, index=True)  # 'scheduled' or 'manual'
+
+    # Lifecycle timestamps
+    scheduled_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    sent_at = Column(DateTime, nullable=True)
+    executed_at = Column(DateTime, nullable=True)
+
+    # Status tracking
+    status = Column(String(50), nullable=False, default="pending", index=True)  # pending, sent, executed, failed, timeout
+
+    # Link to resulting capture
+    capture_id = Column(String(255), ForeignKey("captures.record_id", ondelete="SET NULL"), nullable=True)
+
+    # Error tracking
+    error_message = Column(Text, nullable=True)
+    retry_count = Column(Integer, default=0)
+
+    # Relationships
+    device = relationship("Device")
+    capture = relationship("Capture", foreign_keys=[capture_id])
+
+    def __repr__(self):
+        return f"<ScheduledTrigger(trigger_id={self.trigger_id}, device_id={self.device_id}, status={self.status})>"
+
+
 # Create indexes for common query patterns
 # These will be created automatically by SQLAlchemy when tables are created
 # Additional composite indexes for performance:
