@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# OK Monitor Pre-Start Update Script
+# Visant Pre-Start Update Script
 #
 # This script runs BEFORE the device service starts to ensure
 # the application is always running the latest code.
@@ -8,12 +8,12 @@
 # Failure behavior: If this script fails, the service will NOT start.
 # This ensures we never run outdated code.
 #
-# Called by: okmonitor-device.service (ExecStartPre)
+# Called by: visant-device.service or visant-device-v2.service (ExecStartPre)
 #
 
 set -e  # Exit immediately if any command fails
 
-INSTALL_DIR="/opt/okmonitor"
+INSTALL_DIR="/opt/visant"
 LOG_PREFIX="[PRE-START-UPDATE]"
 
 # Configure git safe.directory to avoid ownership issues when running as root

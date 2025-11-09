@@ -1,15 +1,16 @@
 #!/bin/bash
-# OK Monitor Device Installation Script for Raspberry Pi 5
+# Visant Device Installation Script for Raspberry Pi 5
 # Run this script on a fresh Raspberry Pi OS (Bookworm) installation
 
 set -e
 
-INSTALL_DIR="/opt/okmonitor"
-REPO_URL="https://github.com/atxapple/okmonitor.git"
+INSTALL_DIR="/opt/visant"
+REPO_URL="https://github.com/atxapple/visant.git"
 BRANCH="main"
 TAILSCALE_KEY=""
 SKIP_TAILSCALE=false
 INSTALL_TAILSCALE=false
+USE_V2=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -30,6 +31,10 @@ while [[ $# -gt 0 ]]; do
             INSTALL_TAILSCALE=true
             shift
             ;;
+        --v2)
+            USE_V2=true
+            shift
+            ;;
         --help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
@@ -38,6 +43,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --tailscale-key KEY    Tailscale auth key for automatic remote access setup"
             echo "  --skip-tailscale       Skip Tailscale installation/configuration (safe for reinstalls)"
             echo "  --install-tailscale    Force Tailscale installation/reconfiguration"
+            echo "  --v2                   Install v2.0 cloud-triggered architecture (default: v1.0 polling)"
             echo "  --help                 Show this help message"
             echo ""
             echo "Examples:"
@@ -81,16 +87,16 @@ fi
 USER_NAME="${INSTALL_USER:-$ACTUAL_USER}"
 
 # Check if .env.device exists when Tailscale key is provided
-if [ -n "$TAILSCALE_KEY" ] && [ ! -f "/opt/okmonitor/.env.device" ]; then
+if [ -n "$TAILSCALE_KEY" ] && [ ! -f "/opt/visant/.env.device" ]; then
     echo "===== IMPORTANT: Configuration Required ====="
     echo ""
-    echo "ERROR: You provided a Tailscale key, but /opt/okmonitor/.env.device doesn't exist yet."
+    echo "ERROR: You provided a Tailscale key, but /opt/visant/.env.device doesn't exist yet."
     echo ""
     echo "The DEVICE_ID from .env.device is used to set the Tailscale hostname."
     echo ""
     echo "Please create the configuration file first:"
-    echo "  1. sudo mkdir -p /opt/okmonitor"
-    echo "  2. sudo nano /opt/okmonitor/.env.device"
+    echo "  1. sudo mkdir -p /opt/visant"
+    echo "  2. sudo nano /opt/visant/.env.device"
     echo "  3. Add at minimum:"
     echo "     API_URL=https://your-api-url.com"
     echo "     DEVICE_ID=your-device-id"
@@ -102,7 +108,13 @@ if [ -n "$TAILSCALE_KEY" ] && [ ! -f "/opt/okmonitor/.env.device" ]; then
     exit 1
 fi
 
-echo "===== OK Monitor Device Installation ====="
+ARCH_NAME="v1.0 (Polling)"
+if [ "$USE_V2" = true ]; then
+    ARCH_NAME="v2.0 (Cloud-Triggered)"
+fi
+
+echo "===== Visant Device Installation ====="
+echo "Architecture: $ARCH_NAME"
 echo "Installing for user: $USER_NAME"
 echo ""
 echo "This script will:"
@@ -204,7 +216,7 @@ echo "Step 4: Configuring environment..."
 if [ ! -f ".env.device" ]; then
     cp deployment/.env.device.example .env.device
     echo "Created .env.device - PLEASE EDIT THIS FILE with your configuration!"
-    echo "Edit: nano /opt/okmonitor/.env.device"
+    echo "Edit: nano /opt/visant/.env.device"
 fi
 
 # Create directories
@@ -220,13 +232,22 @@ usermod -a -G video "$USER_NAME"
 echo ""
 echo "Step 5: Installing systemd services..."
 
-# Copy and update service files with actual username
-cp deployment/okmonitor-device.service /etc/systemd/system/
-sed -i "s/User=pi/User=$USER_NAME/" /etc/systemd/system/okmonitor-device.service
-sed -i "s/Group=pi/Group=$USER_NAME/" /etc/systemd/system/okmonitor-device.service
+# Determine which service file to use
+if [ "$USE_V2" = true ]; then
+    SERVICE_FILE="visant-device-v2.service"
+    echo "Installing v2.0 cloud-triggered service..."
+else
+    SERVICE_FILE="visant-device.service"
+    echo "Installing v1.0 polling service..."
+fi
 
-cp deployment/okmonitor-update.service /etc/systemd/system/
-cp deployment/okmonitor-update.timer /etc/systemd/system/
+# Copy and update service files with actual username
+cp "deployment/$SERVICE_FILE" /etc/systemd/system/
+sed -i "s/User=pi/User=$USER_NAME/" "/etc/systemd/system/$SERVICE_FILE"
+sed -i "s/Group=pi/Group=$USER_NAME/" "/etc/systemd/system/$SERVICE_FILE"
+
+cp deployment/visant-update.service /etc/systemd/system/
+cp deployment/visant-update.timer /etc/systemd/system/
 
 # Make update scripts executable
 chmod +x deployment/update_device.sh
@@ -237,8 +258,8 @@ systemctl daemon-reload
 
 echo ""
 echo "Step 6: Enabling services..."
-systemctl enable okmonitor-device.service
-systemctl enable okmonitor-update.timer
+systemctl enable "$SERVICE_FILE"
+systemctl enable visant-update.timer
 
 echo ""
 echo "Step 7: Installing Comitup (WiFi hotspot)..."
@@ -249,7 +270,7 @@ if [ -f "deployment/install_comitup.sh" ]; then
     cd deployment
     ./install_comitup.sh
     cd "$INSTALL_DIR"
-    echo "✓ Comitup installed - device will create 'okmonitor-XXXX' hotspot when no WiFi configured"
+    echo "✓ Comitup installed - device will create 'visant-XXXX' hotspot when no WiFi configured"
 else
     echo "WARNING: Comitup installer not found, skipping..."
 fi
@@ -365,9 +386,9 @@ else
 
             # Use device ID for hostname if available, otherwise use generic name
             if [ -n "$DEVICE_ID" ] && [ "$DEVICE_ID" != "PLACEHOLDER_DEVICE_ID" ]; then
-                HOSTNAME="okmonitor-${DEVICE_ID}"
+                HOSTNAME="visant-${DEVICE_ID}"
             else
-                HOSTNAME="okmonitor-$(hostname)"
+                HOSTNAME="visant-$(hostname)"
             fi
 
             tailscale up --authkey="$TAILSCALE_KEY" --hostname="$HOSTNAME" --accept-routes
@@ -403,7 +424,7 @@ echo "Configure WiFi - Choose one method:"
 echo ""
 echo "  Method 1: Comitup (Recommended - no SSH needed)"
 echo "    1. Reboot device: sudo reboot"
-echo "    2. Connect phone to 'okmonitor-XXXX' WiFi (no password)"
+echo "    2. Connect phone to 'visant-XXXX' WiFi (no password)"
 echo "    3. Open browser: http://10.41.0.1"
 echo "    4. Select and configure customer WiFi"
 echo "    📖 Full guide: deployment/COMITUP.md"
@@ -420,14 +441,14 @@ if [ -z "$TAILSCALE_KEY" ]; then
     echo ""
 fi
 echo "Test the device program:"
-echo "  sudo systemctl start okmonitor-device"
-echo "  sudo journalctl -u okmonitor-device -f"
+echo "  sudo systemctl start $SERVICE_FILE"
+echo "  sudo journalctl -u $SERVICE_FILE -f"
 echo ""
 echo "Verify deployment:"
 echo "  sudo deployment/verify_deployment.sh"
 echo ""
 echo "Check update timer:"
-echo "  sudo systemctl list-timers okmonitor-update"
+echo "  sudo systemctl list-timers visant-update"
 echo ""
 echo "After confirming configuration is correct:"
 echo "  sudo reboot"

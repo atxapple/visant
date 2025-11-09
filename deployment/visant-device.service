@@ -1,0 +1,59 @@
+[Unit]
+Description=Visant Device Capture Service (v1.0 Polling Architecture)
+Documentation=https://github.com/atxapple/visant
+After=network-online.target
+Wants=network-online.target
+# Wait for time sync to ensure accurate timestamps
+After=time-sync.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/opt/visant
+EnvironmentFile=/opt/visant/.env.device
+
+# Update code before starting (ensures latest version)
+# The + prefix runs with elevated privileges (needed for git/pip operations)
+ExecStartPre=+/opt/visant/deployment/pre-start-update.sh
+
+# Use the virtual environment Python
+ExecStart=/opt/visant/venv/bin/python -m device.main \
+    --camera opencv \
+    --camera-source ${CAMERA_SOURCE} \
+    --camera-warmup ${CAMERA_WARMUP} \
+    --api http \
+    --api-url ${API_URL} \
+    --api-timeout ${API_TIMEOUT} \
+    --device-id ${DEVICE_ID} \
+    --iterations 0 \
+    --config-poll-interval ${CONFIG_POLL_INTERVAL} \
+    --save-frames-dir "${SAVE_FRAMES_DIR}" \
+    --verbose
+
+# Restart policy
+Restart=always
+RestartSec=10s
+
+# Resource limits (adjust based on Pi 5 capabilities)
+MemoryMax=512M
+CPUQuota=80%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=visant-device
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/visant/debug_captures
+ReadWritePaths=/opt/visant/config
+
+# Allow access to camera device
+SupplementaryGroups=video
+
+[Install]
+WantedBy=multi-user.target

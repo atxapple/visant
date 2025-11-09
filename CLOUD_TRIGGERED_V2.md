@@ -301,6 +301,100 @@ python -m device.main_v2 \
 
 ---
 
+## Raspberry Pi Deployment
+
+### Quick Start
+
+For Raspberry Pi 5 deployment with USB webcam:
+
+1. **Flash Raspberry Pi OS Bookworm 64-bit** to SD card
+2. **Enable SSH** via Raspberry Pi Imager
+3. **Boot and connect** via SSH
+4. **Configure environment:**
+   ```bash
+   sudo mkdir -p /opt/visant
+   sudo nano /opt/visant/.env.device
+   ```
+   Add:
+   ```bash
+   API_URL=https://your-cloud-server.railway.app
+   DEVICE_ID=your-unique-device-id
+   CAMERA_SOURCE=0
+   UPLOAD_TIMEOUT=30
+   STREAM_TIMEOUT=70
+   RECONNECT_DELAY=5
+   SAVE_FRAMES_DIR=/opt/visant/debug_captures
+   ```
+
+5. **Clone repository:**
+   ```bash
+   git clone https://github.com/atxapple/visant.git
+   cd visant
+   ```
+
+6. **Run installer:**
+   ```bash
+   # Install v2.0 cloud-triggered architecture
+   sudo deployment/install_device.sh --v2
+
+   # Or with Tailscale remote access
+   sudo deployment/install_device.sh --v2 --tailscale-key tskey-auth-xxxxx
+   ```
+
+7. **Configure WiFi:**
+   ```bash
+   # Method 1: Comitup (no SSH needed)
+   # - Reboot, connect to 'visant-XXXX' hotspot
+   # - Browse to http://10.41.0.1
+   # - Configure WiFi
+
+   # Method 2: addwifi.sh (SSH)
+   ~/addwifi.sh "WiFi-Name" "password"
+   ```
+
+8. **Verify deployment:**
+   ```bash
+   sudo deployment/verify_deployment.sh
+   ```
+
+9. **Start service:**
+   ```bash
+   sudo systemctl start visant-device-v2.service
+   sudo journalctl -u visant-device-v2.service -f
+   ```
+
+### Service Management
+
+```bash
+# View logs
+sudo journalctl -u visant-device-v2.service -f
+
+# Restart service
+sudo systemctl restart visant-device-v2.service
+
+# Check status
+sudo systemctl status visant-device-v2.service
+
+# View update logs
+sudo cat /var/log/visant-update.log
+```
+
+### Camera Support
+
+- **USB Webcams:** Fully supported via OpenCV (V4L2)
+- **Raspberry Pi Camera Module:** Not currently supported
+  - Workaround: Use USB webcams
+
+### Documentation
+
+- **Full Raspberry Pi v2.0 Guide:** `deployment/DEPLOYMENT_V2.md`
+- **v1.0 Deployment:** `deployment/DEPLOYMENT.md`
+- **WiFi Setup:** `deployment/WIFI.md`
+- **Comitup Guide:** `deployment/COMITUP.md`
+- **Fleet Deployment:** `deployment/CLONING.md`
+
+---
+
 ## Testing
 
 ### Test Scripts

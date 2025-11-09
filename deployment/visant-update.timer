@@ -1,0 +1,17 @@
+[Unit]
+Description=Visant Device Update Timer
+Documentation=https://github.com/atxapple/visant
+
+[Timer]
+# Run at 02:00 every day (for long-running devices)
+OnCalendar=*-*-* 02:00:00
+
+# If the system was off at 02:00, run on next boot
+# Note: Devices that boot/restart also get updated via ExecStartPre in device service
+Persistent=true
+
+# Add random delay up to 5 minutes to avoid all devices updating simultaneously
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

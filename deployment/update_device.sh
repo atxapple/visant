@@ -1,5 +1,5 @@
 #!/bin/bash
-# OK Monitor Scheduled Update Script
+# Visant Scheduled Update Script
 #
 # Runs at 2 AM daily to update long-running devices.
 # Updates code, then restarts the service to run the latest version.
@@ -9,9 +9,22 @@
 
 set -e
 
-INSTALL_DIR="/opt/okmonitor"
-SERVICE_NAME="okmonitor-device"
-LOG_FILE="/var/log/okmonitor-update.log"
+INSTALL_DIR="/opt/visant"
+LOG_FILE="/var/log/visant-update.log"
+
+# Detect which service is active (v1 or v2)
+if systemctl is-enabled --quiet visant-device-v2.service 2>/dev/null; then
+    SERVICE_NAME="visant-device-v2.service"
+elif systemctl is-enabled --quiet visant-device.service 2>/dev/null; then
+    SERVICE_NAME="visant-device.service"
+else
+    # Fallback: check which is active
+    if systemctl is-active --quiet visant-device-v2.service 2>/dev/null; then
+        SERVICE_NAME="visant-device-v2.service"
+    else
+        SERVICE_NAME="visant-device.service"
+    fi
+fi
 
 # Configure git safe.directory to avoid ownership issues when running as root
 git config --global --add safe.directory "$INSTALL_DIR" 2>/dev/null || true
@@ -21,7 +34,7 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
-log "===== Starting OK Monitor device update ====="
+log "===== Starting Visant device update (service: $SERVICE_NAME) ====="
 
 # Change to install directory
 cd "$INSTALL_DIR" || {

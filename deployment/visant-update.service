@@ -1,0 +1,23 @@
+[Unit]
+Description=Visant Device Update Service
+Documentation=https://github.com/atxapple/visant
+# Ensure network is available for git pull
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/visant
+ExecStart=/opt/visant/deployment/update_device.sh
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=visant-update
+
+# Timeout after 10 minutes
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target
