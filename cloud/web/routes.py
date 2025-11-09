@@ -588,7 +588,18 @@ async def list_captures(
     state: list[str] | None = Query(default=None),
     start: str | None = Query(default=None, alias="from"),
     end: str | None = Query(default=None, alias="to"),
+    authorization: Optional[str] = Header(None),
 ) -> List[dict[str, Any]]:
+    """
+    List captures from database for authenticated user's organization.
+
+    Now queries the database Capture table instead of filesystem.
+    """
+    from cloud.api.database import get_db, Capture, Organization
+    from cloud.api.auth.dependencies import get_current_user
+    from sqlalchemy.orm import Session
+    from fastapi import Depends
+
     states, states_explicit = _normalize_state_filters(state)
     start_dt = parse_capture_timestamp(start)
     end_dt = parse_capture_timestamp(end)
@@ -611,106 +622,159 @@ async def list_captures(
     if states_explicit and states is not None and not states:
         return []
 
-    datalake_root: Path | None = getattr(request.app.state, "datalake_root", None)
-    if datalake_root is None or not datalake_root.exists():
-        return []
+    # Get current user's organization from JWT
+    # For now, return all captures (multi-tenant filtering will be added later)
+    # TODO: Implement proper session-based or cookie-based auth for UI
+    db = next(get_db())
+    try:
+        # Query all captures (temporary - should be filtered by org in production)
+        query = db.query(Capture)
 
-    capture_index = getattr(request.app.state, "capture_index", None)
-    summaries: List[CaptureSummary] = []
-    use_index = (
-        capture_index is not None
-        and not states_explicit
-        and start_dt is None
-        and end_dt is None
-    )
+        # Apply state filter if provided
+        if states is not None and len(states) > 0:
+            query = query.filter(Capture.state.in_(states))
 
-    if use_index:
-        summaries = capture_index.latest(clamped_limit)
-        if len(summaries) < clamped_limit:
-            exclude_ids = {summary.record_id for summary in summaries}
-            remaining = clamped_limit - len(summaries)
-            if remaining > 0:
-                summaries.extend(
-                    _collect_recent_captures(
-                        datalake_root,
-                        remaining,
-                        states=states,
-                        start=start_dt,
-                        end=end_dt,
-                        exclude_ids=exclude_ids,
-                    )
-                )
-    else:
-        summaries = _collect_recent_captures(
-            datalake_root,
-            clamped_limit,
-            states=states,
-            start=start_dt,
-            end=end_dt,
-        )
+        # Apply time range filters
+        if start_dt:
+            query = query.filter(Capture.captured_at >= start_dt)
+        if end_dt:
+            query = query.filter(Capture.captured_at <= end_dt)
 
-    sort_anchor = datetime.fromtimestamp(0, tz=timezone.utc)
-    summaries.sort(key=lambda item: item.captured_at_dt or sort_anchor, reverse=True)
-    summaries = summaries[:clamped_limit]
+        # Order by captured_at descending and limit
+        db_captures = query.order_by(Capture.captured_at.desc()).limit(clamped_limit).all()
 
-    captures: List[dict[str, Any]] = []
-    for summary in summaries:
-        captures.append(_serialize_capture_summary(summary, request))
-    return captures
+        # Convert database captures to API response format
+        captures: List[dict[str, Any]] = []
+        for cap in db_captures:
+            # Build image URL if image is stored
+            image_url = None
+            download_url = None
+            thumbnail_url = None
+            if cap.image_stored and cap.s3_image_key:
+                image_route = request.url_for("serve_capture_image", record_id=cap.record_id)
+                image_url = image_route.path or str(image_route)
+                download_url = f"{image_url}?download=1"
+                # Use full image for thumbnail (TODO: generate actual thumbnails)
+                thumbnail_url = image_url
+
+            captures.append({
+                "record_id": cap.record_id,
+                "captured_at": cap.captured_at.isoformat() if cap.captured_at else None,
+                "ingested_at": cap.ingested_at.isoformat() if cap.ingested_at else None,
+                "state": cap.state,
+                "score": cap.score,
+                "reason": cap.reason,
+                "trigger_label": cap.trigger_label,
+                "normal_description_file": None,  # Not used in database captures
+                "image_available": cap.image_stored,
+                "image_url": image_url,
+                "thumbnail_url": thumbnail_url,
+                "download_url": download_url,
+                "agent_details": None,  # Not used in database captures
+            })
+
+        return captures
+    finally:
+        db.close()
 
 
 @router.get("/ui/captures/{record_id}")
-async def fetch_capture_metadata(record_id: str, request: Request) -> dict[str, Any]:
-    datalake_root: Path | None = getattr(request.app.state, "datalake_root", None)
-    if datalake_root is None:
-        raise HTTPException(status_code=404, detail="Capture not found")
-    capture_index = getattr(request.app.state, "capture_index", None)
-    summary: CaptureSummary | None = None
-    if capture_index is not None:
-        try:
-            summary = capture_index.get(record_id)
-        except Exception:
-            summary = None
-    if summary is None:
-        json_path = _find_capture_json(datalake_root, record_id)
-        if json_path is None:
+async def fetch_capture_metadata(
+    record_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(None)
+) -> dict[str, Any]:
+    """
+    Get capture metadata from database.
+
+    Now queries the database Capture table instead of filesystem.
+    """
+    from cloud.api.database import get_db, Capture
+
+    # Get capture from database
+    # For now, return any capture (multi-tenant filtering will be added later)
+    # TODO: Implement proper session-based or cookie-based auth for UI
+    db = next(get_db())
+    try:
+        # Query capture from database (temporary - should be filtered by org in production)
+        cap = db.query(Capture).filter(
+            Capture.record_id == record_id
+        ).first()
+
+        if not cap:
             raise HTTPException(status_code=404, detail="Capture not found")
-        summary = load_capture_summary(json_path)
-    if summary is None:
-        raise HTTPException(status_code=404, detail="Capture not found")
-    return _serialize_capture_summary(summary, request)
+
+        # Build image URL if image is stored
+        image_url = None
+        download_url = None
+        thumbnail_url = None
+        if cap.image_stored and cap.s3_image_key:
+            image_route = request.url_for("serve_capture_image", record_id=cap.record_id)
+            image_url = image_route.path or str(image_route)
+            download_url = f"{image_url}?download=1"
+            thumbnail_url = f"/v1/captures/{cap.record_id}/thumbnail"
+
+        return {
+            "record_id": cap.record_id,
+            "captured_at": cap.captured_at.isoformat() if cap.captured_at else None,
+            "ingested_at": cap.ingested_at.isoformat() if cap.ingested_at else None,
+            "state": cap.state,
+            "score": cap.score,
+            "reason": cap.reason,
+            "trigger_label": cap.trigger_label,
+            "normal_description_file": None,  # Not used in database captures
+            "image_available": cap.image_stored,
+            "image_url": image_url,
+            "thumbnail_url": thumbnail_url,
+            "download_url": download_url,
+            "agent_details": None,  # Not used in database captures
+        }
+    finally:
+        db.close()
 
 
 @router.get("/ui/captures/{record_id}/image")
 async def serve_capture_image(
-    record_id: str, request: Request, download: bool = False
+    record_id: str,
+    request: Request,
+    download: bool = False,
+    authorization: Optional[str] = Header(None)
 ) -> FileResponse:
-    datalake_root: Path | None = getattr(request.app.state, "datalake_root", None)
-    if datalake_root is None:
-        raise HTTPException(status_code=404, detail="Capture not found")
+    """
+    Serve capture image from local filesystem.
 
-    json_path = _find_capture_json(datalake_root, record_id)
-    if json_path is None:
-        raise HTTPException(status_code=404, detail="Capture not found")
+    Now serves from uploads directory based on database record.
+    """
+    from cloud.api.database import get_db, Capture
 
-    image_path = None
+    # Get capture from database
+    # For now, return any capture (multi-tenant filtering will be added later)
+    # TODO: Implement proper session-based or cookie-based auth for UI
+    db = next(get_db())
     try:
-        payload = json.loads(json_path.read_text(encoding="utf-8"))
-        image_name = payload.get("image_filename")
-        if isinstance(image_name, str) and image_name.strip():
-            candidate = json_path.parent / image_name.strip()
-            if candidate.exists():
-                image_path = candidate
-    except (OSError, json.JSONDecodeError):
-        image_path = None
+        # Query capture from database (temporary - should be filtered by org in production)
+        cap = db.query(Capture).filter(
+            Capture.record_id == record_id
+        ).first()
 
-    if image_path is None:
-        image_path = find_capture_image(json_path)
-    if image_path is None:
-        raise HTTPException(status_code=404, detail="Capture image missing")
+        if not cap:
+            raise HTTPException(status_code=404, detail="Capture not found")
 
-    filename = image_path.name if download else None
-    return FileResponse(image_path, filename=filename)
+        if not cap.image_stored or not cap.s3_image_key:
+            raise HTTPException(status_code=404, detail="Capture image not available")
+
+        # Build path to image file
+        # s3_image_key stores relative path like: "c472e36a.../devices/TEST3/captures/TEST3_20251109_035751_25bdcc09.jpg"
+        uploads_dir = Path("uploads")
+        image_path = uploads_dir / cap.s3_image_key
+
+        if not image_path.exists():
+            raise HTTPException(status_code=404, detail="Capture image file missing")
+
+        filename = image_path.name if download else None
+        return FileResponse(image_path, filename=filename)
+    finally:
+        db.close()
 
 
 @router.get("/ui/normal-definitions/{file_name}")

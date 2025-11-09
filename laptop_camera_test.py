@@ -22,7 +22,7 @@ import sys
 
 # ===== CONFIGURATION =====
 API_URL = "http://localhost:8000"
-DEVICE_ID = "TEST2"  # Change this to your activated device
+DEVICE_ID = "TEST3"  # Change this to your activated device
 # =========================
 
 def print_section(title):

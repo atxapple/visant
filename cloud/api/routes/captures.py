@@ -4,6 +4,7 @@ import uuid
 import base64
 from datetime import datetime
 from typing import List, Optional
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -14,6 +15,29 @@ from cloud.api.service import InferenceService
 from cloud.api.workers.ai_evaluator import evaluate_capture_async
 
 router = APIRouter(prefix="/v1/captures", tags=["Captures"])
+
+# Storage configuration
+UPLOADS_DIR = Path("uploads")  # Local filesystem storage for development
+
+
+def save_capture_image(org_id: str, device_id: str, record_id: str, image_bytes: bytes) -> str:
+    """
+    Save capture image to local filesystem.
+
+    Storage structure: uploads/{org_id}/devices/{device_id}/captures/{record_id}.jpg
+
+    Returns the relative path to the saved image.
+    """
+    # Create directory structure
+    device_dir = UPLOADS_DIR / str(org_id) / "devices" / device_id / "captures"
+    device_dir.mkdir(parents=True, exist_ok=True)
+
+    # Save image
+    image_path = device_dir / f"{record_id}.jpg"
+    image_path.write_bytes(image_bytes)
+
+    # Return relative path from uploads root
+    return str(image_path.relative_to(UPLOADS_DIR))
 
 
 # Request/Response Models
@@ -134,6 +158,26 @@ async def upload_capture(
     db.commit()
     db.refresh(capture)
 
+    # Save image to local filesystem
+    try:
+        image_path = save_capture_image(
+            org_id=str(device.org_id),
+            device_id=device.device_id,
+            record_id=record_id,
+            image_bytes=image_bytes
+        )
+
+        # Update capture with image path (repurposing s3_image_key for local path)
+        capture.s3_image_key = image_path
+        capture.image_stored = True
+        db.commit()
+        db.refresh(capture)
+    except Exception as e:
+        # Log error but don't fail the upload (evaluation can still proceed)
+        print(f"Warning: Failed to save image to disk: {e}")
+        capture.image_stored = False
+        db.commit()
+
     # Update device last_seen_at
     device.last_seen_at = datetime.utcnow()
     db.commit()
@@ -151,12 +195,12 @@ async def upload_capture(
         )
 
     # Trigger async AI evaluation in background
+    # Note: Background task creates its own DB session (request session will be closed)
     background_tasks.add_task(
         evaluate_capture_async,
         record_id=record_id,
         image_bytes=image_bytes,
-        inference_service=inference_service,
-        db=db
+        inference_service=inference_service
     )
 
     return {

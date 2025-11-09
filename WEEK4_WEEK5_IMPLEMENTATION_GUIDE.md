@@ -7,23 +7,33 @@ This document provides detailed implementation instructions for completing Phase
 
 ---
 
-## ✅ Completed: Week 4 Day 1-2 (ShareManager)
+## ✅ Completed: Week 4 Day 1-2 (ShareManager - Simplified)
 
 ### What Was Done:
-- ✅ Created `cloud/web/static/js/share_manager.js` - Full ShareManager class
+- ✅ Created `cloud/web/static/js/share_manager.js` - Simplified ShareManager class
 - ✅ Added script include to `index.html`
 - ✅ Implemented share modal creation and display
-- ✅ QR code display and download
 - ✅ Copy to clipboard functionality
-- ✅ List and revoke share links methods
+- ✅ Open link in new tab
+- ✅ Remove/revoke link with confirmation
 
-### Features Implemented:
-- Create device/capture/date_range shares
-- Configurable expiration (1-365 days)
-- Optional view limits
-- QR code generation
-- Share URL copy
-- Modal UI (created dynamically in JavaScript)
+### Features Implemented (Simplified Approach):
+- **One permanent public link per device**
+- Automatically loads existing link or creates new one
+- Copy link to clipboard
+- Open link in new tab
+- Remove/revoke link
+- Clean, minimal UI
+
+### Advanced Features (Available in Backend, Hidden in UI):
+The backend supports advanced features that are currently hidden for simplicity:
+- QR code generation (`GET /v1/share-links/{token}/qrcode`)
+- Configurable expiration (1-365+ days)
+- Share types (device/capture/date_range)
+- View limits and analytics (view count)
+
+**To re-enable advanced features:** Modify `share_manager.js` to show additional form fields.
+See "Advanced Features Documentation" section below for implementation details.
 
 ---
 
@@ -766,3 +776,200 @@ async def settings_page(request: Request):
 - Total: 16-20 hours
 
 This guide provides all the code and instructions needed to complete Phase 5 Weeks 4-5.
+
+---
+
+## 🔧 Advanced Features Documentation (Optional Future Enhancements)
+
+### Overview
+
+The ShareManager has been simplified for a minimal user experience, but the backend fully supports advanced sharing features. This section documents how to re-enable these features if needed in the future.
+
+### Currently Available Backend APIs:
+
+All these APIs are fully functional but not exposed in the current UI:
+
+1. **QR Code Generation**
+   ```
+   GET /v1/share-links/{token}/qrcode
+   ```
+   Returns: PNG image of QR code for the share link
+
+2. **Share Types**
+   ```javascript
+   // Device share (current default)
+   { share_type: "device" }
+
+   // Single capture share
+   { share_type: "capture", capture_id: "..." }
+
+   // Date range share
+   { share_type: "date_range", start_date: "...", end_date: "..." }
+   ```
+
+3. **Expiration Control**
+   ```javascript
+   {
+     expires_in_days: 365  // Can be 1-365+ days
+   }
+   ```
+   Currently defaults to 365 days (effectively permanent)
+
+4. **View Limits**
+   ```javascript
+   {
+     max_views: 100  // Limit number of times link can be viewed
+   }
+   ```
+
+5. **Analytics**
+   ```javascript
+   {
+     view_count: 42,  // Number of times link has been viewed
+     max_views: 100   // Limit (if set)
+   }
+   ```
+
+### How to Re-Enable Advanced Features:
+
+#### Option 1: Add QR Codes
+
+Modify `share_manager.js` - in the `displayShareLink()` method, add QR code display:
+
+```javascript
+async displayShareLink(shareLink) {
+    document.getElementById('shareUrl').value = shareLink.share_url;
+
+    // Load QR code
+    try {
+        const qrResponse = await fetch(`/v1/share-links/${shareLink.token}/qrcode`, {
+            headers: {
+                'Authorization': `Bearer ${sessionStorage.getItem('auth_token')}`
+            }
+        });
+
+        if (qrResponse.ok) {
+            const blob = await qrResponse.blob();
+            const qrUrl = URL.createObjectURL(blob);
+
+            // Add QR code image to modal (insert before buttons)
+            const qrHtml = `
+                <div style="text-align: center; margin: 1rem 0;">
+                    <img src="${qrUrl}" alt="QR Code" style="max-width: 200px; border: 1px solid #ddd; border-radius: 8px;" />
+                </div>
+            `;
+            // Insert into modal
+        }
+    } catch (error) {
+        console.error('Error loading QR code:', error);
+    }
+
+    document.getElementById('shareLoading').style.display = 'none';
+    document.getElementById('shareContent').style.display = 'block';
+}
+```
+
+#### Option 2: Add Expiration Selector
+
+Add to modal HTML in `createShareModal()`:
+
+```html
+<div class="form-group">
+    <label>Link Expires In:</label>
+    <select id="expiresInDays" class="form-control">
+        <option value="1">1 Day</option>
+        <option value="7">1 Week</option>
+        <option value="30">1 Month</option>
+        <option value="365" selected>1 Year (Permanent)</option>
+    </select>
+</div>
+```
+
+Then update `createShareLink()` to use the selected value:
+
+```javascript
+const payload = {
+    device_id: this.currentDeviceId,
+    share_type: 'device',
+    expires_in_days: parseInt(document.getElementById('expiresInDays').value),
+    max_views: null
+};
+```
+
+#### Option 3: Add Share Type Selector
+
+Add to modal HTML:
+
+```html
+<div class="form-group">
+    <label>What to Share:</label>
+    <select id="shareType" class="form-control">
+        <option value="device">Entire Camera (all captures)</option>
+        <option value="capture">Single Capture</option>
+        <option value="date_range">Date Range</option>
+    </select>
+</div>
+```
+
+#### Option 4: Display Analytics
+
+Modify `displayShareLink()` to show view count:
+
+```javascript
+displayShareLink(shareLink) {
+    document.getElementById('shareUrl').value = shareLink.share_url;
+
+    // Display analytics
+    const analyticsHtml = `
+        <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+            Views: ${shareLink.view_count}${shareLink.max_views ? ` / ${shareLink.max_views}` : ''}
+        </div>
+    `;
+    // Insert into modal
+
+    // ... rest of display logic
+}
+```
+
+### Backend Schema Reference:
+
+```python
+class ShareLink(Base):
+    token: str              # Unique share token
+    device_id: str          # Device being shared
+    org_id: str             # Organization owner
+    share_type: str         # "device", "capture", "date_range"
+    capture_id: str         # If share_type == "capture"
+    start_date: datetime    # If share_type == "date_range"
+    end_date: datetime      # If share_type == "date_range"
+    created_at: datetime    # When link was created
+    expires_at: datetime    # When link expires
+    created_by_user_id: str # User who created link
+    password_hash: str      # Optional password (not implemented in UI)
+    max_views: int          # Optional view limit
+    view_count: int         # Number of times viewed
+```
+
+### Migration Path:
+
+If you decide to add advanced features later:
+
+1. **Phase 1**: Add QR codes (most visual, easiest to implement)
+2. **Phase 2**: Add expiration selector (simple dropdown)
+3. **Phase 3**: Add analytics display (view count)
+4. **Phase 4**: Add share type selector (capture/date_range)
+5. **Phase 5**: Add view limits
+
+Each phase builds on the previous without breaking existing functionality.
+
+---
+
+## Final Notes
+
+The current simplified implementation provides:
+- ✅ One-click sharing
+- ✅ Permanent links
+- ✅ Easy revocation
+- ✅ Clean UX
+
+Future enhancements are available when needed without backend changes.

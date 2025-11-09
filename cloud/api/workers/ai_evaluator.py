@@ -108,24 +108,30 @@ class CloudAIEvaluator:
 def evaluate_capture_async(
     record_id: str,
     image_bytes: bytes,
-    inference_service: InferenceService,
-    db: Session
+    inference_service: InferenceService
 ):
     """
     Async wrapper for background task execution.
 
     This function is called by FastAPI BackgroundTasks.
+    Creates its own database session (background tasks must not reuse request sessions).
 
     Args:
         record_id: The capture record_id
         image_bytes: The image data
         inference_service: InferenceService instance
-        db: Database session
     """
-    evaluator = CloudAIEvaluator(inference_service)
-    result = evaluator.evaluate_capture(record_id, image_bytes, db)
+    from cloud.api.database import SessionLocal
 
-    if result:
-        logger.info(f"Background evaluation succeeded: {record_id}")
-    else:
-        logger.error(f"Background evaluation failed: {record_id}")
+    # Create new database session for background task
+    db = SessionLocal()
+    try:
+        evaluator = CloudAIEvaluator(inference_service)
+        result = evaluator.evaluate_capture(record_id, image_bytes, db)
+
+        if result:
+            logger.info(f"Background evaluation succeeded: {record_id}")
+        else:
+            logger.error(f"Background evaluation failed: {record_id}")
+    finally:
+        db.close()  # Always close the session
