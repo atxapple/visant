@@ -1,7 +1,7 @@
 """Background AI evaluation worker for uploaded captures."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.orm import Session
 
@@ -67,7 +67,7 @@ class CloudAIEvaluator:
             capture.score = classification.score
             capture.reason = classification.reason
             capture.evaluation_status = "completed"
-            capture.evaluated_at = datetime.utcnow()
+            capture.evaluated_at = datetime.now(timezone.utc)
 
             db.commit()
             db.refresh(capture)

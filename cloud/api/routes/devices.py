@@ -153,7 +153,7 @@ def register_device(
         friendly_name=request.friendly_name or request.device_id.replace('-', ' ').title(),
         api_key=api_key,
         status="active",
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc)
     )
 
     db.add(device)

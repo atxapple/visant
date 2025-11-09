@@ -1,6 +1,7 @@
 """FastAPI dependencies for authentication and authorization."""
 
 import secrets
+from datetime import datetime, timezone
 from typing import Optional
 from fastapi import Depends, HTTPException, Header, status
 from sqlalchemy.orm import Session
@@ -48,7 +49,7 @@ def get_current_user(
 
     # Update last login timestamp
     from datetime import datetime
-    user.last_login_at = datetime.utcnow()
+    user.last_login_at = datetime.now(timezone.utc)
     db.commit()
 
     return user
@@ -142,7 +143,7 @@ def verify_device_api_key(
 
     # Update device last_seen timestamp
     from datetime import datetime
-    device.last_seen_at = datetime.utcnow()
+    device.last_seen_at = datetime.now(timezone.utc)
     db.commit()
 
     return device
@@ -226,7 +227,7 @@ def verify_device_by_id(
 
     # Update device last_seen timestamp
     from datetime import datetime
-    device.last_seen_at = datetime.utcnow()
+    device.last_seen_at = datetime.now(timezone.utc)
     db.commit()
 
     return device

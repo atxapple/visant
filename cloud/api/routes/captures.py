@@ -2,7 +2,7 @@
 
 import uuid
 import base64
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form, BackgroundTasks
@@ -132,7 +132,7 @@ async def upload_capture(
         )
 
     # Generate unique record_id
-    record_id = f"{device.device_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+    record_id = f"{device.device_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
 
     # Create capture record with pending evaluation
     capture = Capture(
@@ -140,7 +140,7 @@ async def upload_capture(
         org_id=device.org_id,  # Automatically set from device's org
         device_id=device.device_id,
         captured_at=request.captured_at,
-        ingested_at=datetime.utcnow(),
+        ingested_at=datetime.now(timezone.utc),
         trigger_label=request.trigger_label,
         capture_metadata=request.metadata or {},
         # Cloud AI fields - initially null/pending
@@ -179,7 +179,7 @@ async def upload_capture(
         db.commit()
 
     # Update device last_seen_at
-    device.last_seen_at = datetime.utcnow()
+    device.last_seen_at = datetime.now(timezone.utc)
     db.commit()
 
     # Get global InferenceService instance (set by test_auth_server.py or main server)

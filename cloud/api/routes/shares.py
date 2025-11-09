@@ -2,7 +2,7 @@
 
 import secrets
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
@@ -128,7 +128,7 @@ def create_share_link(
         token = generate_share_token()
 
     # Calculate expiration
-    expires_at = datetime.utcnow() + timedelta(days=request.expires_in_days)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=request.expires_in_days)
 
     # Create share link
     share_link = ShareLink(
@@ -140,7 +140,7 @@ def create_share_link(
         start_date=request.start_date,
         end_date=request.end_date,
         created_by=user.id,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
         expires_at=expires_at,
         max_views=request.max_views,
         view_count=0

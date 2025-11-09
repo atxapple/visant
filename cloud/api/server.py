@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 
 from .schemas import (
@@ -220,6 +221,20 @@ def create_app(
 
     app = FastAPI(title="OK Monitor API", version="0.1.0")
 
+    # Configure CORS
+    # Get allowed origins from environment variable, default to localhost for development
+    import os
+    allowed_origins_env = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")
+    allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     # Load persistent server configuration
     server_config_path = Path("/mnt/data/config/server_config.json")
     persistent_config = load_server_config(server_config_path)
@@ -339,85 +354,8 @@ def create_app(
     def healthcheck() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.post("/v1/captures", response_model=InferenceResponse)
-    async def ingest_capture(request: CaptureRequest) -> InferenceResponse:
-        import time
-
-        # Timing debug: Record request received timestamp
-        timing = None
-        if app.state.timing_debug_enabled:
-            timing = CaptureTimings(
-                record_id="",  # Will be filled in later
-                device_id=request.device_id,
-                t3_server_request_received=time.time(),
-            )
-            # Copy device timestamps if provided
-            if request.debug_timestamps:
-                timing.t0_device_capture = request.debug_timestamps.get("t0_device_capture")
-                timing.t1_device_thumbnail = request.debug_timestamps.get("t1_device_thumbnail")
-                timing.t2_device_request_sent = request.debug_timestamps.get("t2_device_request_sent")
-
-        logger.info(
-            "Ingest capture device=%s trigger=%s payload_bytes=%d",
-            request.device_id,
-            request.trigger_label,
-            len(request.image_base64 or ""),
-        )
-        try:
-            result = service.process_capture(request.model_dump(), timing=timing)
-        except Exception as exc:  # pragma: no cover - surfaced via HTTP
-            logger.exception(
-                "Capture ingestion failed device=%s error=%s", request.device_id, exc
-            )
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-        # Timing debug: Record broadcast start
-        if timing:
-            timing.t8_server_broadcast_complete = time.time()
-
-        if result.get("created") and result.get("record_id"):
-            event_payload = {
-                "event": "capture",
-                "device_id": request.device_id,
-                "record_id": result.get("record_id"),
-                "state": result.get("state"),
-                "captured_at": result.get("captured_at"),
-            }
-            try:
-                await capture_hub.publish(request.device_id, event_payload)
-            except Exception:
-                logger.exception(
-                    "Failed to publish capture event device=%s record_id=%s",
-                    request.device_id,
-                    result.get("record_id"),
-                )
-
-        # Timing debug: Record response sent and store timing data
-        if timing and result.get("record_id"):
-            timing.record_id = result.get("record_id", "")
-            timing.state = result.get("state")
-            timing.t9_server_response_sent = time.time()
-            if app.state.timing_stats:
-                app.state.timing_stats.add_timing(timing)
-
-        logger.info(
-            "Capture processed device=%s state=%s score=%.2f",
-            request.device_id,
-            result.get("state"),
-            result.get("score", 0.0),
-        )
-
-        # Update global device ID to reflect most recently active device
-        # This updates the UI header to show the actual device instead of "ui-device"
-        app.state.device_id = request.device_id
-
-        # Track device version if provided
-        if request.device_version:
-            if not hasattr(app.state, "device_versions"):
-                app.state.device_versions = {}
-            app.state.device_versions[request.device_id] = request.device_version
-
-        return InferenceResponse(**result)
+    # NOTE: Legacy single-tenant /v1/captures endpoint removed
+    # Use the multi-tenant version in cloud/api/routes/captures.py instead
 
     @app.get("/v1/device-config", response_model=DeviceConfigResponse)
     def fetch_device_config(

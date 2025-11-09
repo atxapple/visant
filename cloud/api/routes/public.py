@@ -1,6 +1,6 @@
 """Public gallery endpoints (no authentication required)."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, status, Query, Request
 from fastapi.responses import HTMLResponse
@@ -68,7 +68,7 @@ async def public_gallery_html(
         )
 
     # Check if expired
-    if share_link.expires_at < datetime.utcnow():
+    if share_link.expires_at < datetime.now(timezone.utc):
         return HTMLResponse(
             content=f"""
             <html>
@@ -99,7 +99,7 @@ async def public_gallery_html(
 
     # Increment view count
     share_link.view_count += 1
-    share_link.last_viewed_at = datetime.utcnow()
+    share_link.last_viewed_at = datetime.now(timezone.utc)
     db.commit()
 
     # Get device and organization info
@@ -256,7 +256,7 @@ def public_gallery_api(
         )
 
     # Check if expired
-    if share_link.expires_at < datetime.utcnow():
+    if share_link.expires_at < datetime.now(timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_410_GONE,
             detail="Share link has expired"
@@ -271,7 +271,7 @@ def public_gallery_api(
 
     # Increment view count
     share_link.view_count += 1
-    share_link.last_viewed_at = datetime.utcnow()
+    share_link.last_viewed_at = datetime.now(timezone.utc)
     db.commit()
 
     # Get device and organization info

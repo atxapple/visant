@@ -1,7 +1,7 @@
 """Authentication endpoints for user signup, login, and session management."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
@@ -92,7 +92,7 @@ def signup(
         org = Organization(
             id=uuid.uuid4(),
             name=org_name,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc)
         )
         db.add(org)
         db.flush()  # Get org.id without committing
@@ -104,7 +104,7 @@ def signup(
             org_id=org.id,
             supabase_user_id=uuid.UUID(supabase_user["id"]) if isinstance(supabase_user["id"], str) else supabase_user["id"],
             role="admin",  # First user is admin
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc)
         )
         db.add(user)
         db.commit()
@@ -167,7 +167,7 @@ def login(
             )
 
         # Update last login
-        user.last_login_at = datetime.utcnow()
+        user.last_login_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(user)
 
