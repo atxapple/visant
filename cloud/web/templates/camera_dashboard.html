@@ -399,11 +399,33 @@
             border-radius: 6px;
             font-size: 0.9rem;
             background: #ffffff;
+            color: #374151;
+            font-family: inherit;
         }
         .filter-input:focus {
             outline: none;
             border-color: #2563eb;
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .filter-input[type="datetime-local"] {
+            min-height: 38px;
+            cursor: pointer;
+        }
+        .filter-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            opacity: 0.6;
+            margin-left: 4px;
+        }
+        .filter-input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
+        .filter-input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .filter-input[type="number"]::-webkit-inner-spin-button,
+        .filter-input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
         .filter-actions {
             display: flex;
