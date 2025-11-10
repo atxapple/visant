@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Device Manufacturing - Visant Admin</title>
+    <link rel="icon" type="image/png" href="/ui/static/favicon.png" />
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f6f8fa;
+            color: #101820;
+        }
+
+        /* Header */
+        header {
+            background: #ffffff;
+            border-bottom: 1px solid #d0d7de;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2563eb;
+            text-decoration: none;
+        }
+        .admin-badge {
+            background: #dc2626;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .btn-logout {
+            background: transparent;
+            color: #6b7280;
+            border: 1px solid #d1d5db;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-logout:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.875rem;
+            color: #111827;
+        }
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 2rem;
+        }
+
+        /* Manufacturing Section */
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #111827;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-size: 0.875rem;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .form-hint {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        .btn-primary {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #1d4ed8;
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            padding: 0.75rem 1.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: white;
+            color: #374151;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            margin-left: 0.5rem;
+        }
+        .btn-secondary:hover {
+            background: #f3f4f6;
+        }
+
+        /* Results */
+        .results-container {
+            margin-top: 2rem;
+            display: none;
+        }
+        .results-container.active {
+            display: block;
+        }
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .results-title {
+            font-weight: 600;
+            color: #111827;
+        }
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 0.75rem;
+            padding: 1.5rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .device-id-box {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 0.75rem;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        /* Alert */
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+        .alert.active {
+            display: block;
+        }
+        .alert-success {
+            background: #d1fae5;
+            border: 1px solid #6ee7b7;
+            color: #065f46;
+        }
+        .alert-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-left">
+            <a href="/ui/cameras" class="logo">Visant</a>
+            <span class="admin-badge">ADMIN</span>
+        </div>
+        <div class="header-right">
+            <button class="btn-logout" onclick="window.location.href='/ui/cameras'">Back to Cameras</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <h1>Device Manufacturing</h1>
+        <p class="subtitle">Generate unique device IDs for camera manufacturing</p>
+
+        <!-- Alert Messages -->
+        <div id="alertSuccess" class="alert alert-success"></div>
+        <div id="alertError" class="alert alert-error"></div>
+
+        <!-- Manufacturing Form -->
+        <div class="section">
+            <h2 class="section-title">Generate Device IDs</h2>
+            <form id="manufacturingForm" onsubmit="handleManufacture(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="quantity">Number of Devices *</label>
+                        <input
+                            type="number"
+                            id="quantity"
+                            class="form-input"
+                            placeholder="10"
+                            min="1"
+                            max="1000"
+                            value="10"
+                            required
+                        />
+                        <div class="form-hint">How many device IDs to generate (max 1000)</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="batchId">Batch ID (Optional)</label>
+                        <input
+                            type="text"
+                            id="batchId"
+                            class="form-input"
+                            placeholder="BATCH_2024_001"
+                            maxlength="50"
+                        />
+                        <div class="form-hint">Identifier for this manufacturing batch</div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" id="generateButton">Generate Device IDs</button>
+            </form>
+        </div>
+
+        <!-- Results -->
+        <div id="resultsContainer" class="results-container section">
+            <div class="results-header">
+                <h2 class="section-title">Generated Device IDs</h2>
+                <div>
+                    <button class="btn-secondary" onclick="copyDeviceIds()">Copy All</button>
+                    <button class="btn-secondary" onclick="exportToCsv()">Export CSV</button>
+                    <button class="btn-secondary" onclick="printDeviceIds()">Print</button>
+                </div>
+            </div>
+            <div id="deviceGrid" class="device-grid"></div>
+        </div>
+    </main>
+
+    <script src="/static/js/auth.js"></script>
+    <script>
+        // Require authentication
+        if (!auth.requireAuth()) {
+            // Will redirect to login
+        }
+
+        let generatedDevices = [];
+
+        // Generate device IDs
+        async function handleManufacture(event) {
+            event.preventDefault();
+
+            const quantity = parseInt(document.getElementById('quantity').value);
+            const batchId = document.getElementById('batchId').value.trim() || null;
+
+            const generateButton = document.getElementById('generateButton');
+            const successAlert = document.getElementById('alertSuccess');
+            const errorAlert = document.getElementById('alertError');
+
+            // Clear previous alerts
+            successAlert.classList.remove('active');
+            errorAlert.classList.remove('active');
+
+            // Disable button
+            generateButton.disabled = true;
+            generateButton.textContent = 'Generating...';
+
+            try {
+                // Call manufacturing API
+                const response = await fetch('/v1/devices/manufacture', {
+                    method: 'POST',
+                    headers: {
+                        ...auth.getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        quantity: quantity,
+                        batch_id: batchId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Manufacturing failed');
+                }
+
+                // Store generated devices
+                generatedDevices = data.devices || [];
+
+                // Display results
+                displayResults(generatedDevices);
+
+                // Show success message
+                successAlert.textContent = `Successfully generated ${generatedDevices.length} device IDs`;
+                successAlert.classList.add('active');
+
+            } catch (error) {
+                console.error('Manufacturing error:', error);
+                errorAlert.textContent = error.message;
+                errorAlert.classList.add('active');
+            } finally {
+                // Re-enable button
+                generateButton.disabled = false;
+                generateButton.textContent = 'Generate Device IDs';
+            }
+        }
+
+        // Display generated device IDs
+        function displayResults(devices) {
+            const container = document.getElementById('resultsContainer');
+            const grid = document.getElementById('deviceGrid');
+
+            grid.innerHTML = '';
+
+            devices.forEach(device => {
+                const box = document.createElement('div');
+                box.className = 'device-id-box';
+                box.textContent = device.device_id;
+                grid.appendChild(box);
+            });
+
+            container.classList.add('active');
+        }
+
+        // Copy all device IDs to clipboard
+        function copyDeviceIds() {
+            const ids = generatedDevices.map(d => d.device_id).join('\n');
+            navigator.clipboard.writeText(ids).then(() => {
+                alert('Device IDs copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+
+        // Export to CSV
+        function exportToCsv() {
+            const csv = 'Device ID,Batch ID,Manufactured At\n' +
+                generatedDevices.map(d =>
+                    `${d.device_id},${d.batch_id || ''},${d.manufactured_at}`
+                ).join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `devices_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Print device IDs
+        function printDeviceIds() {
+            const printWindow = window.open('', '_blank');
+            const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Device IDs</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 2rem; }
+                        h1 { margin-bottom: 2rem; }
+                        .grid {
+                            display: grid;
+                            grid-template-columns: repeat(5, 1fr);
+                            gap: 1rem;
+                        }
+                        .box {
+                            border: 2px solid #000;
+                            padding: 1rem;
+                            text-align: center;
+                            font-family: 'Courier New', monospace;
+                            font-size: 1.5rem;
+                            font-weight: bold;
+                            page-break-inside: avoid;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>Visant Device IDs</h1>
+                    <div class="grid">
+                        ${generatedDevices.map(d =>
+                            `<div class="box">${d.device_id}</div>`
+                        ).join('')}
+                    </div>
+                </body>
+                </html>
+            `;
+            printWindow.document.write(html);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        }
+    </script>
+</body>
+</html>

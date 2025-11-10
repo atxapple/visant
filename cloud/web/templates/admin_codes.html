@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Activation Codes - Visant Admin</title>
+    <link rel="icon" type="image/png" href="/ui/static/favicon.png" />
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f6f8fa;
+            color: #101820;
+        }
+
+        /* Header */
+        header {
+            background: #ffffff;
+            border-bottom: 1px solid #d0d7de;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2563eb;
+            text-decoration: none;
+        }
+        .admin-badge {
+            background: #dc2626;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .btn-logout {
+            background: transparent;
+            color: #6b7280;
+            border: 1px solid #d1d5db;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-logout:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.875rem;
+            color: #111827;
+        }
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 2rem;
+        }
+
+        /* Section */
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #111827;
+        }
+
+        /* Form */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-group-full {
+            grid-column: 1 / -1;
+        }
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-size: 0.875rem;
+        }
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .form-hint {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        .form-checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        .form-checkbox {
+            width: auto;
+            margin: 0;
+        }
+        .form-checkbox-label {
+            font-size: 0.875rem;
+            color: #374151;
+            cursor: pointer;
+        }
+
+        /* Buttons */
+        .btn-primary {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #1d4ed8;
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            padding: 0.75rem 1.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: white;
+            color: #374151;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            margin-left: 0.5rem;
+        }
+        .btn-secondary:hover {
+            background: #f3f4f6;
+        }
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+        .alert.active {
+            display: block;
+        }
+        .alert-success {
+            background: #d1fae5;
+            border: 1px solid #6ee7b7;
+            color: #065f46;
+        }
+        .alert-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        /* Code List Table */
+        .code-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .code-table th {
+            background: #f9fafb;
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .code-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.875rem;
+        }
+        .code-table tr:hover {
+            background: #f9fafb;
+        }
+        .code-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .code-badge.active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .code-badge.inactive {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+        .code-badge.expired {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .benefit-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .code-text {
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            color: #111827;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+        .actions-cell {
+            display: flex;
+            gap: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-left">
+            <a href="/ui/cameras" class="logo">Visant</a>
+            <span class="admin-badge">ADMIN</span>
+        </div>
+        <div class="header-right">
+            <button class="btn-logout" onclick="window.location.href='/ui/cameras'">Back to Cameras</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <h1>Activation Code Management</h1>
+        <p class="subtitle">Create and manage activation codes for device registration and promotions</p>
+
+        <!-- Alert Messages -->
+        <div id="alertSuccess" class="alert alert-success"></div>
+        <div id="alertError" class="alert alert-error"></div>
+
+        <!-- Code Creation Form -->
+        <div class="section">
+            <h2 class="section-title">Create New Activation Code</h2>
+            <form id="codeForm" onsubmit="handleCreateCode(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="code">Code *</label>
+                        <input
+                            type="text"
+                            id="code"
+                            class="form-input"
+                            placeholder="PROMO2024"
+                            maxlength="50"
+                            required
+                            style="text-transform: uppercase;"
+                        />
+                        <div class="form-hint">Unique code identifier (auto-uppercased)</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="benefitType">Benefit Type *</label>
+                        <select id="benefitType" class="form-select" required>
+                            <option value="">-- Select Benefit Type --</option>
+                            <option value="device_slots">Device Slots</option>
+                            <option value="free_months">Free Months</option>
+                            <option value="trial_extension">Trial Extension (Days)</option>
+                        </select>
+                        <div class="form-hint">Type of benefit granted by this code</div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="benefitValue">Benefit Value *</label>
+                        <input
+                            type="number"
+                            id="benefitValue"
+                            class="form-input"
+                            placeholder="99"
+                            min="1"
+                            required
+                        />
+                        <div class="form-hint">Numeric value (e.g., 99 devices, 12 months, 30 days)</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="maxUses">Max Uses</label>
+                        <input
+                            type="number"
+                            id="maxUses"
+                            class="form-input"
+                            placeholder="100"
+                            min="1"
+                        />
+                        <div class="form-hint">Leave empty for unlimited uses</div>
+                    </div>
+                </div>
+
+                <div class="form-group form-group-full">
+                    <label class="form-label" for="description">Description</label>
+                    <textarea
+                        id="description"
+                        class="form-textarea"
+                        placeholder="Development testing - 99 device slots, unlimited uses"
+                        maxlength="255"
+                    ></textarea>
+                    <div class="form-hint">Optional description for internal reference</div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="validUntil">Expiration Date</label>
+                        <input
+                            type="datetime-local"
+                            id="validUntil"
+                            class="form-input"
+                        />
+                        <div class="form-hint">Leave empty for no expiration</div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-checkbox-group">
+                            <input
+                                type="checkbox"
+                                id="onePerUser"
+                                class="form-checkbox"
+                                checked
+                            />
+                            <label for="onePerUser" class="form-checkbox-label">One per user (prevent duplicate redemptions)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" id="createButton">Create Activation Code</button>
+            </form>
+        </div>
+
+        <!-- Code List -->
+        <div class="section">
+            <h2 class="section-title">Activation Codes</h2>
+            <div id="codeListContainer">
+                <table class="code-table" id="codeTable">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Description</th>
+                            <th>Benefit</th>
+                            <th>Uses</th>
+                            <th>Expires</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="codeTableBody">
+                        <!-- Codes will be inserted here -->
+                    </tbody>
+                </table>
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <p>No activation codes yet. Create your first code above.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/auth.js"></script>
+    <script>
+        // Require authentication
+        if (!auth.requireAuth()) {
+            // Will redirect to login
+        }
+
+        // Load codes on page load
+        loadActivationCodes();
+
+        // Create activation code
+        async function handleCreateCode(event) {
+            event.preventDefault();
+
+            const code = document.getElementById('code').value.toUpperCase().trim();
+            const benefitType = document.getElementById('benefitType').value;
+            const benefitValue = parseInt(document.getElementById('benefitValue').value);
+            const maxUses = document.getElementById('maxUses').value ? parseInt(document.getElementById('maxUses').value) : null;
+            const description = document.getElementById('description').value.trim() || null;
+            const validUntil = document.getElementById('validUntil').value ? new Date(document.getElementById('validUntil').value).toISOString() : null;
+            const onePerUser = document.getElementById('onePerUser').checked;
+
+            const createButton = document.getElementById('createButton');
+            const successAlert = document.getElementById('alertSuccess');
+            const errorAlert = document.getElementById('alertError');
+
+            // Clear previous alerts
+            successAlert.classList.remove('active');
+            errorAlert.classList.remove('active');
+
+            // Disable button
+            createButton.disabled = true;
+            createButton.textContent = 'Creating...';
+
+            try {
+                const response = await fetch('/v1/admin/activation-codes', {
+                    method: 'POST',
+                    headers: {
+                        ...auth.getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        code: code,
+                        description: description,
+                        benefit_type: benefitType,
+                        benefit_value: benefitValue,
+                        max_uses: maxUses,
+                        valid_until: validUntil,
+                        one_per_user: onePerUser
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to create activation code');
+                }
+
+                // Success! Reset form and reload codes
+                document.getElementById('codeForm').reset();
+                await loadActivationCodes();
+
+                // Show success message
+                successAlert.textContent = `Successfully created activation code: ${data.code}`;
+                successAlert.classList.add('active');
+
+                // Scroll to top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            } catch (error) {
+                console.error('Error creating code:', error);
+                errorAlert.textContent = error.message;
+                errorAlert.classList.add('active');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } finally {
+                // Re-enable button
+                createButton.disabled = false;
+                createButton.textContent = 'Create Activation Code';
+            }
+        }
+
+        // Load activation codes
+        async function loadActivationCodes() {
+            try {
+                const response = await fetch('/v1/admin/activation-codes', {
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load activation codes');
+                }
+
+                const data = await response.json();
+                const codes = data.codes || [];
+
+                if (codes.length === 0) {
+                    document.getElementById('codeTable').style.display = 'none';
+                    document.getElementById('emptyState').style.display = 'block';
+                    return;
+                }
+
+                document.getElementById('codeTable').style.display = 'table';
+                document.getElementById('emptyState').style.display = 'none';
+
+                renderCodeTable(codes);
+            } catch (error) {
+                console.error('Error loading codes:', error);
+                document.getElementById('alertError').textContent = 'Failed to load activation codes';
+                document.getElementById('alertError').classList.add('active');
+            }
+        }
+
+        // Render code table
+        function renderCodeTable(codes) {
+            const tbody = document.getElementById('codeTableBody');
+            tbody.innerHTML = '';
+
+            codes.forEach(code => {
+                const row = document.createElement('tr');
+
+                // Status badge
+                let statusBadge = '';
+                if (!code.active) {
+                    statusBadge = '<span class="code-badge inactive">Inactive</span>';
+                } else if (code.is_expired) {
+                    statusBadge = '<span class="code-badge expired">Expired</span>';
+                } else {
+                    statusBadge = '<span class="code-badge active">Active</span>';
+                }
+
+                // Benefit display
+                let benefitText = '';
+                switch (code.benefit_type) {
+                    case 'device_slots':
+                        benefitText = `${code.benefit_value} Device Slots`;
+                        break;
+                    case 'free_months':
+                        benefitText = `${code.benefit_value} Free Months`;
+                        break;
+                    case 'trial_extension':
+                        benefitText = `${code.benefit_value} Day Extension`;
+                        break;
+                    default:
+                        benefitText = `${code.benefit_type}: ${code.benefit_value}`;
+                }
+
+                // Uses display
+                const usesText = code.max_uses
+                    ? `${code.uses_count}/${code.max_uses}`
+                    : `${code.uses_count}/∞`;
+
+                // Expiration display
+                const expiresText = code.valid_until
+                    ? new Date(code.valid_until).toLocaleDateString()
+                    : 'Never';
+
+                row.innerHTML = `
+                    <td><span class="code-text">${code.code}</span></td>
+                    <td>${code.description || '<em>No description</em>'}</td>
+                    <td><span class="benefit-badge">${benefitText}</span></td>
+                    <td>${usesText}</td>
+                    <td>${expiresText}</td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <div class="actions-cell">
+                            ${code.active
+                                ? `<button class="btn-secondary btn-small" onclick="deactivateCode('${code.code}')">Deactivate</button>`
+                                : `<button class="btn-primary btn-small" onclick="activateCode('${code.code}')">Activate</button>`
+                            }
+                            ${code.uses_count === 0
+                                ? `<button class="btn-danger btn-small" onclick="deleteCode('${code.code}')">Delete</button>`
+                                : ''
+                            }
+                        </div>
+                    </td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        // Deactivate code
+        async function deactivateCode(code) {
+            if (!confirm(`Are you sure you want to deactivate code "${code}"? It will no longer be usable.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/v1/admin/activation-codes/${code}`, {
+                    method: 'PUT',
+                    headers: {
+                        ...auth.getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ active: false })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to deactivate code');
+                }
+
+                await loadActivationCodes();
+                document.getElementById('alertSuccess').textContent = `Code "${code}" deactivated successfully`;
+                document.getElementById('alertSuccess').classList.add('active');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (error) {
+                console.error('Error deactivating code:', error);
+                alert('Failed to deactivate code: ' + error.message);
+            }
+        }
+
+        // Activate code
+        async function activateCode(code) {
+            try {
+                const response = await fetch(`/v1/admin/activation-codes/${code}`, {
+                    method: 'PUT',
+                    headers: {
+                        ...auth.getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ active: true })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to activate code');
+                }
+
+                await loadActivationCodes();
+                document.getElementById('alertSuccess').textContent = `Code "${code}" activated successfully`;
+                document.getElementById('alertSuccess').classList.add('active');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (error) {
+                console.error('Error activating code:', error);
+                alert('Failed to activate code: ' + error.message);
+            }
+        }
+
+        // Delete code
+        async function deleteCode(code) {
+            if (!confirm(`Are you sure you want to permanently delete code "${code}"? This cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/v1/admin/activation-codes/${code}`, {
+                    method: 'DELETE',
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.detail || 'Failed to delete code');
+                }
+
+                await loadActivationCodes();
+                document.getElementById('alertSuccess').textContent = `Code "${code}" deleted successfully`;
+                document.getElementById('alertSuccess').classList.add('active');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (error) {
+                console.error('Error deleting code:', error);
+                alert('Failed to delete code: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

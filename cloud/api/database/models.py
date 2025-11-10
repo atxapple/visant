@@ -82,6 +82,7 @@ class User(Base):
 
     id = Column(GUID, primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, nullable=False, index=True)
+    name = Column(String(255), nullable=True)  # User's display name
     org_id = Column(GUID, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # Link to Supabase Auth user
@@ -109,7 +110,6 @@ class Device(Base):
     org_id = Column(GUID, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True)  # Null until activated
 
     friendly_name = Column(String(255), nullable=True)
-    api_key = Column(String(255), unique=True, nullable=True, index=True)  # Generated on activation
 
     # Manufacturing tracking
     manufactured_at = Column(DateTime, nullable=True)

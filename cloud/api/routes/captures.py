@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from cloud.api.database import get_db, Capture, Device, Organization
-from cloud.api.auth.dependencies import verify_device_api_key, verify_device_by_id
+from cloud.api.auth.dependencies import verify_device_by_id, get_current_org
 from cloud.api.service import InferenceService
 from cloud.api.workers.ai_evaluator import evaluate_capture_async
 
@@ -238,18 +238,18 @@ def list_captures(
     state: Optional[str] = Query(None, description="Filter by state (normal, abnormal, uncertain)"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    device: Device = Depends(verify_device_api_key),
+    org: Organization = Depends(get_current_org),
     db: Session = Depends(get_db)
 ):
     """
-    List captures for the authenticated device's organization.
+    List captures for the authenticated user's organization.
 
-    **Authentication**: Requires device API key.
+    **Authentication**: Requires user JWT token.
 
     Returns captures filtered by organization, optionally by device and state.
     """
     # Base query - filter by organization
-    query = db.query(Capture).filter(Capture.org_id == device.org_id)
+    query = db.query(Capture).filter(Capture.org_id == org.id)
 
     # Apply optional filters
     if device_id:
@@ -415,19 +415,19 @@ def get_capture_status(
 @router.delete("/{record_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_capture(
     record_id: str,
-    device: Device = Depends(verify_device_api_key),
+    org: Organization = Depends(get_current_org),
     db: Session = Depends(get_db)
 ):
     """
     Delete a capture.
 
-    **Authentication**: Requires device API key.
+    **Authentication**: Requires user JWT token.
 
-    Only allows deleting captures from the authenticated device's organization.
+    Only allows deleting captures from the authenticated user's organization.
     """
     capture = db.query(Capture).filter(
         Capture.record_id == record_id,
-        Capture.org_id == device.org_id
+        Capture.org_id == org.id
     ).first()
 
     if not capture:
@@ -448,16 +448,16 @@ def delete_capture(
 async def upload_capture_image(
     record_id: str,
     image: UploadFile = File(...),
-    device: Device = Depends(verify_device_api_key),
+    org: Organization = Depends(get_current_org),
     db: Session = Depends(get_db)
 ):
     """
     Upload image for a capture.
 
-    **Authentication**: Requires device API key.
+    **Authentication**: Requires user JWT token.
 
     **Process**:
-    1. Validates capture belongs to device's org
+    1. Validates capture belongs to user's org
     2. Uploads image to S3 (or local storage for dev)
     3. Updates capture.image_stored = True
     4. Returns S3 key
@@ -467,7 +467,7 @@ async def upload_capture_image(
     # Verify capture exists and belongs to org
     capture = db.query(Capture).filter(
         Capture.record_id == record_id,
-        Capture.org_id == device.org_id
+        Capture.org_id == org.id
     ).first()
 
     if not capture:

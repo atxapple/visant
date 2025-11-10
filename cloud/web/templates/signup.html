@@ -243,6 +243,18 @@
 
         <form id="signupForm">
             <div class="form-group">
+                <label for="name">Name</label>
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    placeholder="Your full name"
+                    required
+                    autocomplete="name"
+                />
+            </div>
+
+            <div class="form-group">
                 <label for="email">Email</label>
                 <input
                     type="email"
@@ -311,7 +323,7 @@
 
         // Redirect if already authenticated
         if (auth.isAuthenticated()) {
-            window.location.href = '/ui';
+            window.location.href = '/ui/cameras';
         }
 
         // Password strength checker
@@ -351,6 +363,7 @@
         signupForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            const name = document.getElementById('name').value.trim();
             const email = document.getElementById('email').value.trim();
             const password = passwordInput.value;
             const confirmPassword = confirmPasswordInput.value;
@@ -359,6 +372,13 @@
             // Clear previous errors
             errorMessage.classList.remove('show');
             errorMessage.textContent = '';
+
+            // Validate name
+            if (!name || name.length < 2) {
+                errorMessage.textContent = 'Please enter your name';
+                errorMessage.classList.add('show');
+                return;
+            }
 
             // Validate passwords match
             if (password !== confirmPassword) {
@@ -388,13 +408,31 @@
 
             try {
                 // Call signup API (organization auto-created from email)
-                await auth.signup(email, password);
+                await auth.signup(name, email, password);
 
-                // Success - redirect to dashboard
-                window.location.href = '/ui';
+                // Success - redirect to camera selection
+                window.location.href = '/ui/cameras';
             } catch (error) {
-                // Show error message
-                errorMessage.textContent = error.message || 'Signup failed. Please try again.';
+                // Show error message (handle FastAPI validation errors)
+                let errorText = 'Signup failed. Please try again.';
+
+                if (typeof error === 'string') {
+                    errorText = error;
+                } else if (error.message) {
+                    errorText = error.message;
+                } else if (error.detail) {
+                    // FastAPI returns validation errors as array
+                    if (Array.isArray(error.detail)) {
+                        errorText = error.detail.map(e => e.msg || JSON.stringify(e)).join(', ');
+                    } else if (typeof error.detail === 'string') {
+                        errorText = error.detail;
+                    } else {
+                        errorText = JSON.stringify(error.detail);
+                    }
+                }
+
+                console.error('Signup error:', error); // Debug logging
+                errorMessage.textContent = errorText;
                 errorMessage.classList.add('show');
 
                 // Re-enable button

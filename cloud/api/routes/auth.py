@@ -16,12 +16,14 @@ router = APIRouter(prefix="/v1/auth", tags=["Authentication"])
 
 # Request/Response Models
 class SignupRequest(BaseModel):
+    name: str
     email: EmailStr
     password: str
 
     class Config:
         json_schema_extra = {
             "example": {
+                "name": "John Doe",
                 "email": "user@example.com",
                 "password": "secure_password_123"
             }
@@ -49,6 +51,7 @@ class AuthResponse(BaseModel):
 
 
 class UserMeResponse(BaseModel):
+    name: Optional[str]
     email: str
     role: str
     organization: dict
@@ -100,6 +103,7 @@ def signup(
         # Step 3: Create user in our database
         user = User(
             id=uuid.uuid4(),
+            name=request.name,
             email=request.email,
             org_id=org.id,
             supabase_user_id=uuid.UUID(supabase_user["id"]) if isinstance(supabase_user["id"], str) else supabase_user["id"],
@@ -118,6 +122,7 @@ def signup(
             "access_token": auth_result["access_token"],
             "refresh_token": auth_result["refresh_token"],
             "user": {
+                "name": user.name,
                 "email": user.email,
                 "role": user.role,
             }
@@ -175,6 +180,7 @@ def login(
             "access_token": auth_result["access_token"],
             "refresh_token": auth_result["refresh_token"],
             "user": {
+                "name": user.name,
                 "email": user.email,
                 "role": user.role,
             }
@@ -206,6 +212,7 @@ def get_current_user_info(
     Requires valid JWT token in Authorization header.
     """
     return {
+        "name": current_user.name,
         "email": current_user.email,
         "role": current_user.role,
         "organization": {

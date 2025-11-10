@@ -42,9 +42,13 @@ router = APIRouter(tags=["ui"])
 INDEX_HTML = Path(__file__).parent / "templates" / "index.html"
 LOGIN_HTML = Path(__file__).parent / "templates" / "login.html"
 SIGNUP_HTML = Path(__file__).parent / "templates" / "signup.html"
+CAMERAS_HTML = Path(__file__).parent / "templates" / "cameras.html"
+CAMERA_DASHBOARD_HTML = Path(__file__).parent / "templates" / "camera_dashboard.html"
 SHARES_HTML = Path(__file__).parent / "templates" / "shares.html"
 DEVICES_HTML = Path(__file__).parent / "templates" / "devices.html"
 SETTINGS_HTML = Path(__file__).parent / "templates" / "settings.html"
+ADMIN_DEVICES_HTML = Path(__file__).parent / "templates" / "admin_devices.html"
+ADMIN_CODES_HTML = Path(__file__).parent / "templates" / "admin_codes.html"
 
 # JWT verification for UI routes (optional - can be disabled for now)
 # Set SUPABASE_JWT_SECRET environment variable to enable authentication
@@ -210,6 +214,38 @@ async def settings_page() -> HTMLResponse:
     if not SETTINGS_HTML.exists():
         raise HTTPException(status_code=500, detail="Settings template missing")
     return HTMLResponse(SETTINGS_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/ui/cameras", response_class=HTMLResponse)
+async def cameras_page() -> HTMLResponse:
+    """Camera selection page - shows grid of user's cameras."""
+    if not CAMERAS_HTML.exists():
+        raise HTTPException(status_code=500, detail="Cameras template missing")
+    return HTMLResponse(CAMERAS_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/ui/admin/devices", response_class=HTMLResponse)
+async def admin_devices_page() -> HTMLResponse:
+    """Admin page - device manufacturing and management."""
+    if not ADMIN_DEVICES_HTML.exists():
+        raise HTTPException(status_code=500, detail="Admin devices template missing")
+    return HTMLResponse(ADMIN_DEVICES_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/ui/admin/codes", response_class=HTMLResponse)
+async def admin_codes_page() -> HTMLResponse:
+    """Admin page - activation code management."""
+    if not ADMIN_CODES_HTML.exists():
+        raise HTTPException(status_code=500, detail="Admin codes template missing")
+    return HTMLResponse(ADMIN_CODES_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/ui/camera/{device_id}", response_class=HTMLResponse)
+async def camera_dashboard_page(device_id: str) -> HTMLResponse:
+    """Individual camera dashboard - shows camera details and captures."""
+    if not CAMERA_DASHBOARD_HTML.exists():
+        raise HTTPException(status_code=500, detail="Camera dashboard template missing")
+    return HTMLResponse(CAMERA_DASHBOARD_HTML.read_text(encoding="utf-8"))
 
 
 @router.get("/ui", response_class=HTMLResponse)

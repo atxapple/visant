@@ -888,7 +888,8 @@
                 const user = auth.getUser();
 
                 if (user) {
-                    document.getElementById('userEmail').textContent = user.email || 'User';
+                    // Show name if available, otherwise fall back to email
+                    document.getElementById('userEmail').textContent = user.name || user.email || 'User';
                     document.getElementById('userInfo').style.display = 'block';
                 }
             }

@@ -228,7 +228,7 @@
 
         // Redirect if already authenticated
         if (auth.isAuthenticated()) {
-            window.location.href = '/ui';
+            window.location.href = '/ui/cameras';
         }
 
         loginForm.addEventListener('submit', async (e) => {
@@ -250,8 +250,8 @@
                 // Call login API
                 await auth.login(email, password);
 
-                // Success - redirect to dashboard
-                window.location.href = '/ui';
+                // Success - redirect to camera selection
+                window.location.href = '/ui/cameras';
             } catch (error) {
                 // Show error message
                 errorMessage.textContent = error.message || 'Login failed. Please check your credentials.';

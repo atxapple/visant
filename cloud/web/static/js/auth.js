@@ -54,11 +54,12 @@ class AuthManager {
 
     /**
      * Sign up new user (organization auto-created)
+     * @param {string} name - User's full name
      * @param {string} email - User email
      * @param {string} password - User password
      * @returns {Promise<Object>} User data
      */
-    async signup(email, password) {
+    async signup(name, email, password) {
         try {
             const response = await fetch(`${this.API_URL}/v1/auth/signup`, {
                 method: 'POST',
@@ -66,6 +67,7 @@ class AuthManager {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
+                    name,
                     email,
                     password
                 })

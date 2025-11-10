@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>My Cameras - Visant</title>
+    <link rel="icon" type="image/png" href="/ui/static/favicon.png" />
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f6f8fa;
+            color: #101820;
+        }
+
+        /* Header */
+        header {
+            background: #ffffff;
+            border-bottom: 1px solid #d0d7de;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2563eb;
+            text-decoration: none;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .btn-add {
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            border: none;
+            background: #2563eb;
+            color: #ffffff;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: background 0.2s;
+        }
+        .btn-add:hover {
+            background: #1d4ed8;
+        }
+        .user-menu {
+            position: relative;
+        }
+        .user-button {
+            background: #f3f4f6;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        h1 {
+            margin: 0 0 2rem 0;
+            font-size: 1.875rem;
+            color: #111827;
+        }
+
+        /* Camera Grid */
+        .camera-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        .camera-card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        .camera-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+        }
+        .camera-thumbnail {
+            width: 100%;
+            height: 180px;
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .camera-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .camera-thumbnail-placeholder {
+            font-size: 3rem;
+            color: #9ca3af;
+        }
+        .camera-info {
+            padding: 1.25rem;
+        }
+        .camera-name {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+            color: #111827;
+        }
+        .camera-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .status-indicator.online {
+            background: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+        }
+        .status-indicator.offline {
+            background: #9ca3af;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #6b7280;
+        }
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+        .empty-state h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+        .empty-state p {
+            font-size: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Logout Button */
+        .btn-logout {
+            background: transparent;
+            color: #6b7280;
+            border: 1px solid #d1d5db;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-logout:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+
+        /* Activation Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 480px;
+            width: 90%;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        }
+        .modal-header {
+            margin-bottom: 1.5rem;
+        }
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem 0;
+            color: #111827;
+        }
+        .modal-subtitle {
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin: 0;
+        }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #374151;
+            font-size: 0.875rem;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .form-hint {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .btn-primary {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: #1d4ed8;
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: white;
+            color: #374151;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover {
+            background: #f3f4f6;
+        }
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .error-message.active {
+            display: block;
+        }
+
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+        .toast {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 320px;
+            max-width: 450px;
+            pointer-events: all;
+            transform: translateX(400px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        .toast.hide {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        .toast-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+        .toast.success .toast-icon {
+            background: #10b981;
+            color: white;
+        }
+        .toast.error .toast-icon {
+            background: #ef4444;
+            color: white;
+        }
+        .toast.info .toast-icon {
+            background: #3b82f6;
+            color: white;
+        }
+        .toast-content {
+            flex: 1;
+        }
+        .toast-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #111827;
+            margin: 0 0 2px 0;
+        }
+        .toast-message {
+            font-size: 13px;
+            color: #6b7280;
+            margin: 0;
+            line-height: 1.4;
+        }
+        .toast-close {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+            font-size: 18px;
+            line-height: 1;
+        }
+        .toast-close:hover {
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-left">
+            <a href="/ui/cameras" class="logo">Visant</a>
+        </div>
+        <div class="header-right">
+            <button class="btn-add" onclick="addCamera()">+ Add Camera</button>
+            <div class="user-menu">
+                <span id="userName" style="margin-right: 1rem; color: #374151; font-weight: 500;"></span>
+                <button class="btn-logout" onclick="handleLogout()">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <h1>My Cameras</h1>
+
+        <div id="cameraGrid" class="camera-grid">
+            <!-- Camera cards will be inserted here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">📷</div>
+            <h2>No cameras yet</h2>
+            <p>Add your first camera to start monitoring</p>
+            <button class="btn-add" onclick="addCamera()">+ Add Your First Camera</button>
+        </div>
+    </main>
+
+    <!-- Activation Modal -->
+    <div id="activationModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Activate New Camera</h2>
+                <p class="modal-subtitle">Enter the device ID from your camera's sticker</p>
+            </div>
+
+            <div id="modalError" class="error-message"></div>
+
+            <form id="activationForm" onsubmit="handleActivation(event)">
+                <div class="form-group">
+                    <label class="form-label" for="deviceId">Device ID *</label>
+                    <input
+                        type="text"
+                        id="deviceId"
+                        class="form-input"
+                        placeholder="ABC12"
+                        pattern="[A-Z0-9]{5}"
+                        maxlength="5"
+                        required
+                        style="text-transform: uppercase;"
+                    />
+                    <div class="form-hint">5-character code (e.g., ABC12, XYZ99)</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="friendlyName">Camera Name (Optional)</label>
+                    <input
+                        type="text"
+                        id="friendlyName"
+                        class="form-input"
+                        placeholder="Living Room Camera"
+                        maxlength="100"
+                    />
+                    <div class="form-hint">Give your camera a friendly name</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="activationCode">Activation Code (Optional)</label>
+                    <input
+                        type="text"
+                        id="activationCode"
+                        class="form-input"
+                        placeholder="PROMO2024"
+                        maxlength="50"
+                    />
+                    <div class="form-hint">Enter a promotional code if you have one</div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeActivationModal()">Cancel</button>
+                    <button type="submit" class="btn-primary" id="activateButton">Activate Camera</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="/static/js/auth.js"></script>
+    <script>
+        // Require authentication
+        if (!auth.requireAuth()) {
+            // Will redirect to login
+        }
+
+        // Load user info
+        const user = auth.getUser();
+        if (user) {
+            document.getElementById('userName').textContent = user.name || user.email || 'User';
+        }
+
+        // Logout handler
+        function handleLogout() {
+            auth.logout();
+        }
+
+        // Toast notification system
+        function showToast(message, type = 'success', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icons = {
+                success: '✓',
+                error: '✕',
+                info: 'i'
+            };
+
+            toast.innerHTML = `
+                <div class="toast-icon">${icons[type] || icons.info}</div>
+                <div class="toast-content">
+                    <p class="toast-message">${message}</p>
+                </div>
+                <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+            `;
+
+            container.appendChild(toast);
+
+            // Trigger animation
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+
+            // Auto remove after duration
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.classList.add('hide');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        // Show activation modal
+        function addCamera() {
+            const modal = document.getElementById('activationModal');
+            modal.classList.add('active');
+            document.getElementById('deviceId').focus();
+        }
+
+        // Close activation modal
+        function closeActivationModal() {
+            const modal = document.getElementById('activationModal');
+            modal.classList.remove('active');
+
+            // Reset form
+            document.getElementById('activationForm').reset();
+
+            // Clear error
+            const errorEl = document.getElementById('modalError');
+            errorEl.classList.remove('active');
+            errorEl.textContent = '';
+        }
+
+        // Handle device activation
+        async function handleActivation(event) {
+            event.preventDefault();
+
+            const deviceId = document.getElementById('deviceId').value.toUpperCase().trim();
+            const friendlyName = document.getElementById('friendlyName').value.trim();
+            const activationCode = document.getElementById('activationCode').value.trim();
+
+            const activateButton = document.getElementById('activateButton');
+            const errorEl = document.getElementById('modalError');
+
+            // Clear previous error
+            errorEl.classList.remove('active');
+            errorEl.textContent = '';
+
+            // Disable button
+            activateButton.disabled = true;
+            activateButton.textContent = 'Activating...';
+
+            try {
+                // Call activation API
+                const response = await fetch('/v1/devices/activate', {
+                    method: 'POST',
+                    headers: {
+                        ...auth.getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        device_id: deviceId,
+                        friendly_name: friendlyName || null,
+                        activation_code: activationCode || null
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Activation failed');
+                }
+
+                // Success! Close modal and reload cameras
+                closeActivationModal();
+                await loadCameras();
+
+                // Show success message
+                showToast(`Camera "${data.friendly_name || deviceId}" activated successfully!`, 'success');
+
+            } catch (error) {
+                console.error('Activation error:', error);
+                errorEl.textContent = error.message;
+                errorEl.classList.add('active');
+            } finally {
+                // Re-enable button
+                activateButton.disabled = false;
+                activateButton.textContent = 'Activate Camera';
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('activationModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeActivationModal();
+            }
+        });
+
+        // Load cameras
+        async function loadCameras() {
+            try {
+                const response = await fetch('/v1/devices', {
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load cameras');
+                }
+
+                const data = await response.json();
+                const devices = data.devices || [];
+
+                if (devices.length === 0) {
+                    document.getElementById('emptyState').style.display = 'block';
+                    document.getElementById('cameraGrid').style.display = 'none';
+                    return;
+                }
+
+                renderCameras(devices);
+            } catch (error) {
+                console.error('Error loading cameras:', error);
+                alert('Failed to load cameras. Please try again.');
+            }
+        }
+
+        // Render cameras
+        function renderCameras(devices) {
+            const grid = document.getElementById('cameraGrid');
+            grid.innerHTML = '';
+
+            devices.forEach(device => {
+                const card = document.createElement('a');
+                card.className = 'camera-card';
+                card.href = `/ui/camera/${device.device_id}`;
+
+                // Get latest capture thumbnail (if available)
+                const thumbnailUrl = device.latest_capture_url || null;
+
+                card.innerHTML = `
+                    <div class="camera-thumbnail">
+                        ${thumbnailUrl
+                            ? `<img src="${thumbnailUrl}" alt="${device.friendly_name || device.device_id}" />`
+                            : '<div class="camera-thumbnail-placeholder">📷</div>'
+                        }
+                    </div>
+                    <div class="camera-info">
+                        <h3 class="camera-name">${device.friendly_name || device.device_id}</h3>
+                        <div class="camera-status">
+                            <span class="status-indicator ${device.status === 'active' ? 'online' : 'offline'}"></span>
+                            <span>${device.status === 'active' ? 'Online' : 'Offline'}</span>
+                        </div>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        // Load cameras on page load
+        loadCameras();
+    </script>
+</body>
+</html>

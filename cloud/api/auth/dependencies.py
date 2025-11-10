@@ -1,6 +1,5 @@
 """FastAPI dependencies for authentication and authorization."""
 
-import secrets
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import Depends, HTTPException, Header, status
@@ -82,81 +81,6 @@ def get_current_org(
         )
 
     return user.organization
-
-
-def verify_device_api_key(
-    authorization: Optional[str] = Header(None),
-    db: Session = Depends(get_db)
-) -> Device:
-    """
-    FastAPI dependency to verify device API key.
-
-    For device endpoints that use API keys instead of user JWTs.
-
-    Usage:
-        @app.post("/v1/captures")
-        def upload_capture(device: Device = Depends(verify_device_api_key)):
-            ...
-
-    Args:
-        authorization: Authorization header with Bearer token (device API key)
-        db: Database session
-
-    Returns:
-        Device object
-
-    Raises:
-        HTTPException: If API key invalid or device not found
-    """
-    if not authorization:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing device API key",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Extract API key (same format as JWT: "Bearer <api_key>")
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid API key format (use: Bearer <api_key>)",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    api_key = parts[1]
-
-    # Look up device by API key
-    device = db.query(Device).filter(Device.api_key == api_key).first()
-
-    if not device:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid device API key"
-        )
-
-    if device.status != "active":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Device is {device.status}"
-        )
-
-    # Update device last_seen timestamp
-    from datetime import datetime
-    device.last_seen_at = datetime.now(timezone.utc)
-    db.commit()
-
-    return device
-
-
-def generate_device_api_key() -> str:
-    """
-    Generate a secure random API key for device authentication.
-
-    Returns:
-        URL-safe random string (43 characters, ~256 bits entropy)
-    """
-    return secrets.token_urlsafe(32)
 
 
 def verify_device_by_id(

@@ -49,7 +49,6 @@ def seed_test_devices():
                 status="manufactured",
                 created_at=datetime.now(timezone.utc),
                 org_id=None,  # Not activated yet
-                api_key=None,  # Generated on activation
             )
 
             db.add(device)
