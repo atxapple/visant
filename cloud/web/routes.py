@@ -690,8 +690,8 @@ async def list_captures(
                 image_route = request.url_for("serve_capture_image", record_id=cap.record_id)
                 image_url = image_route.path or str(image_route)
                 download_url = f"{image_url}?download=1"
-                # Use full image for thumbnail (TODO: generate actual thumbnails)
-                thumbnail_url = image_url
+                # Use thumbnail endpoint for efficient gallery display
+                thumbnail_url = f"/v1/captures/{cap.record_id}/thumbnail"
 
             captures.append({
                 "record_id": cap.record_id,

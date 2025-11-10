@@ -13,6 +13,7 @@ from cloud.api.database import get_db, Capture, Device, Organization
 from cloud.api.auth.dependencies import verify_device_by_id, get_current_org
 from cloud.api.service import InferenceService
 from cloud.api.workers.ai_evaluator import evaluate_capture_async
+from cloud.datalake.storage import _generate_thumbnail
 
 router = APIRouter(prefix="/v1/captures", tags=["Captures"])
 
@@ -20,24 +21,38 @@ router = APIRouter(prefix="/v1/captures", tags=["Captures"])
 UPLOADS_DIR = Path("uploads")  # Local filesystem storage for development
 
 
-def save_capture_image(org_id: str, device_id: str, record_id: str, image_bytes: bytes) -> str:
+def save_capture_image(org_id: str, device_id: str, record_id: str, image_bytes: bytes) -> tuple[str, Optional[str]]:
     """
-    Save capture image to local filesystem.
+    Save capture image and thumbnail to local filesystem.
 
-    Storage structure: uploads/{org_id}/devices/{device_id}/captures/{record_id}.jpg
+    Storage structure:
+    - Image: uploads/{org_id}/devices/{device_id}/captures/{record_id}.jpg
+    - Thumbnail: uploads/{org_id}/devices/{device_id}/captures/{record_id}_thumb.jpg
 
-    Returns the relative path to the saved image.
+    Returns:
+        Tuple of (image_path, thumbnail_path) where thumbnail_path is None if generation failed.
     """
     # Create directory structure
     device_dir = UPLOADS_DIR / str(org_id) / "devices" / device_id / "captures"
     device_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save image
+    # Save full image
     image_path = device_dir / f"{record_id}.jpg"
     image_path.write_bytes(image_bytes)
 
-    # Return relative path from uploads root
-    return str(image_path.relative_to(UPLOADS_DIR))
+    # Generate and save thumbnail
+    thumbnail_path = None
+    try:
+        thumbnail_bytes = _generate_thumbnail(image_bytes, max_size=(400, 300), quality=85)
+        thumb_path = device_dir / f"{record_id}_thumb.jpg"
+        thumb_path.write_bytes(thumbnail_bytes)
+        thumbnail_path = str(thumb_path.relative_to(UPLOADS_DIR))
+    except Exception as e:
+        # Log warning but don't fail the upload
+        print(f"Warning: Failed to generate thumbnail for {record_id}: {e}")
+
+    # Return relative paths from uploads root
+    return str(image_path.relative_to(UPLOADS_DIR)), thumbnail_path
 
 
 # Request/Response Models
@@ -160,24 +175,30 @@ async def upload_capture(
     db.commit()
     db.refresh(capture)
 
-    # Save image to local filesystem
+    # Save image and thumbnail to local filesystem
     try:
-        image_path = save_capture_image(
+        image_path, thumbnail_path = save_capture_image(
             org_id=str(device.org_id),
             device_id=device.device_id,
             record_id=record_id,
             image_bytes=image_bytes
         )
 
-        # Update capture with image path (repurposing s3_image_key for local path)
+        # Update capture with image and thumbnail paths
         capture.s3_image_key = image_path
         capture.image_stored = True
+
+        if thumbnail_path:
+            capture.s3_thumbnail_key = thumbnail_path
+            capture.thumbnail_stored = True
+
         db.commit()
         db.refresh(capture)
     except Exception as e:
         # Log error but don't fail the upload (evaluation can still proceed)
         print(f"Warning: Failed to save image to disk: {e}")
         capture.image_stored = False
+        capture.thumbnail_stored = False
         db.commit()
 
     # Update device last_seen_at

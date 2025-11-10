@@ -8,9 +8,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
+from sqlalchemy.orm import Session
 
 from .schemas import (
     CaptureRequest,
@@ -36,6 +37,9 @@ from version import __version__ as CLOUD_VERSION
 from .workers.command_hub import CommandHub as NewCommandHub
 from .workers.trigger_scheduler import TriggerScheduler
 from .routes import device_commands
+
+# Database imports
+from .database import get_db, Capture
 
 
 logger = logging.getLogger(__name__)
@@ -556,25 +560,30 @@ def create_app(
             logger.info("WebSocket cleanup complete target=%s", target_key)
 
     @app.get("/v1/captures/{record_id}/thumbnail")
-    async def get_thumbnail(record_id: str) -> FileResponse:
-        """Serve thumbnail image for a capture record."""
-        # Parse record_id to find the file
-        # Format: {device}_{timestamp}_{hash}
-        # Files stored in: datalake/YYYY/MM/DD/{record_id}_thumb.jpeg
+    async def get_thumbnail(
+        record_id: str,
+        db: Session = Depends(get_db)
+    ) -> FileResponse:
+        """
+        Serve thumbnail image for a capture record.
 
-        # Try to find the thumbnail file
-        # We need to search through the datalake structure
-        root = Path(app.state.datalake_root)
+        Queries database for thumbnail path, falls back to full image if thumbnail not available.
+        """
+        # Query database for capture record
+        capture = db.query(Capture).filter(Capture.record_id == record_id).first()
 
-        # Quick search through recent days (optimization)
-        from datetime import timedelta
-        today = datetime.now(timezone.utc)
+        if not capture:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Capture {record_id} not found"
+            )
 
-        for days_ago in range(30):  # Search last 30 days
-            check_date = today - timedelta(days=days_ago)
-            date_path = root / check_date.strftime("%Y/%m/%d")
-            thumbnail_path = date_path / f"{record_id}_thumb.jpeg"
+        # Determine which file to serve (thumbnail or full image)
+        uploads_root = Path("uploads")
 
+        if capture.thumbnail_stored and capture.s3_thumbnail_key:
+            # Serve thumbnail
+            thumbnail_path = uploads_root / capture.s3_thumbnail_key
             if thumbnail_path.exists():
                 return FileResponse(
                     thumbnail_path,
@@ -582,7 +591,20 @@ def create_app(
                     headers={"Cache-Control": "public, max-age=86400"}  # Cache for 1 day
                 )
 
-        raise HTTPException(status_code=404, detail=f"Thumbnail not found for record {record_id}")
+        # Fallback to full image if thumbnail not available
+        if capture.image_stored and capture.s3_image_key:
+            image_path = uploads_root / capture.s3_image_key
+            if image_path.exists():
+                return FileResponse(
+                    image_path,
+                    media_type="image/jpeg",
+                    headers={"Cache-Control": "public, max-age=86400"}
+                )
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"No image found for capture {record_id}"
+        )
 
     @app.post("/v1/admin/prune-datalake")
     async def prune_datalake_endpoint(

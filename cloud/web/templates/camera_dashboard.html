@@ -516,6 +516,27 @@
             height: 100%;
             object-fit: cover;
         }
+        .capture-download-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 10px;
+            cursor: pointer;
+            font-size: 16px;
+            opacity: 0;
+            transition: opacity 0.2s, background 0.2s;
+            z-index: 2;
+        }
+        .capture-card:hover .capture-download-btn {
+            opacity: 1;
+        }
+        .capture-download-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
         .capture-info {
             padding: 0.75rem;
             background: #f9fafb;
@@ -1287,16 +1308,25 @@
             captures.forEach(capture => {
                 const card = document.createElement('div');
                 card.className = 'capture-card';
-                card.onclick = () => viewCapture(capture.record_id);
+                card.onclick = (e) => {
+                    // Don't trigger view if clicking download button
+                    if (!e.target.classList.contains('capture-download-btn')) {
+                        viewCapture(capture.record_id);
+                    }
+                };
 
                 const captureDate = new Date(capture.captured_at);
                 const timeString = captureDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 const dateString = captureDate.toLocaleDateString();
 
+                // Use thumbnail_url for efficient loading, fallback to image_url
+                const imageSource = capture.thumbnail_url || capture.image_url;
+
                 card.innerHTML = `
                     <div class="capture-thumbnail">
-                        ${capture.image_url
-                            ? `<img src="${capture.image_url}" alt="Capture" />`
+                        ${imageSource
+                            ? `<img src="${imageSource}" alt="Capture" />
+                               <button class="capture-download-btn" onclick="event.stopPropagation(); downloadCapture('${capture.record_id}', '${capture.image_url}')">⬇</button>`
                             : '<div style="color: #9ca3af; font-size: 2rem;">📷</div>'
                         }
                     </div>
@@ -1310,6 +1340,13 @@
 
                 grid.appendChild(card);
             });
+        }
+
+        // Download capture image
+        function downloadCapture(recordId, imageUrl) {
+            // Use download parameter to force download
+            const downloadUrl = `${imageUrl}?download=1`;
+            window.open(downloadUrl, '_blank');
         }
 
         // Apply filters - reload captures with current filter settings
