@@ -134,19 +134,4 @@ async def manual_trigger(
     }
 
 
-@router.get("/v1/devices/connected")
-async def list_connected_devices():
-    """
-    List all devices currently connected to command stream.
-
-    Useful for debugging and monitoring.
-    """
-    from cloud.api.server import get_command_hub
-    command_hub = get_command_hub()
-
-    connected = command_hub.get_connected_devices()
-
-    return {
-        "connected_devices": connected,
-        "count": len(connected)
-    }
+# Note: /connected endpoint moved to devices.py to avoid route conflict with /{device_id}

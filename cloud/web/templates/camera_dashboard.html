@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Camera Dashboard - Visant</title>
+    <link rel="icon" type="image/png" href="/ui/static/favicon.png" />
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f6f8fa;
+            color: #101820;
+        }
+
+        /* Header */
+        header {
+            background: #ffffff;
+            border-bottom: 1px solid #d0d7de;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2563eb;
+            text-decoration: none;
+        }
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #6b7280;
+            font-size: 0.95rem;
+        }
+        .breadcrumb a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .btn-logout {
+            background: transparent;
+            color: #6b7280;
+            border: 1px solid #d1d5db;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-logout:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Camera Header Section */
+        .camera-header {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .camera-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .camera-title-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .camera-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #111827;
+            margin: 0;
+        }
+        .btn-settings-header {
+            padding: 0.5rem 1rem;
+            background: #6b7280;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-settings-header:hover {
+            background: #4b5563;
+        }
+        .camera-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            color: #6b7280;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .status-indicator.online {
+            background: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+        }
+        .status-indicator.offline {
+            background: #9ca3af;
+        }
+        .last-seen {
+            font-size: 0.85rem;
+            color: #9ca3af;
+            margin-left: 0.5rem;
+        }
+
+        /* Settings Panel */
+        #settingsPanel {
+            display: none;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            animation: slideDown 0.3s ease;
+        }
+        #settingsPanel.show {
+            display: block;
+        }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .settings-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+            margin: 0 0 1.5rem 0;
+            text-align: center;
+        }
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+        .settings-column {
+            border-right: 1px solid #e5e7eb;
+            padding-right: 2rem;
+        }
+        .settings-column:last-child {
+            border-right: none;
+            padding-right: 0;
+        }
+        .column-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #111827;
+            margin: 0 0 1rem 0;
+        }
+        .column-subtitle {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin: 0 0 1.25rem 0;
+            line-height: 1.4;
+        }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        .form-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        .form-textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.65rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+        .form-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .form-checkbox label {
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #374151;
+            font-weight: 500;
+        }
+        .form-help {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 0.4rem;
+            line-height: 1.4;
+        }
+        .btn-primary {
+            padding: 0.65rem 1.5rem;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .btn-trigger {
+            padding: 0.65rem 1.5rem;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        .btn-trigger:hover {
+            background: #059669;
+        }
+        .status-text {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 0.75rem;
+            font-style: italic;
+        }
+
+        /* Device Details Section */
+        #deviceDetailsSection {
+            display: none;
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        #deviceDetailsSection.show {
+            display: block;
+        }
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+        }
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .detail-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+        .detail-value {
+            font-size: 0.9rem;
+            color: #111827;
+            font-weight: 600;
+        }
+
+        /* Captures Section */
+        .section {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #111827;
+            margin: 0;
+        }
+        .view-all {
+            color: #2563eb;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .view-all:hover {
+            text-decoration: underline;
+        }
+
+        /* Captures Grid */
+        .captures-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .capture-card {
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .capture-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .capture-thumbnail {
+            width: 100%;
+            height: 140px;
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .capture-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .capture-info {
+            padding: 0.75rem;
+            background: #f9fafb;
+        }
+        .capture-time {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin: 0;
+        }
+        .capture-status {
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+        .capture-status.normal {
+            color: #10b981;
+        }
+        .capture-status.abnormal {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #9ca3af;
+        }
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.4;
+        }
+        .empty-state p {
+            font-size: 0.95rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+            .settings-column {
+                border-right: none;
+                border-bottom: 1px solid #e5e7eb;
+                padding-right: 0;
+                padding-bottom: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+            .settings-column:last-child {
+                border-bottom: none;
+                padding-bottom: 0;
+                margin-bottom: 0;
+            }
+            .details-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+            .camera-title-left {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+        }
+
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+        .toast {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 320px;
+            max-width: 450px;
+            pointer-events: all;
+            transform: translateX(400px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        .toast.hide {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        .toast-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+        .toast.success .toast-icon {
+            background: #10b981;
+            color: white;
+        }
+        .toast.error .toast-icon {
+            background: #ef4444;
+            color: white;
+        }
+        .toast.info .toast-icon {
+            background: #3b82f6;
+            color: white;
+        }
+        .toast-content {
+            flex: 1;
+        }
+        .toast-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #111827;
+            margin: 0 0 2px 0;
+        }
+        .toast-message {
+            font-size: 13px;
+            color: #6b7280;
+            margin: 0;
+            line-height: 1.4;
+        }
+        .toast-close {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+            font-size: 18px;
+            line-height: 1;
+        }
+        .toast-close:hover {
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-left">
+            <a href="/ui/cameras" class="logo">Visant</a>
+            <div class="breadcrumb">
+                <a href="/ui/cameras">← Cameras</a>
+            </div>
+        </div>
+        <div class="header-right">
+            <span id="userName" style="margin-right: 1rem; color: #374151; font-weight: 500;"></span>
+            <button class="btn-logout" onclick="handleLogout()">Logout</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Camera Header -->
+        <div class="camera-header">
+            <div class="camera-title-row">
+                <div class="camera-title-left">
+                    <h1 id="cameraName" class="camera-title">Loading...</h1>
+                    <button id="btnToggleSettings" class="btn-settings-header" onclick="toggleSettings()">
+                        ⚙️ Settings
+                    </button>
+                </div>
+                <div class="camera-status">
+                    <span id="statusIndicator" class="status-indicator"></span>
+                    <span id="statusText">Checking...</span>
+                    <span id="lastSeen" class="last-seen"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Panel (Collapsible) -->
+        <div id="settingsPanel">
+            <h2 class="settings-header">CAMERA SETTINGS</h2>
+            <div class="settings-grid">
+                <!-- Column 1: Abnormal Condition -->
+                <div class="settings-column">
+                    <h3 class="column-title">Abnormal Condition</h3>
+                    <p class="column-subtitle">Classification reference description. Example: If someone is smiling, it is abnormal. Otherwise normal.</p>
+
+                    <div class="form-group">
+                        <label class="form-label">Describe the abnormal/normal capture</label>
+                        <textarea
+                            id="abnormalDefinition"
+                            class="form-textarea"
+                            placeholder="Describe what should be considered abnormal. For example: 'Detect if a person appears in the frame' or 'Alert if the door is open'"
+                        ></textarea>
+                        <div class="form-help">
+                            This definition helps the AI understand what to look for when analyzing captures.
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="saveAbnormalDefinition()">
+                        Save Description
+                    </button>
+                </div>
+
+                <!-- Column 2: Trigger Sources -->
+                <div class="settings-column">
+                    <h3 class="column-title">Trigger Sources</h3>
+                    <p class="column-subtitle">&nbsp;</p>
+
+                    <div class="form-group">
+                        <button class="btn-trigger" onclick="triggerCapture()">📸 Trigger Now</button>
+                    </div>
+
+                    <h4 style="font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 1rem 0;">Recurring Trigger</h4>
+
+                    <div class="form-group">
+                        <div class="form-checkbox">
+                            <input type="checkbox" id="recurringEnabled" onchange="updateTriggerStatus()" />
+                            <label for="recurringEnabled">Enable recurring trigger</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Interval (seconds)</label>
+                        <input
+                            type="number"
+                            id="recurringInterval"
+                            class="form-input"
+                            min="7"
+                            max="86400"
+                            value="10"
+                            onchange="updateTriggerStatus()"
+                        />
+                        <div class="form-help">Min: 7 seconds</div>
+                    </div>
+
+                    <button class="btn-primary" onclick="updateRecurringTrigger()">
+                        Update Trigger
+                    </button>
+
+                    <div id="triggerStatus" class="status-text">
+                        Recurring trigger disabled.
+                    </div>
+                </div>
+
+                <!-- Column 3: Notification & Actions -->
+                <div class="settings-column">
+                    <h3 class="column-title">Notification & Actions</h3>
+                    <p class="column-subtitle">&nbsp;</p>
+
+                    <div class="form-group">
+                        <div class="form-checkbox">
+                            <input type="checkbox" id="notificationEnabled" />
+                            <label for="notificationEnabled">Enable email notifications</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Send email Recipients</label>
+                        <input
+                            type="text"
+                            id="emailRecipients"
+                            class="form-input"
+                            placeholder="ops@example.com"
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Cooldown (minutes)</label>
+                        <input
+                            type="number"
+                            id="cooldownMinutes"
+                            class="form-input"
+                            min="0"
+                            max="1440"
+                            value="10"
+                        />
+                        <div class="form-help">
+                            Wait this many minutes before another abnormal alert. Use 0 to email every abnormal event.
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="updateNotificationSettings()">
+                        Update Actions
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Device Details Section (Shows when settings expanded) -->
+        <div id="deviceDetailsSection">
+            <div class="details-grid">
+                <div class="detail-item">
+                    <span class="detail-label">Device ID</span>
+                    <span class="detail-value" id="detailDeviceId">-</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Type</span>
+                    <span class="detail-value" id="detailType">-</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Location</span>
+                    <span class="detail-value" id="detailLocation">-</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Created</span>
+                    <span class="detail-value" id="detailCreated">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Captures Section (Full Width) -->
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">Recent Captures</h2>
+                <a href="#" class="view-all">View All</a>
+            </div>
+            <div id="capturesGrid" class="captures-grid">
+                <!-- Captures will be inserted here -->
+            </div>
+            <div id="emptyCapturesState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">📷</div>
+                <p>No captures yet. Trigger your first capture to get started.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="/static/js/auth.js"></script>
+    <script>
+        // Require authentication
+        if (!auth.requireAuth()) {
+            // Will redirect to login
+        }
+
+        // Load user info
+        const user = auth.getUser();
+        if (user) {
+            document.getElementById('userName').textContent = user.name || user.email || 'User';
+        }
+
+        // Get device ID from URL path
+        const pathParts = window.location.pathname.split('/');
+        const deviceId = pathParts[pathParts.length - 1];
+
+        let currentDevice = null;
+        let settingsExpanded = false;
+
+        // Logout handler
+        function handleLogout() {
+            auth.logout();
+        }
+
+        // Toast notification system
+        function showToast(message, type = 'success', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icons = {
+                success: '✓',
+                error: '✕',
+                info: 'i'
+            };
+
+            toast.innerHTML = `
+                <div class="toast-icon">${icons[type] || icons.info}</div>
+                <div class="toast-content">
+                    <p class="toast-message">${message}</p>
+                </div>
+                <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+            `;
+
+            container.appendChild(toast);
+
+            // Trigger animation
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+
+            // Auto remove after duration
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.classList.add('hide');
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        // Toggle settings panel
+        function toggleSettings() {
+            settingsExpanded = !settingsExpanded;
+            const panel = document.getElementById('settingsPanel');
+            const detailsSection = document.getElementById('deviceDetailsSection');
+            const button = document.getElementById('btnToggleSettings');
+
+            if (settingsExpanded) {
+                panel.classList.add('show');
+                detailsSection.classList.add('show');
+                button.innerHTML = '⚙️ Settings ▼';
+            } else {
+                panel.classList.remove('show');
+                detailsSection.classList.remove('show');
+                button.innerHTML = '⚙️ Settings';
+            }
+        }
+
+        // Load device data
+        async function loadDeviceData() {
+            try {
+                const response = await fetch(`/v1/devices/${deviceId}`, {
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load device data');
+                }
+
+                currentDevice = await response.json();
+                renderDeviceHeader();
+                renderDeviceDetails();
+                loadDeviceConfig();
+                loadCaptures();
+            } catch (error) {
+                console.error('Error loading device data:', error);
+                showToast('Failed to load camera data. Please try again.', 'error');
+            }
+        }
+
+        // Check real-time connection status
+        let isDeviceConnected = false;
+        async function checkConnectionStatus() {
+            try {
+                const response = await fetch('/v1/devices/connected', {
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // Find our device in the connected devices list
+                    isDeviceConnected = data.devices.some(d => d.device_id === deviceId);
+                    updateConnectionStatus();
+                }
+            } catch (error) {
+                console.error('Error checking connection status:', error);
+            }
+        }
+
+        // Update connection status display
+        function updateConnectionStatus() {
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+
+            if (isDeviceConnected) {
+                statusIndicator.className = 'status-indicator online';
+                statusText.textContent = 'Connected';
+            } else {
+                statusIndicator.className = 'status-indicator offline';
+                statusText.textContent = 'Offline';
+            }
+        }
+
+        // Render device header
+        function renderDeviceHeader() {
+            if (!currentDevice) return;
+
+            document.getElementById('cameraName').textContent =
+                currentDevice.friendly_name || currentDevice.device_id;
+
+            const lastSeen = document.getElementById('lastSeen');
+
+            if (currentDevice.last_seen_at) {
+                const lastSeenDate = new Date(currentDevice.last_seen_at);
+                const now = new Date();
+                const diffMinutes = Math.floor((now - lastSeenDate) / 60000);
+
+                if (diffMinutes < 1) {
+                    lastSeen.textContent = 'Just now';
+                } else if (diffMinutes < 60) {
+                    lastSeen.textContent = `${diffMinutes}m ago`;
+                } else if (diffMinutes < 1440) {
+                    lastSeen.textContent = `${Math.floor(diffMinutes / 60)}h ago`;
+                } else {
+                    lastSeen.textContent = `${Math.floor(diffMinutes / 1440)}d ago`;
+                }
+            }
+
+            // Check real-time connection status
+            checkConnectionStatus();
+
+            // Poll connection status every 10 seconds
+            setInterval(checkConnectionStatus, 10000);
+        }
+
+        // Render device details
+        function renderDeviceDetails() {
+            if (!currentDevice) return;
+
+            document.getElementById('detailDeviceId').textContent = currentDevice.device_id;
+            document.getElementById('detailType').textContent = currentDevice.device_type || 'Camera';
+            document.getElementById('detailLocation').textContent = currentDevice.location || 'Not set';
+            document.getElementById('detailCreated').textContent = new Date(currentDevice.created_at).toLocaleDateString();
+        }
+
+        // Load device config
+        async function loadDeviceConfig() {
+            try {
+                const response = await fetch(`/v1/devices/${deviceId}/config`, {
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    console.warn('Failed to load device config');
+                    return;
+                }
+
+                const data = await response.json();
+                const config = data.config || {};
+
+                // Load abnormal definition
+                if (config.normal_description) {
+                    document.getElementById('abnormalDefinition').value = config.normal_description;
+                }
+
+                // Load recurring trigger settings
+                if (config.trigger) {
+                    document.getElementById('recurringEnabled').checked = config.trigger.enabled || false;
+                    document.getElementById('recurringInterval').value = config.trigger.interval_seconds || 10;
+                }
+
+                // Load notification settings
+                if (config.notification) {
+                    document.getElementById('notificationEnabled').checked = config.notification.enabled || false;
+                    document.getElementById('emailRecipients').value = config.notification.email_recipients?.join(', ') || '';
+                    document.getElementById('cooldownMinutes').value = config.notification.cooldown_minutes || 10;
+                }
+
+                updateTriggerStatus();
+            } catch (error) {
+                console.error('Error loading device config:', error);
+            }
+        }
+
+        // Save abnormal definition
+        async function saveAbnormalDefinition() {
+            const definition = document.getElementById('abnormalDefinition').value.trim();
+
+            try {
+                const response = await fetch(`/v1/devices/${deviceId}/config`, {
+                    method: 'PUT',
+                    headers: {
+                        ...auth.getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        normal_description: definition
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to save definition');
+                }
+
+                showToast('Abnormal definition saved successfully!', 'success');
+            } catch (error) {
+                console.error('Error saving definition:', error);
+                showToast(error.message || 'Failed to save definition. Please try again.', 'error');
+            }
+        }
+
+        // Update recurring trigger settings
+        async function updateRecurringTrigger() {
+            const enabled = document.getElementById('recurringEnabled').checked;
+            const interval = parseInt(document.getElementById('recurringInterval').value);
+
+            // Validation
+            if (interval < 7) {
+                showToast('Interval must be at least 7 seconds', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/v1/devices/${deviceId}/config`, {
+                    method: 'PUT',
+                    headers: {
+                        ...auth.getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        trigger: { enabled, interval_seconds: interval }
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to update trigger');
+                }
+
+                showToast('Recurring trigger settings updated successfully!', 'success');
+                updateTriggerStatus();
+            } catch (error) {
+                console.error('Error updating trigger:', error);
+                showToast(error.message || 'Failed to update trigger. Please try again.', 'error');
+            }
+        }
+
+        // Update notification settings
+        async function updateNotificationSettings() {
+            const enabled = document.getElementById('notificationEnabled').checked;
+            const recipientsInput = document.getElementById('emailRecipients').value.trim();
+            const recipients = recipientsInput ? recipientsInput.split(',').map(e => e.trim()) : [];
+            const cooldown = parseInt(document.getElementById('cooldownMinutes').value);
+
+            try {
+                const response = await fetch(`/v1/devices/${deviceId}/config`, {
+                    method: 'PUT',
+                    headers: {
+                        ...auth.getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        notification: { enabled, email_recipients: recipients, cooldown_minutes: cooldown }
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to update notifications');
+                }
+
+                showToast('Notification settings updated successfully!', 'success');
+            } catch (error) {
+                console.error('Error updating notifications:', error);
+                showToast(error.message || 'Failed to update notifications. Please try again.', 'error');
+            }
+        }
+
+        // Update trigger status text
+        function updateTriggerStatus() {
+            const enabled = document.getElementById('recurringEnabled').checked;
+            const interval = document.getElementById('recurringInterval').value;
+            const statusEl = document.getElementById('triggerStatus');
+
+            if (enabled) {
+                statusEl.textContent = `Recurring trigger running every ${interval} second(s).`;
+            } else {
+                statusEl.textContent = 'Recurring trigger disabled.';
+            }
+        }
+
+        // Load captures for this device
+        async function loadCaptures() {
+            try {
+                const response = await fetch(`/v1/devices/${deviceId}/captures?limit=6`, {
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load captures');
+                }
+
+                const captures = await response.json();
+
+                if (captures.length === 0) {
+                    document.getElementById('emptyCapturesState').style.display = 'block';
+                    document.getElementById('capturesGrid').style.display = 'none';
+                    return;
+                }
+
+                renderCaptures(captures);
+            } catch (error) {
+                console.error('Error loading captures:', error);
+                document.getElementById('emptyCapturesState').style.display = 'block';
+                document.getElementById('capturesGrid').style.display = 'none';
+            }
+        }
+
+        // Render captures
+        function renderCaptures(captures) {
+            const grid = document.getElementById('capturesGrid');
+            grid.innerHTML = '';
+
+            captures.forEach(capture => {
+                const card = document.createElement('div');
+                card.className = 'capture-card';
+                card.onclick = () => viewCapture(capture.record_id);
+
+                const captureDate = new Date(capture.captured_at);
+                const timeString = captureDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const dateString = captureDate.toLocaleDateString();
+
+                card.innerHTML = `
+                    <div class="capture-thumbnail">
+                        ${capture.image_url
+                            ? `<img src="${capture.image_url}" alt="Capture" />`
+                            : '<div style="color: #9ca3af; font-size: 2rem;">📷</div>'
+                        }
+                    </div>
+                    <div class="capture-info">
+                        <p class="capture-time">${dateString} ${timeString}</p>
+                        <p class="capture-status ${capture.is_abnormal ? 'abnormal' : 'normal'}">
+                            ${capture.is_abnormal ? '⚠️ Abnormal' : '✓ Normal'}
+                        </p>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        // Trigger capture
+        async function triggerCapture() {
+            try {
+                const response = await fetch(`/v1/devices/${deviceId}/trigger`, {
+                    method: 'POST',
+                    headers: auth.getAuthHeaders()
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    // Show detailed error message from server
+                    const errorMessage = data.detail || 'Failed to trigger capture';
+                    throw new Error(errorMessage);
+                }
+
+                // Show success message
+                showToast('Capture triggered successfully! The camera will take a photo shortly.', 'success');
+
+                // Reload captures after a short delay
+                setTimeout(() => loadCaptures(), 2000);
+            } catch (error) {
+                console.error('Error triggering capture:', error);
+                showToast(error.message || 'Failed to trigger capture. Please try again.', 'error');
+            }
+        }
+
+        // View capture details
+        function viewCapture(captureId) {
+            // TODO: Implement capture detail modal/page
+            window.location.href = `/ui/capture/${captureId}`;
+        }
+
+        // Load data on page load
+        loadDeviceData();
+    </script>
+</body>
+</html>

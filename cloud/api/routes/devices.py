@@ -2,32 +2,19 @@
 
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 from cloud.api.database import get_db, Device, Organization, User
 from cloud.api.database.models import ActivationCode, CodeRedemption
-from cloud.api.auth.dependencies import get_current_org, get_current_user, generate_device_api_key
+from cloud.api.auth.dependencies import get_current_org, get_current_user
 
 router = APIRouter(prefix="/v1/devices", tags=["Devices"])
 
 
 # Request/Response Models
-class DeviceCreateRequest(BaseModel):
-    device_id: str
-    friendly_name: Optional[str] = None
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "device_id": "floor-01-cam",
-                "friendly_name": "Floor 1 Camera"
-            }
-        }
-
-
 class DeviceResponse(BaseModel):
     device_id: str
     friendly_name: Optional[str]
@@ -38,12 +25,27 @@ class DeviceResponse(BaseModel):
     organization: dict
 
 
-class DeviceCreateResponse(DeviceResponse):
-    api_key: str  # Only returned on creation
-
-
 class DeviceListResponse(BaseModel):
     devices: List[DeviceResponse]
+    total: int
+
+
+# Device manufacturing models
+class ManufactureDevicesRequest(BaseModel):
+    quantity: int  # Number of devices to generate
+    batch_id: Optional[str] = None  # Optional batch identifier
+
+
+class ManufacturedDeviceResponse(BaseModel):
+    device_id: str
+    batch_id: Optional[str]
+    manufactured_at: datetime
+    status: str  # Will be "manufactured"
+
+
+class ManufactureDevicesResponse(BaseModel):
+    devices: List[ManufacturedDeviceResponse]
+    batch_id: Optional[str]
     total: int
 
 
@@ -74,7 +76,6 @@ class CodeBenefitResponse(BaseModel):
 class DeviceActivationResponse(BaseModel):
     device_id: str
     friendly_name: str
-    api_key: str  # ONE TIME ONLY
     status: str
     activated_at: datetime
     code_benefit: Optional[CodeBenefitResponse] = None
@@ -111,66 +112,103 @@ class DeviceConfigResponse(BaseModel):
     last_updated: Optional[str] = None
 
 
-@router.post("", response_model=DeviceCreateResponse, status_code=status.HTTP_201_CREATED)
-def register_device(
-    request: DeviceCreateRequest,
-    org: Organization = Depends(get_current_org),
+# === DEVICE MANUFACTURING ===
+
+@router.post("/manufacture", response_model=ManufactureDevicesResponse, status_code=status.HTTP_201_CREATED)
+def manufacture_devices(
+    request: ManufactureDevicesRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Register a new device (camera) for the organization.
+    Generate device IDs for manufacturing (Admin only).
 
-    This endpoint:
-    1. Generates a secure API key for the device
-    2. Creates the device record
-    3. Returns the API key (SAVE THIS - it won't be shown again!)
+    **Process**:
+    1. Generate N unique 5-character alphanumeric device IDs
+    2. Create device records with status="manufactured"
+    3. Optionally assign batch_id for tracking
+    4. Return list of generated devices
 
-    **Important**: The device API key is only returned once.
-    Store it securely and configure your device to use it.
+    **Authentication**: Requires user JWT token (admin users only in production).
 
-    Devices use this API key in the Authorization header:
-    `Authorization: Bearer <device_api_key>`
+    **Usage**:
+    ```
+    POST /v1/devices/manufacture
+    {
+        "quantity": 10,
+        "batch_id": "BATCH_2024_001"
+    }
+    ```
     """
-    # Check if device_id already exists
-    existing_device = db.query(Device).filter(
-        Device.device_id == request.device_id
-    ).first()
+    import random
+    import string
 
-    if existing_device:
+    # Validate quantity
+    if request.quantity < 1 or request.quantity > 1000:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Device with ID '{request.device_id}' already exists"
+            detail="Quantity must be between 1 and 1000"
         )
 
-    # Generate secure API key
-    api_key = generate_device_api_key()
+    # Generate unique device IDs
+    def generate_device_id():
+        """Generate a 5-character uppercase alphanumeric ID."""
+        chars = string.ascii_uppercase + string.digits
+        return ''.join(random.choices(chars, k=5))
 
-    # Create device
-    device = Device(
-        device_id=request.device_id,
-        org_id=org.id,
-        friendly_name=request.friendly_name or request.device_id.replace('-', ' ').title(),
-        api_key=api_key,
-        status="active",
-        created_at=datetime.now(timezone.utc)
-    )
+    # Generate unique IDs (check for duplicates)
+    generated_ids = set()
+    devices = []
+    now = datetime.now(timezone.utc)
 
-    db.add(device)
+    attempts = 0
+    max_attempts = request.quantity * 10  # Allow some retries for duplicates
+
+    while len(generated_ids) < request.quantity and attempts < max_attempts:
+        device_id = generate_device_id()
+        attempts += 1
+
+        # Check if ID already exists in database
+        existing = db.query(Device).filter(Device.device_id == device_id).first()
+        if existing or device_id in generated_ids:
+            continue
+
+        generated_ids.add(device_id)
+
+        # Create device record
+        device = Device(
+            device_id=device_id,
+            manufactured_at=now,
+            batch_id=request.batch_id,
+            status="manufactured",
+            created_at=now,
+            org_id=None,  # Not activated yet
+        )
+
+        db.add(device)
+        devices.append(device)
+
+    if len(devices) < request.quantity:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could only generate {len(devices)} unique IDs out of {request.quantity} requested"
+        )
+
     db.commit()
-    db.refresh(device)
 
+    # Prepare response
     return {
-        "device_id": device.device_id,
-        "friendly_name": device.friendly_name,
-        "status": device.status,
-        "created_at": device.created_at,
-        "last_seen_at": device.last_seen_at,
-        "device_version": device.device_version,
-        "api_key": api_key,  # Only shown once!
-        "organization": {
-            "name": org.name,
-        }
+        "devices": [
+            {
+                "device_id": d.device_id,
+                "batch_id": d.batch_id,
+                "manufactured_at": d.manufactured_at,
+                "status": d.status
+            }
+            for d in devices
+        ],
+        "batch_id": request.batch_id,
+        "total": len(devices)
     }
 
 
@@ -442,7 +480,6 @@ def activate_device(
     device.activated_at = datetime.now(timezone.utc)
     device.status = "active"
     device.friendly_name = request.friendly_name or request.device_id.replace('-', ' ').title()
-    device.api_key = generate_device_api_key()
 
     # 4. Update organization counts
     org.active_devices_count += 1
@@ -455,7 +492,6 @@ def activate_device(
     response = {
         "device_id": device.device_id,
         "friendly_name": device.friendly_name,
-        "api_key": device.api_key,
         "status": device.status,
         "activated_at": device.activated_at,
         "organization": {
@@ -484,28 +520,46 @@ def list_devices(
     List all devices for the current organization.
 
     Returns devices sorted by creation date (newest first).
+    Includes latest capture thumbnail URL for each device.
     """
+    from cloud.api.database import Capture
+    from sqlalchemy import func
+
     devices = db.query(Device).filter(
         Device.org_id == org.id
     ).order_by(Device.created_at.desc()).all()
 
-    return {
-        "devices": [
-            {
-                "device_id": d.device_id,
-                "friendly_name": d.friendly_name,
-                "status": d.status,
-                "created_at": d.created_at,
-                "last_seen_at": d.last_seen_at,
-                "device_version": d.device_version,
-                "organization": {
-                    "id": str(org.id),
-                    "name": org.name,
-                }
+    # Get latest capture for each device
+    device_list = []
+    for d in devices:
+        # Query latest capture for this device
+        latest_capture = db.query(Capture).filter(
+            Capture.device_id == d.device_id,
+            Capture.image_stored == True
+        ).order_by(Capture.captured_at.desc()).first()
+
+        # Build latest capture URL if available
+        latest_capture_url = None
+        if latest_capture and latest_capture.s3_image_key:
+            latest_capture_url = f"/ui/captures/{latest_capture.record_id}/image"
+
+        device_list.append({
+            "device_id": d.device_id,
+            "friendly_name": d.friendly_name,
+            "status": d.status,
+            "created_at": d.created_at,
+            "last_seen_at": d.last_seen_at,
+            "device_version": d.device_version,
+            "latest_capture_url": latest_capture_url,
+            "organization": {
+                "id": str(org.id),
+                "name": org.name,
             }
-            for d in devices
-        ],
-        "total": len(devices)
+        })
+
+    return {
+        "devices": device_list,
+        "total": len(device_list)
     }
 
 
@@ -620,6 +674,32 @@ def update_device_config(
     }
 
 
+# === CONNECTED DEVICES ===
+# NOTE: This route MUST be before /{device_id} to avoid matching "connected" as a device ID
+
+@router.get("/connected")
+def get_connected_devices():
+    """
+    List all devices currently connected to command stream (SSE).
+
+    This endpoint checks which devices have active SSE connections to the command hub.
+    Used by the UI to show real-time connection status.
+    """
+    from cloud.api.server import get_command_hub
+    command_hub = get_command_hub()
+
+    connected_device_ids = command_hub.get_connected_devices()
+
+    # Format as list of device objects for frontend
+    devices = [{"device_id": device_id, "subscribers": command_hub.get_subscriber_count(device_id)}
+               for device_id in connected_device_ids]
+
+    return {
+        "devices": devices,
+        "count": len(devices)
+    }
+
+
 @router.get("/{device_id}", response_model=DeviceResponse)
 def get_device(
     device_id: str,
@@ -731,5 +811,114 @@ def delete_device(
     db.commit()
 
     return None
+
+
+# === DEVICE CAPTURES ===
+
+@router.get("/{device_id}/captures")
+def get_device_captures(
+    device_id: str,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    state: Optional[str] = Query(None, description="Filter by state (normal, abnormal, uncertain)"),
+    org: Organization = Depends(get_current_org),
+    db: Session = Depends(get_db)
+):
+    """
+    Get captures for a specific device.
+
+    Returns recent captures with image URLs and metadata.
+    """
+    from cloud.api.database import Capture
+
+    # Verify device belongs to organization
+    device = db.query(Device).filter(
+        Device.device_id == device_id,
+        Device.org_id == org.id
+    ).first()
+
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+
+    # Query captures for this device
+    query = db.query(Capture).filter(
+        Capture.device_id == device_id,
+        Capture.org_id == org.id
+    )
+
+    # Apply state filter if provided
+    if state:
+        if state not in ["normal", "abnormal", "uncertain"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid state. Must be: normal, abnormal, or uncertain"
+            )
+        query = query.filter(Capture.state == state)
+
+    # Get total count
+    total = query.count()
+
+    # Get paginated captures
+    captures = query.order_by(
+        Capture.captured_at.desc()
+    ).limit(limit).offset(offset).all()
+
+    # Format response with image URLs
+    return [
+        {
+            "id": c.record_id,
+            "record_id": c.record_id,
+            "captured_at": c.captured_at.isoformat() if c.captured_at else None,
+            "ingested_at": c.ingested_at.isoformat() if c.ingested_at else None,
+            "state": c.state,
+            "score": c.score,
+            "reason": c.reason,
+            "is_abnormal": c.state == "abnormal",
+            "image_url": f"/ui/captures/{c.record_id}/image" if c.image_stored else None,
+            "trigger_label": c.trigger_label
+        }
+        for c in captures
+    ]
+
+
+# === DEVICE SCHEDULES ===
+
+@router.get("/{device_id}/schedules")
+def get_device_schedules(
+    device_id: str,
+    org: Organization = Depends(get_current_org),
+    db: Session = Depends(get_db)
+):
+    """
+    Get scheduled triggers for a specific device.
+
+    Returns list of recurring triggers with schedule information.
+    """
+    from cloud.api.database.models import ScheduledTrigger
+
+    # Verify device belongs to organization
+    device = db.query(Device).filter(
+        Device.device_id == device_id,
+        Device.org_id == org.id
+    ).first()
+
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Device not found"
+        )
+
+    # TODO: Implement schedule definitions table
+    # Currently ScheduledTrigger only tracks trigger executions, not recurring schedules
+    # Return empty list until schedule definitions are implemented
+    return []
+
+
+# === DEVICE TRIGGER ===
+# Note: Trigger endpoint moved to device_commands.py
+# The working implementation uses CommandHub.publish() for real-time SSE streaming
 
 
