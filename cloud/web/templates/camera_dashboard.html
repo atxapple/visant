@@ -410,14 +410,18 @@
         .filter-input[type="datetime-local"] {
             min-height: 38px;
             cursor: pointer;
+            position: relative;
         }
         .filter-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
             cursor: pointer;
-            opacity: 0.6;
+            opacity: 1;
+            filter: invert(0.4);
+            width: 20px;
+            height: 20px;
             margin-left: 4px;
         }
         .filter-input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
-            opacity: 1;
+            filter: invert(0.2);
         }
         .filter-input[type="number"] {
             -moz-appearance: textfield;
@@ -1227,14 +1231,35 @@
 
                 allCaptures = await response.json();
 
-                // Client-side filtering by state (since server might not support all filters yet)
+                // Client-side filtering
                 let filtered = allCaptures;
+
+                // Filter by state
                 if (states.length > 0 && states.length < 3) {
-                    filtered = allCaptures.filter(capture => {
+                    filtered = filtered.filter(capture => {
                         if (capture.is_abnormal && states.includes('abnormal')) return true;
                         if (!capture.is_abnormal && capture.is_abnormal !== null && states.includes('normal')) return true;
                         if (capture.is_abnormal === null && states.includes('uncertain')) return true;
                         return false;
+                    });
+                }
+
+                // Filter by date range (client-side)
+                if (fromDate || toDate) {
+                    filtered = filtered.filter(capture => {
+                        const captureDate = new Date(capture.captured_at);
+
+                        if (fromDate) {
+                            const from = new Date(fromDate);
+                            if (captureDate < from) return false;
+                        }
+
+                        if (toDate) {
+                            const to = new Date(toDate);
+                            if (captureDate > to) return false;
+                        }
+
+                        return true;
                     });
                 }
 
