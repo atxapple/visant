@@ -515,6 +515,24 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .capture-thumbnail img.loaded {
+            opacity: 1;
+        }
+        .capture-loading {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         .capture-download-btn {
             position: absolute;
@@ -1225,22 +1243,45 @@
                 const maxResults = document.getElementById('filterMaxResults').value || 20;
                 let url = `/v1/devices/${deviceId}/captures?limit=${maxResults}`;
 
-                // Add filter parameters
+                // Add state filter parameters
                 const filterNormal = document.getElementById('filterNormal').checked;
                 const filterAbnormal = document.getElementById('filterAbnormal').checked;
                 const filterUncertain = document.getElementById('filterUncertain').checked;
 
-                // If not all states are selected, add state filter
+                // Build state parameter - only add specific states if not all are selected
                 const states = [];
                 if (filterNormal) states.push('normal');
                 if (filterAbnormal) states.push('abnormal');
                 if (filterUncertain) states.push('uncertain');
 
-                // Date range filters
+                // Only filter by state if not all states are selected
+                if (states.length > 0 && states.length < 3) {
+                    // Note: Backend expects single state parameter, so we'll need to make multiple requests
+                    // or filter client-side for now. For simplicity, if user wants multiple states,
+                    // we'll retrieve all and let backend handle single state filter.
+                    // For now, just add the first selected state if only one is selected
+                    if (states.length === 1) {
+                        url += `&state=${states[0]}`;
+                    }
+                }
+
+                // Date range filters - convert local time to UTC before sending to backend
                 const fromDate = document.getElementById('filterFrom').value;
                 const toDate = document.getElementById('filterTo').value;
-                if (fromDate) url += `&from=${encodeURIComponent(fromDate)}`;
-                if (toDate) url += `&to=${encodeURIComponent(toDate)}`;
+
+                if (fromDate) {
+                    // datetime-local gives us local time, convert to UTC ISO string
+                    const localFromDate = new Date(fromDate);
+                    const utcFromString = localFromDate.toISOString();
+                    url += `&from=${encodeURIComponent(utcFromString)}`;
+                }
+
+                if (toDate) {
+                    // datetime-local gives us local time, convert to UTC ISO string
+                    const localToDate = new Date(toDate);
+                    const utcToString = localToDate.toISOString();
+                    url += `&to=${encodeURIComponent(utcToString)}`;
+                }
 
                 const response = await fetch(url, {
                     headers: auth.getAuthHeaders()
@@ -1252,39 +1293,22 @@
 
                 allCaptures = await response.json();
 
-                // Client-side filtering
-                let filtered = allCaptures;
-
-                // Filter by state
+                // Apply client-side state filtering if multiple (but not all) states are selected
+                let filteredCaptures = allCaptures;
                 if (states.length > 0 && states.length < 3) {
-                    filtered = filtered.filter(capture => {
-                        if (capture.is_abnormal && states.includes('abnormal')) return true;
-                        if (!capture.is_abnormal && capture.is_abnormal !== null && states.includes('normal')) return true;
-                        if (capture.is_abnormal === null && states.includes('uncertain')) return true;
-                        return false;
-                    });
+                    if (states.length === 2) {
+                        // Filter client-side for 2 selected states
+                        filteredCaptures = allCaptures.filter(capture => {
+                            if (capture.is_abnormal && states.includes('abnormal')) return true;
+                            if (!capture.is_abnormal && capture.is_abnormal !== null && states.includes('normal')) return true;
+                            if (capture.is_abnormal === null && states.includes('uncertain')) return true;
+                            return false;
+                        });
+                    }
+                    // For single state selection, server already filtered it
                 }
 
-                // Filter by date range (client-side)
-                if (fromDate || toDate) {
-                    filtered = filtered.filter(capture => {
-                        const captureDate = new Date(capture.captured_at);
-
-                        if (fromDate) {
-                            const from = new Date(fromDate);
-                            if (captureDate < from) return false;
-                        }
-
-                        if (toDate) {
-                            const to = new Date(toDate);
-                            if (captureDate > to) return false;
-                        }
-
-                        return true;
-                    });
-                }
-
-                if (filtered.length === 0) {
+                if (filteredCaptures.length === 0) {
                     document.getElementById('emptyCapturesState').style.display = 'block';
                     document.getElementById('capturesGrid').style.display = 'none';
                     return;
@@ -1292,7 +1316,7 @@
 
                 document.getElementById('emptyCapturesState').style.display = 'none';
                 document.getElementById('capturesGrid').style.display = 'grid';
-                renderCaptures(filtered);
+                renderCaptures(filteredCaptures);
             } catch (error) {
                 console.error('Error loading captures:', error);
                 document.getElementById('emptyCapturesState').style.display = 'block';
@@ -1315,9 +1339,20 @@
                     }
                 };
 
+                // Parse ISO 8601 timestamp and convert to local timezone
+                // The backend sends UTC timestamps, ensure proper conversion
                 const captureDate = new Date(capture.captured_at);
-                const timeString = captureDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                const dateString = captureDate.toLocaleDateString();
+                const timeString = captureDate.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                });
+                const dateString = captureDate.toLocaleDateString([], {
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric'
+                });
 
                 // Use thumbnail_url for efficient loading, fallback to image_url
                 const imageSource = capture.thumbnail_url || capture.image_url;
@@ -1325,7 +1360,8 @@
                 card.innerHTML = `
                     <div class="capture-thumbnail">
                         ${imageSource
-                            ? `<img src="${imageSource}" alt="Capture" />
+                            ? `<div class="capture-loading"></div>
+                               <img src="${imageSource}" alt="Capture" data-record-id="${capture.record_id}" />
                                <button class="capture-download-btn" onclick="event.stopPropagation(); downloadCapture('${capture.record_id}', '${capture.image_url}')">⬇</button>`
                             : '<div style="color: #9ca3af; font-size: 2rem;">📷</div>'
                         }
@@ -1337,6 +1373,22 @@
                         </p>
                     </div>
                 `;
+
+                // Add image load event listener
+                if (imageSource) {
+                    const img = card.querySelector('img');
+                    const loader = card.querySelector('.capture-loading');
+
+                    img.addEventListener('load', () => {
+                        img.classList.add('loaded');
+                        if (loader) loader.remove();
+                    });
+
+                    img.addEventListener('error', () => {
+                        if (loader) loader.remove();
+                        img.style.opacity = '0';
+                    });
+                }
 
                 grid.appendChild(card);
             });

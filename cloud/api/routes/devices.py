@@ -14,6 +14,48 @@ from cloud.api.auth.dependencies import get_current_org, get_current_user
 router = APIRouter(prefix="/v1/devices", tags=["Devices"])
 
 
+# Helper Functions
+def _parse_datetime_filter(date_str: str) -> datetime:
+    """
+    Parse datetime string from frontend filter inputs.
+
+    Frontend converts user's local datetime-local input to UTC ISO 8601 format
+    before sending to backend (e.g., "2025-11-10T08:53:00.000Z").
+
+    Supports two formats:
+    1. ISO 8601 with timezone: "YYYY-MM-DDTHH:MM:SS.sssZ" or "YYYY-MM-DDTHH:MM:SS+00:00"
+    2. datetime-local format: "YYYY-MM-DDTHH:MM" (fallback, assumes UTC)
+
+    Returns timezone-aware datetime in UTC.
+    """
+    if not date_str or not date_str.strip():
+        raise ValueError("Empty date string")
+
+    date_str = date_str.strip()
+
+    # Try ISO 8601 format first (with timezone)
+    try:
+        dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        # Ensure timezone-aware
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except ValueError:
+        pass
+
+    # Try datetime-local format (YYYY-MM-DDTHH:MM or YYYY-MM-DDTHH:MM:SS)
+    try:
+        # Parse without timezone and assume UTC
+        dt = datetime.fromisoformat(date_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except ValueError:
+        raise ValueError(
+            f"Invalid date format: '{date_str}'. Expected ISO 8601 or datetime-local format (YYYY-MM-DDTHH:MM)"
+        )
+
+
 # Request/Response Models
 class DeviceResponse(BaseModel):
     device_id: str
@@ -821,6 +863,8 @@ def get_device_captures(
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     state: Optional[str] = Query(None, description="Filter by state (normal, abnormal, uncertain)"),
+    from_date: Optional[str] = Query(None, alias="from", description="Start date (ISO 8601 or datetime-local format)"),
+    to_date: Optional[str] = Query(None, alias="to", description="End date (ISO 8601 or datetime-local format)"),
     org: Organization = Depends(get_current_org),
     db: Session = Depends(get_db)
 ):
@@ -828,6 +872,7 @@ def get_device_captures(
     Get captures for a specific device.
 
     Returns recent captures with image URLs and metadata.
+    Supports filtering by state and date range.
     """
     from cloud.api.database import Capture
 
@@ -858,6 +903,29 @@ def get_device_captures(
             )
         query = query.filter(Capture.state == state)
 
+    # Apply date range filters if provided
+    if from_date:
+        try:
+            # Parse datetime-local format (YYYY-MM-DDTHH:MM) or ISO 8601
+            from_dt = _parse_datetime_filter(from_date)
+            query = query.filter(Capture.captured_at >= from_dt)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid 'from' date format: {str(e)}"
+            )
+
+    if to_date:
+        try:
+            # Parse datetime-local format (YYYY-MM-DDTHH:MM) or ISO 8601
+            to_dt = _parse_datetime_filter(to_date)
+            query = query.filter(Capture.captured_at <= to_dt)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid 'to' date format: {str(e)}"
+            )
+
     # Get total count
     total = query.count()
 
@@ -867,17 +935,28 @@ def get_device_captures(
     ).limit(limit).offset(offset).all()
 
     # Format response with image URLs
+    def _format_datetime_utc(dt: Optional[datetime]) -> Optional[str]:
+        """Format datetime as ISO 8601 with UTC timezone indicator."""
+        if not dt:
+            return None
+        # If naive datetime, assume it's UTC and add timezone info
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        # Return ISO format with timezone (will end with +00:00 or Z)
+        return dt.isoformat().replace('+00:00', 'Z')
+
     return [
         {
             "id": c.record_id,
             "record_id": c.record_id,
-            "captured_at": c.captured_at.isoformat() if c.captured_at else None,
-            "ingested_at": c.ingested_at.isoformat() if c.ingested_at else None,
+            "captured_at": _format_datetime_utc(c.captured_at),
+            "ingested_at": _format_datetime_utc(c.ingested_at),
             "state": c.state,
             "score": c.score,
             "reason": c.reason,
             "is_abnormal": c.state == "abnormal",
             "image_url": f"/ui/captures/{c.record_id}/image" if c.image_stored else None,
+            "thumbnail_url": f"/ui/captures/{c.record_id}/image" if c.image_stored else None,
             "trigger_label": c.trigger_label
         }
         for c in captures
