@@ -172,11 +172,18 @@
             }
         }
         .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             font-size: 1.5rem;
             font-weight: 700;
             color: #111827;
             margin: 0 0 1.5rem 0;
-            text-align: center;
+        }
+        .settings-device-id {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #6b7280;
         }
         .settings-grid {
             display: grid;
@@ -307,38 +314,6 @@
             font-style: italic;
         }
 
-        /* Device Details Section */
-        #deviceDetailsSection {
-            display: none;
-            background: #ffffff;
-            border-radius: 8px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        #deviceDetailsSection.show {
-            display: block;
-        }
-        .details-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-        }
-        .detail-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-        .detail-label {
-            font-size: 0.8rem;
-            color: #6b7280;
-            font-weight: 500;
-        }
-        .detail-value {
-            font-size: 0.9rem;
-            color: #111827;
-            font-weight: 600;
-        }
 
         /* Captures Section */
         .section {
@@ -594,7 +569,10 @@
 
         <!-- Settings Panel (Collapsible) -->
         <div id="settingsPanel">
-            <h2 class="settings-header">CAMERA SETTINGS</h2>
+            <h2 class="settings-header">
+                <span>CAMERA SETTINGS</span>
+                <span class="settings-device-id" id="settingsDeviceId">-</span>
+            </h2>
             <div class="settings-grid">
                 <!-- Column 1: Abnormal Condition -->
                 <div class="settings-column">
@@ -703,28 +681,6 @@
             </div>
         </div>
 
-        <!-- Device Details Section (Shows when settings expanded) -->
-        <div id="deviceDetailsSection">
-            <div class="details-grid">
-                <div class="detail-item">
-                    <span class="detail-label">Device ID</span>
-                    <span class="detail-value" id="detailDeviceId">-</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Type</span>
-                    <span class="detail-value" id="detailType">-</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Location</span>
-                    <span class="detail-value" id="detailLocation">-</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Created</span>
-                    <span class="detail-value" id="detailCreated">-</span>
-                </div>
-            </div>
-        </div>
-
         <!-- Recent Captures Section (Full Width) -->
         <div class="section">
             <div class="section-header">
@@ -808,16 +764,13 @@
         function toggleSettings() {
             settingsExpanded = !settingsExpanded;
             const panel = document.getElementById('settingsPanel');
-            const detailsSection = document.getElementById('deviceDetailsSection');
             const button = document.getElementById('btnToggleSettings');
 
             if (settingsExpanded) {
                 panel.classList.add('show');
-                detailsSection.classList.add('show');
                 button.innerHTML = '⚙️ Settings ▼';
             } else {
                 panel.classList.remove('show');
-                detailsSection.classList.remove('show');
                 button.innerHTML = '⚙️ Settings';
             }
         }
@@ -913,10 +866,8 @@
         function renderDeviceDetails() {
             if (!currentDevice) return;
 
-            document.getElementById('detailDeviceId').textContent = currentDevice.device_id;
-            document.getElementById('detailType').textContent = currentDevice.device_type || 'Camera';
-            document.getElementById('detailLocation').textContent = currentDevice.location || 'Not set';
-            document.getElementById('detailCreated').textContent = new Date(currentDevice.created_at).toLocaleDateString();
+            // Show device ID in settings header
+            document.getElementById('settingsDeviceId').textContent = currentDevice.device_id;
         }
 
         // Load device config
