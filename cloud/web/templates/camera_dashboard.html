@@ -344,6 +344,32 @@
             text-decoration: underline;
         }
 
+        /* Capture Filters */
+        .capture-filters {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            background: #ffffff;
+            color: #6b7280;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover {
+            border-color: #2563eb;
+            color: #2563eb;
+        }
+        .filter-btn.active {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+        }
+
         /* Captures Grid */
         .captures-grid {
             display: grid;
@@ -571,7 +597,7 @@
         <div id="settingsPanel">
             <h2 class="settings-header">
                 <span>CAMERA SETTINGS</span>
-                <span class="settings-device-id" id="settingsDeviceId">-</span>
+                <span class="settings-device-id"><span style="color: #9ca3af; font-weight: 500;">Camera ID:</span> <span id="settingsDeviceId">-</span></span>
             </h2>
             <div class="settings-grid">
                 <!-- Column 1: Abnormal Condition -->
@@ -685,7 +711,11 @@
         <div class="section">
             <div class="section-header">
                 <h2 class="section-title">Recent Captures</h2>
-                <a href="#" class="view-all">View All</a>
+                <div class="capture-filters">
+                    <button class="filter-btn active" data-filter="all" onclick="filterCaptures('all')">All</button>
+                    <button class="filter-btn" data-filter="normal" onclick="filterCaptures('normal')">Normal</button>
+                    <button class="filter-btn" data-filter="abnormal" onclick="filterCaptures('abnormal')">Abnormal</button>
+                </div>
             </div>
             <div id="capturesGrid" class="captures-grid">
                 <!-- Captures will be inserted here -->
@@ -719,6 +749,8 @@
 
         let currentDevice = null;
         let settingsExpanded = false;
+        let allCaptures = [];
+        let currentFilter = 'all';
 
         // Logout handler
         function handleLogout() {
@@ -1020,7 +1052,7 @@
         // Load captures for this device
         async function loadCaptures() {
             try {
-                const response = await fetch(`/v1/devices/${deviceId}/captures?limit=6`, {
+                const response = await fetch(`/v1/devices/${deviceId}/captures?limit=20`, {
                     headers: auth.getAuthHeaders()
                 });
 
@@ -1028,15 +1060,16 @@
                     throw new Error('Failed to load captures');
                 }
 
-                const captures = await response.json();
+                allCaptures = await response.json();
 
-                if (captures.length === 0) {
+                if (allCaptures.length === 0) {
                     document.getElementById('emptyCapturesState').style.display = 'block';
                     document.getElementById('capturesGrid').style.display = 'none';
                     return;
                 }
 
-                renderCaptures(captures);
+                // Apply current filter
+                filterCaptures(currentFilter);
             } catch (error) {
                 console.error('Error loading captures:', error);
                 document.getElementById('emptyCapturesState').style.display = 'block';
@@ -1055,7 +1088,7 @@
                 card.onclick = () => viewCapture(capture.record_id);
 
                 const captureDate = new Date(capture.captured_at);
-                const timeString = captureDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const timeString = captureDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 const dateString = captureDate.toLocaleDateString();
 
                 card.innerHTML = `
@@ -1075,6 +1108,37 @@
 
                 grid.appendChild(card);
             });
+        }
+
+        // Filter captures by type
+        function filterCaptures(filterType) {
+            currentFilter = filterType;
+
+            // Update active button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.filter === filterType) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Filter captures
+            let filtered = allCaptures;
+            if (filterType === 'normal') {
+                filtered = allCaptures.filter(c => !c.is_abnormal);
+            } else if (filterType === 'abnormal') {
+                filtered = allCaptures.filter(c => c.is_abnormal);
+            }
+
+            // Show/hide empty state
+            if (filtered.length === 0) {
+                document.getElementById('emptyCapturesState').style.display = 'block';
+                document.getElementById('capturesGrid').style.display = 'none';
+            } else {
+                document.getElementById('emptyCapturesState').style.display = 'none';
+                document.getElementById('capturesGrid').style.display = 'grid';
+                renderCaptures(filtered);
+            }
         }
 
         // Trigger capture
