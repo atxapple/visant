@@ -344,30 +344,105 @@
             text-decoration: underline;
         }
 
-        /* Capture Filters */
-        .capture-filters {
+        /* Filter Panel */
+        .filter-panel {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .filter-section {
+            margin-bottom: 1rem;
+        }
+        .filter-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+        .filter-checkboxes {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .filter-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #374151;
+        }
+        .filter-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .filter-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 0.8fr auto;
+            gap: 1rem;
+            align-items: end;
+        }
+        .filter-field {
+            display: flex;
+            flex-direction: column;
+        }
+        .filter-input {
+            padding: 0.6rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background: #ffffff;
+        }
+        .filter-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .filter-actions {
             display: flex;
             gap: 0.5rem;
         }
-        .filter-btn {
-            padding: 0.5rem 1rem;
-            border: 1px solid #d1d5db;
+        .btn-apply {
+            padding: 0.6rem 1.5rem;
+            background: #2563eb;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-apply:hover {
+            background: #1d4ed8;
+        }
+        .btn-clear {
+            padding: 0.6rem 1.5rem;
             background: #ffffff;
             color: #6b7280;
+            border: 1px solid #d1d5db;
             border-radius: 6px;
-            font-size: 0.875rem;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 0.9rem;
             cursor: pointer;
             transition: all 0.2s;
         }
-        .filter-btn:hover {
-            border-color: #2563eb;
-            color: #2563eb;
+        .btn-clear:hover {
+            border-color: #9ca3af;
+            color: #374151;
         }
-        .filter-btn.active {
-            background: #2563eb;
-            color: #ffffff;
-            border-color: #2563eb;
+
+        @media (max-width: 1024px) {
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+            .filter-actions {
+                justify-content: flex-start;
+            }
         }
 
         /* Captures Grid */
@@ -709,14 +784,48 @@
 
         <!-- Recent Captures Section (Full Width) -->
         <div class="section">
-            <div class="section-header">
-                <h2 class="section-title">Recent Captures</h2>
-                <div class="capture-filters">
-                    <button class="filter-btn active" data-filter="all" onclick="filterCaptures('all')">All</button>
-                    <button class="filter-btn" data-filter="normal" onclick="filterCaptures('normal')">Normal</button>
-                    <button class="filter-btn" data-filter="abnormal" onclick="filterCaptures('abnormal')">Abnormal</button>
+            <h2 class="section-title">Recent Captures</h2>
+
+            <!-- Filter Panel -->
+            <div class="filter-panel">
+                <div class="filter-section">
+                    <label class="filter-label">States</label>
+                    <div class="filter-checkboxes">
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="filterNormal" checked onchange="applyFilters()">
+                            <span>Normal</span>
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="filterAbnormal" checked onchange="applyFilters()">
+                            <span>Abnormal</span>
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" id="filterUncertain" checked onchange="applyFilters()">
+                            <span>Uncertain</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-row">
+                    <div class="filter-field">
+                        <label class="filter-label">From</label>
+                        <input type="datetime-local" id="filterFrom" class="filter-input" onchange="applyFilters()">
+                    </div>
+                    <div class="filter-field">
+                        <label class="filter-label">To</label>
+                        <input type="datetime-local" id="filterTo" class="filter-input" onchange="applyFilters()">
+                    </div>
+                    <div class="filter-field">
+                        <label class="filter-label">Max results</label>
+                        <input type="number" id="filterMaxResults" class="filter-input" value="20" min="1" max="100" onchange="applyFilters()">
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn-apply" onclick="applyFilters()">Apply filters</button>
+                        <button class="btn-clear" onclick="clearFilters()">Clear</button>
+                    </div>
                 </div>
             </div>
+
             <div id="capturesGrid" class="captures-grid">
                 <!-- Captures will be inserted here -->
             </div>
@@ -750,7 +859,6 @@
         let currentDevice = null;
         let settingsExpanded = false;
         let allCaptures = [];
-        let currentFilter = 'all';
 
         // Logout handler
         function handleLogout() {
@@ -1049,10 +1157,31 @@
             }
         }
 
-        // Load captures for this device
+        // Load captures for this device with filters
         async function loadCaptures() {
             try {
-                const response = await fetch(`/v1/devices/${deviceId}/captures?limit=20`, {
+                // Build query parameters from filters
+                const maxResults = document.getElementById('filterMaxResults').value || 20;
+                let url = `/v1/devices/${deviceId}/captures?limit=${maxResults}`;
+
+                // Add filter parameters
+                const filterNormal = document.getElementById('filterNormal').checked;
+                const filterAbnormal = document.getElementById('filterAbnormal').checked;
+                const filterUncertain = document.getElementById('filterUncertain').checked;
+
+                // If not all states are selected, add state filter
+                const states = [];
+                if (filterNormal) states.push('normal');
+                if (filterAbnormal) states.push('abnormal');
+                if (filterUncertain) states.push('uncertain');
+
+                // Date range filters
+                const fromDate = document.getElementById('filterFrom').value;
+                const toDate = document.getElementById('filterTo').value;
+                if (fromDate) url += `&from=${encodeURIComponent(fromDate)}`;
+                if (toDate) url += `&to=${encodeURIComponent(toDate)}`;
+
+                const response = await fetch(url, {
                     headers: auth.getAuthHeaders()
                 });
 
@@ -1062,14 +1191,26 @@
 
                 allCaptures = await response.json();
 
-                if (allCaptures.length === 0) {
+                // Client-side filtering by state (since server might not support all filters yet)
+                let filtered = allCaptures;
+                if (states.length > 0 && states.length < 3) {
+                    filtered = allCaptures.filter(capture => {
+                        if (capture.is_abnormal && states.includes('abnormal')) return true;
+                        if (!capture.is_abnormal && capture.is_abnormal !== null && states.includes('normal')) return true;
+                        if (capture.is_abnormal === null && states.includes('uncertain')) return true;
+                        return false;
+                    });
+                }
+
+                if (filtered.length === 0) {
                     document.getElementById('emptyCapturesState').style.display = 'block';
                     document.getElementById('capturesGrid').style.display = 'none';
                     return;
                 }
 
-                // Apply current filter
-                filterCaptures(currentFilter);
+                document.getElementById('emptyCapturesState').style.display = 'none';
+                document.getElementById('capturesGrid').style.display = 'grid';
+                renderCaptures(filtered);
             } catch (error) {
                 console.error('Error loading captures:', error);
                 document.getElementById('emptyCapturesState').style.display = 'block';
@@ -1110,35 +1251,27 @@
             });
         }
 
-        // Filter captures by type
-        function filterCaptures(filterType) {
-            currentFilter = filterType;
+        // Apply filters - reload captures with current filter settings
+        function applyFilters() {
+            loadCaptures();
+        }
 
-            // Update active button
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.filter === filterType) {
-                    btn.classList.add('active');
-                }
-            });
+        // Clear all filters and reload
+        function clearFilters() {
+            // Reset checkboxes
+            document.getElementById('filterNormal').checked = true;
+            document.getElementById('filterAbnormal').checked = true;
+            document.getElementById('filterUncertain').checked = true;
 
-            // Filter captures
-            let filtered = allCaptures;
-            if (filterType === 'normal') {
-                filtered = allCaptures.filter(c => !c.is_abnormal);
-            } else if (filterType === 'abnormal') {
-                filtered = allCaptures.filter(c => c.is_abnormal);
-            }
+            // Clear date inputs
+            document.getElementById('filterFrom').value = '';
+            document.getElementById('filterTo').value = '';
 
-            // Show/hide empty state
-            if (filtered.length === 0) {
-                document.getElementById('emptyCapturesState').style.display = 'block';
-                document.getElementById('capturesGrid').style.display = 'none';
-            } else {
-                document.getElementById('emptyCapturesState').style.display = 'none';
-                document.getElementById('capturesGrid').style.display = 'grid';
-                renderCaptures(filtered);
-            }
+            // Reset max results
+            document.getElementById('filterMaxResults').value = 20;
+
+            // Reload captures
+            loadCaptures();
         }
 
         // Trigger capture
