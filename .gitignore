@@ -10,9 +10,10 @@ venv/
 debug_captures/
 debug_captures_stub/
 
-# Datalake runtime data (capture images and metadata)
+# Datalake runtime data (capture images and metadata) - exclude actual data, not Python code
 cloud_datalake/
-datalake/
+/datalake/
+/uploads/
 
 debug_captures_real/
 samples/
