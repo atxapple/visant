@@ -22,7 +22,7 @@ router = APIRouter()
 @router.get("/v1/capture-events/stream")
 async def capture_event_stream_sse(
     device_id: Optional[str] = Query(None, description="Filter by device ID (optional)"),
-    current_user: dict = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """
     SSE stream that pushes capture events to web clients.
@@ -37,7 +37,7 @@ async def capture_event_stream_sse(
     3. Update UI when events received
     4. Reconnect if connection drops
     """
-    org_id = current_user["org_id"]
+    org_id = str(current_user.org_id)
 
     # Get capture hub from app state
     from cloud.api.server import get_capture_hub
@@ -53,7 +53,7 @@ async def capture_event_stream_sse(
             yield f'data: {json.dumps({"event": "connected", "org_id": org_id, "device_id": device_id})}\n\n'
 
             logger.info(
-                f"[capture_events] User {current_user['email']} connected to SSE stream "
+                f"[capture_events] User {current_user.email} connected to SSE stream "
                 f"(org={org_id}, device={device_id or 'all'})"
             )
 
@@ -69,17 +69,17 @@ async def capture_event_stream_sse(
 
         except asyncio.CancelledError:
             logger.info(
-                f"[capture_events] SSE stream cancelled for user {current_user['email']}"
+                f"[capture_events] SSE stream cancelled for user {current_user.email}"
             )
         except Exception as e:
             logger.error(
-                f"[capture_events] Error streaming to user {current_user['email']}: {e}"
+                f"[capture_events] Error streaming to user {current_user.email}: {e}"
             )
         finally:
             # Unsubscribe when connection closes
             await capture_hub.unsubscribe(key, queue)
             logger.info(
-                f"[capture_events] User {current_user['email']} disconnected from SSE stream"
+                f"[capture_events] User {current_user.email} disconnected from SSE stream"
             )
 
     return StreamingResponse(
@@ -131,11 +131,32 @@ async def capture_event_stream_ws(
     # Validate token and get user info
     try:
         from cloud.api.auth.middleware import verify_jwt_token
-        current_user = verify_jwt_token(token)
-        org_id = current_user["org_id"]
+        from cloud.api.database import get_db, User
+
+        # Verify JWT and extract user_id
+        payload = verify_jwt_token(token)
+        user_id = payload["user_id"]
+
+        # Look up user in database to get org_id
+        db = next(get_db())
+        try:
+            user = db.query(User).filter(User.supabase_user_id == user_id).first()
+
+            if not user:
+                raise Exception(f"User not found for ID: {user_id}")
+
+            org_id = str(user.org_id)
+            current_user = {
+                "email": user.email,
+                "org_id": org_id,
+                "user_id": str(user.id)
+            }
+        finally:
+            db.close()
+
     except Exception as e:
-        logger.warning(f"[ws_capture_events] Invalid token: {e}")
-        await websocket.close(code=1008, reason="Invalid token")
+        logger.warning(f"[ws_capture_events] Auth failed: {e}")
+        await websocket.close(code=1008, reason="Authentication failed")
         return
 
     # Get capture hub
