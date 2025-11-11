@@ -764,7 +764,7 @@
                 <h2 style="margin:0;">Recent Captures</h2>
                 <div style="display:flex;align-items:center;gap:0.5rem;">
                     <label for="auto-refresh-toggle" class="muted" style="display:flex;align-items:center;gap:0.35rem;font-size:0.9rem;">
-                        <input id="auto-refresh-toggle" type="checkbox" /> Auto refresh
+                        <input id="auto-refresh-toggle" type="checkbox" checked /> Auto refresh
                     </label>
                     <button id="refresh-captures" type="button">Refresh</button>
                 </div>
@@ -1367,7 +1367,6 @@
                 const deviceVersionText = `${versionWarning}${data.device_id} (v${deviceVersion})`;
 
                 liveIndicator.innerHTML = `<span class="${dotClass}"></span>${statusLabel} | Cloud v${cloudVersion} | Device: <span style="${versionStyle}">${deviceVersionText}</span> | IP: ${ip} | Classifier: ${data.classifier} | Last seen ${lastSeenText} | UI synced ${(new Date()).toLocaleTimeString()}`;
-                ensureCaptureStream('all'); // Listen to ALL devices, not just UI device
             } catch (error) {
                 normalStatus.textContent = error.message;
             }
@@ -1820,6 +1819,8 @@
             loadCaptures();
             scheduleStateRefresh();
             scheduleCaptureRefresh();
+            // Always ensure WebSocket connection for real-time updates
+            ensureCaptureStream('all');
         })();
     </script>
 </body>
