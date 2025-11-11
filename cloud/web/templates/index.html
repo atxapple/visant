@@ -1045,8 +1045,8 @@
             if (deviceId) {
                 params.set('device_id', deviceId);
             }
-            // Get JWT token from cookie
-            const token = document.cookie.split('; ').find(row => row.startsWith('access_token='))?.split('=')[1];
+            // Get JWT token from sessionStorage (where auth.js stores it)
+            const token = sessionStorage.getItem('visant_access_token');
             if (token) {
                 params.set('token', token);
             }
