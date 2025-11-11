@@ -50,12 +50,13 @@ if __name__ == "__main__":
     # Create FastAPI app with multi-tenant architecture
     from cloud.api.database import Base, engine
     from cloud.api.server import create_app
-    from cloud.api.routes import auth, devices, captures, device_commands, admin_codes
+    from cloud.api.routes import auth, devices, captures, device_commands, admin_codes, capture_events
     from cloud.web import routes as web_routes
     from cloud.api.service import InferenceService
     from cloud.ai import SimpleThresholdModel
     from cloud.datalake.storage import FileSystemDatalake
     from cloud.api.capture_index import RecentCaptureIndex
+    from cloud.api.workers.capture_hub import CaptureHub
     from pathlib import Path
     from fastapi import FastAPI
     from fastapi.staticfiles import StaticFiles
@@ -78,6 +79,13 @@ if __name__ == "__main__":
     import cloud.api.routes.captures as captures_module
     captures_module.global_inference_service = inference_service
 
+    # Initialize CaptureHub for real-time event streaming
+    _capture_hub = CaptureHub()
+
+    # Register CaptureHub for global access
+    from cloud.api.server import set_capture_hub
+    set_capture_hub(_capture_hub)
+
     # Create main app
     main_app = FastAPI(title="Visant Cloud API v2.0", version="2.0.0")
 
@@ -89,7 +97,8 @@ if __name__ == "__main__":
     main_app.include_router(auth.router)
     main_app.include_router(devices.router)
     main_app.include_router(captures.router)
-    main_app.include_router(device_commands.router)  # NEW: Cloud-triggered commands
+    main_app.include_router(device_commands.router)  # Cloud-triggered device commands (SSE)
+    main_app.include_router(capture_events.router)  # Real-time capture events (SSE/WebSocket)
     main_app.include_router(admin_codes.router)  # Admin: Activation code management
     main_app.include_router(web_routes.router)  # Web UI routes (login, signup, dashboard)
 

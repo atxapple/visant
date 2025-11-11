@@ -694,11 +694,18 @@ def create_app(
 
 # Global accessors for dependency injection
 _current_app = None
+_multi_tenant_capture_hub = None  # Multi-tenant CaptureHub (initialized by main server.py)
 
 def set_current_app(app: FastAPI):
     """Set the current app instance for global access."""
     global _current_app
     _current_app = app
+
+def set_capture_hub(capture_hub):
+    """Set the multi-tenant CaptureHub instance for global access."""
+    global _multi_tenant_capture_hub
+    from .workers.capture_hub import CaptureHub
+    _multi_tenant_capture_hub = capture_hub
 
 def get_command_hub() -> NewCommandHub:
     """Get CommandHub from current app state."""
@@ -712,5 +719,11 @@ def get_trigger_scheduler() -> TriggerScheduler:
         raise RuntimeError("App not initialized. Call set_current_app() first.")
     return _current_app.state.trigger_scheduler
 
+def get_capture_hub():
+    """Get multi-tenant CaptureHub instance."""
+    if _multi_tenant_capture_hub is None:
+        raise RuntimeError("CaptureHub not initialized. Call set_capture_hub() first.")
+    return _multi_tenant_capture_hub
 
-__all__ = ["create_app", "get_command_hub", "get_trigger_scheduler", "set_current_app"]
+
+__all__ = ["create_app", "get_command_hub", "get_trigger_scheduler", "set_current_app", "get_capture_hub", "set_capture_hub"]

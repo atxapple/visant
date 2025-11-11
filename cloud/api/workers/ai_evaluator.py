@@ -77,6 +77,40 @@ class CloudAIEvaluator:
                 f"score={classification.score:.2f}"
             )
 
+            # Broadcast capture event to web clients
+            try:
+                import asyncio
+                from cloud.api.server import get_capture_hub
+
+                capture_hub = get_capture_hub()
+
+                # Prepare event data
+                event = {
+                    "event": "new_capture",
+                    "capture_id": capture.record_id,
+                    "device_id": capture.device_id,
+                    "state": capture.state,
+                    "score": capture.score,
+                    "captured_at": capture.captured_at.isoformat() if capture.captured_at else None,
+                    "evaluated_at": capture.evaluated_at.isoformat()
+                }
+
+                # Publish event (create event loop if needed for sync context)
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+
+                loop.run_until_complete(
+                    capture_hub.publish(capture.org_id, capture.device_id, event)
+                )
+
+                logger.debug(f"Published capture event for {record_id}")
+            except Exception as publish_error:
+                logger.warning(f"Failed to publish capture event for {record_id}: {publish_error}")
+                # Don't fail the evaluation if event publishing fails
+
             # TODO: Trigger notifications if abnormal
             # if classification.state == "abnormal":
             #     notify_abnormal_detection(capture)

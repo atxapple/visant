@@ -1038,15 +1038,20 @@
             }
             captureEventDeviceId = target;
 
-            // Construct WebSocket URL
+            // Construct WebSocket URL with auth token
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const host = window.location.host;
             const params = new URLSearchParams();
             if (deviceId) {
                 params.set('device_id', deviceId);
             }
+            // Get JWT token from cookie
+            const token = document.cookie.split('; ').find(row => row.startsWith('access_token='))?.split('=')[1];
+            if (token) {
+                params.set('token', token);
+            }
             const query = params.toString();
-            const url = `${protocol}//${host}/ws/captures${query ? `?${query}` : ''}`;
+            const url = `${protocol}//${host}/ws/capture-events${query ? `?${query}` : ''}`;
 
             console.log('Connecting WebSocket:', url);
             const ws = new WebSocket(url);

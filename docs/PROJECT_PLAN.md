@@ -34,12 +34,12 @@
 - ☁️ Production deployment (Railway PostgreSQL + volume storage)
 
 ### What's Missing (From Legacy System)
-- ❌ Public sharing integration (code exists but not wired to main app)
-- ❌ Real-time event streaming (SSE/WebSocket for capture updates)
-- ❌ Manual trigger UI (multi-tenant version)
+- ❌ Real-time event streaming (SSE/WebSocket for capture updates) - **Phase 1 Priority**
 - ❌ Notification configuration UI
 - ❌ Normal description management UI
-- ❌ Datalake pruning admin panel
+- ⏸️ Public sharing integration (deferred to Phase 4)
+- ⏸️ Manual trigger UI (deferred to Phase 4)
+- ⏸️ Datalake pruning admin panel (Phase 3 - Low priority)
 
 ---
 
@@ -61,28 +61,9 @@ Comprehensive analysis of legacy system features not yet integrated into multi-t
 
 ### Phase 1: Quick Wins (1-2 weeks) ⚡ HIGH IMPACT
 
-These features have code already written but need integration work.
+Core features that significantly improve user experience.
 
-#### 1. Public Sharing System ⚡ HIGHEST PRIORITY
-**Status**: Routes exist but not included in main app
-**Complexity**: LOW (just wire up existing routers)
-**Impact**: CRITICAL for viral growth
-
-**Tasks**:
-- [ ] Include `shares.py` and `public.py` routers in `test_server_v2.py`
-- [ ] Test share link creation flow
-- [ ] Verify public gallery `/s/{token}` works without auth
-- [ ] Test QR code generation
-- [ ] Add share management to UI navigation
-
-**Files to Modify**:
-- `test_server_v2.py`: Lines 75-80 (add router includes)
-
-**Expected Time**: 2-3 hours
-
----
-
-#### 2. Real-time Capture Event Streaming
+#### 1. Real-time Capture Event Streaming
 **Status**: CaptureHub exists but not wired
 **Complexity**: LOW (existing code in legacy server.py)
 **Impact**: HIGH (improves UX significantly)
@@ -103,27 +84,7 @@ These features have code already written but need integration work.
 
 ---
 
-#### 3. Multi-Tenant Manual Trigger
-**Status**: Legacy endpoint exists, need multi-tenant version
-**Complexity**: MEDIUM
-**Impact**: MEDIUM
-
-**Tasks**:
-- [ ] Create `/v1/devices/{device_id}/trigger` endpoint (multi-tenant)
-- [ ] Migrate TriggerHub logic to multi-tenant architecture
-- [ ] Add manual trigger button to device dashboard
-- [ ] Test trigger delivery to connected devices
-- [ ] Add trigger history/feedback to UI
-
-**Files to Create/Modify**:
-- `cloud/api/routes/device_commands.py`: Add manual trigger endpoint
-- `cloud/web/templates/camera_dashboard.html`: Add trigger button
-
-**Expected Time**: 6-8 hours
-
----
-
-#### 4. Version Tracking Endpoint
+#### 2. Version Tracking Endpoint
 **Status**: Exists in legacy, simple to add
 **Complexity**: LOW
 **Impact**: LOW
@@ -146,7 +107,7 @@ These features have code already written but need integration work.
 
 These require UI development in addition to backend work.
 
-#### 5. Notification Configuration UI
+#### 3. Notification Configuration UI
 **Status**: Backend exists, missing UI
 **Complexity**: MEDIUM
 **Impact**: HIGH (user requested feature)
@@ -168,7 +129,7 @@ These require UI development in addition to backend work.
 
 ---
 
-#### 6. Normal Description Management UI
+#### 4. Normal Description Management UI
 **Status**: Backend partially exists
 **Complexity**: MEDIUM
 **Impact**: MEDIUM
@@ -189,7 +150,7 @@ These require UI development in addition to backend work.
 
 ---
 
-#### 7. Advanced Filtering UI
+#### 5. Advanced Filtering UI
 **Status**: InferenceService has code, not exposed
 **Complexity**: MEDIUM
 **Impact**: MEDIUM
@@ -216,7 +177,7 @@ These require UI development in addition to backend work.
 
 ---
 
-#### 8. Device Presence Tracking UI
+#### 6. Device Presence Tracking UI
 **Status**: Backend partial (last_heartbeat exists)
 **Complexity**: LOW
 **Impact**: MEDIUM
@@ -241,7 +202,7 @@ These require UI development in addition to backend work.
 
 Nice-to-have features that improve operations and debugging.
 
-#### 9. Datalake Pruning Admin Panel
+#### 7. Datalake Pruning Admin Panel
 **Status**: Code exists, not exposed in UI
 **Complexity**: LOW
 **Impact**: LOW (mostly for Railway deployments)
@@ -261,7 +222,7 @@ Nice-to-have features that improve operations and debugging.
 
 ---
 
-#### 10. Timing Debug / Performance Monitoring
+#### 8. Timing Debug / Performance Monitoring
 **Status**: Code exists in `timing_debug.py`, not exposed
 **Complexity**: MEDIUM
 **Impact**: LOW (developer tool)
@@ -281,7 +242,7 @@ Nice-to-have features that improve operations and debugging.
 
 ---
 
-#### 11. UI Preferences Management
+#### 9. UI Preferences Management
 **Status**: Code exists, partially functional
 **Complexity**: LOW
 **Impact**: LOW
@@ -301,7 +262,7 @@ Nice-to-have features that improve operations and debugging.
 
 ---
 
-#### 12. WebSocket Device Commands (Alternative to SSE)
+#### 10. WebSocket Device Commands (Alternative to SSE)
 **Status**: Not implemented (SSE only)
 **Complexity**: MEDIUM
 **Impact**: LOW
@@ -313,6 +274,48 @@ Nice-to-have features that improve operations and debugging.
 - [ ] Test with device clients
 
 **Expected Time**: 10-12 hours
+
+---
+
+### Phase 4: Growth & Engagement Features (Future) 🚀 DEFERRED
+
+Lower priority features that support growth and user engagement, deferred to focus on core functionality first.
+
+#### 13. Public Sharing System
+**Status**: Routes exist but not included in main app
+**Complexity**: LOW (just wire up existing routers)
+**Impact**: MEDIUM (viral growth potential)
+
+**Tasks**:
+- [ ] Include `shares.py` and `public.py` routers in `server.py`
+- [ ] Test share link creation flow
+- [ ] Verify public gallery `/s/{token}` works without auth
+- [ ] Test QR code generation
+- [ ] Add share management to UI navigation
+
+**Files to Modify**:
+- `server.py`: Add router includes for shares and public routes
+
+**Expected Time**: 2-3 hours
+
+---
+
+#### 14. Multi-Tenant Manual Trigger
+**Status**: CommandHub exists with trigger functionality
+**Complexity**: MEDIUM
+**Impact**: MEDIUM (user convenience feature)
+
+**Tasks**:
+- [ ] Verify `/v1/devices/{device_id}/trigger` endpoint works
+- [ ] Add manual trigger button to device dashboard
+- [ ] Test trigger delivery to connected devices
+- [ ] Add trigger history/feedback to UI
+
+**Files to Modify**:
+- `cloud/web/templates/index.html`: Add trigger button
+- `cloud/api/routes/device_commands.py`: Manual trigger endpoint (already exists)
+
+**Expected Time**: 4-6 hours
 
 ---
 
