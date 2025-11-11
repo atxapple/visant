@@ -1,31 +1,67 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
 
 # Virtual environments
 venv/
 .venv/
+env/
+ENV/
+
+# Database files
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
 
 # Captured debug artifacts
 debug_captures/
 debug_captures_stub/
+debug_captures_real/
 
 # Datalake runtime data (capture images and metadata) - exclude actual data, not Python code
 cloud_datalake/
 /datalake/
 /uploads/
-
-debug_captures_real/
 samples/
 path/to/
 
 # Environment files
 .env
+.env.local
+.env.*.local
+
+# Testing
 .pytest_cache/
 .ruff_cache/
+.coverage
+htmlcov/
+*.cover
 
 # Runtime configuration artifacts
 config/normal_descriptions/
 config/normal_*.txt
 config/notifications.json
 config/similarity_cache.json
+config/ui_preferences.json
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+nul
+Desktop.ini
+
+# Build
+dist/
+build/
+*.egg-info/
+*.egg
