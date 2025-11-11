@@ -1,12 +1,26 @@
 #!/usr/bin/env python3
 """
-Test server for Cloud-Triggered Camera System v2.0
+Visant Cloud Server - Production Entry Point
 
-This script starts the cloud API server with:
-- CommandHub for device command streaming
-- TriggerScheduler for automated captures
-- Device command routes (SSE streams)
+Multi-tenant SaaS platform for AI-powered visual monitoring.
+
+This server provides:
+- Multi-tenant API with organization/user isolation
+- CommandHub for real-time device command streaming (SSE)
+- TriggerScheduler for automated scheduled captures
+- Background AI evaluation pipeline
+- Web UI for dashboard and device management
+- Legacy single-tenant server mounted at /legacy/*
 """
+
+import sys
+import os
+from pathlib import Path
+
+# Add project root to Python path
+# This file is at the project root
+project_root = Path(__file__).resolve().parent
+sys.path.insert(0, str(project_root))
 
 import uvicorn
 from dotenv import load_dotenv
@@ -68,7 +82,7 @@ if __name__ == "__main__":
     main_app = FastAPI(title="Visant Cloud API v2.0", version="2.0.0")
 
     # Mount static files for web UI
-    static_path = Path(__file__).parent / "cloud" / "web" / "static"
+    static_path = project_root / "cloud" / "web" / "static"
     main_app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
     # Include multi-tenant routes

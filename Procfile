@@ -1,1 +1,1 @@
-web: python tools/server/dev_server.py
+web: python server.py
