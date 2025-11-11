@@ -512,3 +512,81 @@ async def upload_capture_image(
         "image_stored": True,
         "message": "Image upload endpoint ready. S3 integration pending."
     }
+
+
+@router.get("/{record_id}/thumbnail")
+def get_capture_thumbnail(
+    record_id: str,
+    device_id: Optional[str] = Query(None, description="Device ID for authentication (no API key required)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get thumbnail image for a capture.
+
+    **Authentication**: Device ID only (from query parameter).
+
+    Returns the thumbnail image file (JPEG) if available.
+    Falls back to generating thumbnail from full image if thumbnail file is missing.
+
+    Usage:
+        GET /v1/captures/{record_id}/thumbnail?device_id=TEST2
+    """
+    from fastapi.responses import FileResponse, Response
+
+    # Validate device by device_id if provided
+    if device_id:
+        device = verify_device_by_id(device_id, db)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="device_id query parameter required"
+        )
+
+    # Get capture
+    capture = db.query(Capture).filter(
+        Capture.record_id == record_id,
+        Capture.org_id == device.org_id  # Ensure org isolation
+    ).first()
+
+    if not capture:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Capture not found"
+        )
+
+    # Check if thumbnail exists
+    if capture.thumbnail_stored and capture.s3_thumbnail_key:
+        thumbnail_path = UPLOADS_DIR / capture.s3_thumbnail_key
+
+        if thumbnail_path.exists():
+            return FileResponse(
+                thumbnail_path,
+                media_type="image/jpeg",
+                headers={"Cache-Control": "public, max-age=31536000"}  # 1 year cache
+            )
+
+    # Fallback: Generate thumbnail from full image on-demand
+    if capture.image_stored and capture.s3_image_key:
+        image_path = UPLOADS_DIR / capture.s3_image_key
+
+        if image_path.exists():
+            try:
+                image_bytes = image_path.read_bytes()
+                thumbnail_bytes = _generate_thumbnail(image_bytes, max_size=(400, 300), quality=85)
+
+                return Response(
+                    content=thumbnail_bytes,
+                    media_type="image/jpeg",
+                    headers={"Cache-Control": "public, max-age=31536000"}  # 1 year cache
+                )
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Failed to generate thumbnail: {str(e)}"
+                )
+
+    # No image available
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Thumbnail not available"
+    )

@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List
 from sqlalchemy import (
-    Column, String, DateTime, ForeignKey, Integer, Float, Boolean, Text, JSON, TypeDecorator, CHAR
+    Column, String, DateTime, ForeignKey, Integer, Float, Boolean, Text, JSON, TypeDecorator, CHAR, Index
 )
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
@@ -142,6 +142,10 @@ class Device(Base):
 class Capture(Base):
     """Capture record with classification results."""
     __tablename__ = "captures"
+    __table_args__ = (
+        # Composite index for common query pattern: WHERE org_id AND device_id ORDER BY captured_at
+        Index('idx_captures_org_device_captured', 'org_id', 'device_id', 'captured_at'),
+    )
 
     record_id = Column(String(255), primary_key=True)
     org_id = Column(GUID, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)

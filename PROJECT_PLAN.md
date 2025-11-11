@@ -1123,6 +1123,164 @@ visant/
 
 ---
 
+## Performance Optimization Plan
+
+### Background
+After Phase 5 completion, performance testing revealed significant slowness in loading recent capture images (20-30 seconds to load all images). Investigation identified multiple bottlenecks affecting both image loading and overall system responsiveness.
+
+### Critical Performance Issues Identified
+
+#### Priority 1: Missing Thumbnail Endpoint (PRIMARY BOTTLENECK)
+**Impact**: 4-7x larger payload, major load time increase
+**Location**: `cloud/api/routes/captures.py`
+**Problem**:
+- Thumbnails are generated during upload (`{record_id}_thumb.jpg`)
+- No API endpoint exists to serve thumbnails
+- Frontend requests `thumbnail_url` → gets 404 → falls back to full 17-29KB images
+- Loading 20 full images = 340-580KB instead of 40-80KB thumbnails
+
+**Fix**:
+- Add `/v1/captures/{record_id}/thumbnail` endpoint
+- Serve pre-generated thumbnail files
+- Estimated time: 10 lines of code
+- Expected improvement: Reduce load time from 20-30s to 5-8s
+
+#### Priority 2: Missing Composite Database Index
+**Impact**: Query scanning overhead
+**Location**: `cloud/api/database/models.py:142-181`
+**Problem**:
+- Common query: `WHERE org_id = X AND device_id = Y ORDER BY captured_at DESC`
+- Only individual column indexes exist
+- Database scans thousands of rows unnecessarily
+
+**Fix**:
+- Add composite index: `idx_captures_org_device_captured ON (org_id, device_id, captured_at DESC)`
+- Migration required
+- Estimated time: 1 SQL line + migration
+- Expected improvement: Faster query execution for capture lists
+
+#### Priority 3: No Cache Headers on Images
+**Impact**: Redundant downloads on every page load
+**Location**: `cloud/web/routes.py:810-811`
+**Problem**:
+- FileResponse returns images without cache headers
+- No `Cache-Control`, `ETag`, or `Last-Modified` headers
+- Browser re-downloads same 20 images every time
+
+**Fix**:
+- Add cache headers to FileResponse
+- Set `Cache-Control: public, max-age=31536000` (1 year for content-addressed images)
+- Add `ETag` for client validation
+- Estimated time: 5 lines of code
+- Expected improvement: Instant loads on subsequent visits
+
+#### Priority 4: Synchronous Thumbnail Generation
+**Impact**: Blocks upload response by 500ms-1s
+**Location**: `cloud/api/routes/captures.py:44-52`
+**Problem**:
+- Thumbnail generation runs synchronously during upload
+- AI evaluation is async, but thumbnails aren't
+- Adds latency to every upload
+
+**Fix**:
+- Move thumbnail generation to `background_tasks.add_task()`
+- Consistent with AI evaluation pattern
+- Estimated time: 10 lines of code refactoring
+- Expected improvement: Faster upload responses
+
+#### Priority 5: Wrong Thumbnail URL in API Response
+**Impact**: Forces fallback to full images
+**Location**: `cloud/api/routes/devices.py:959`
+**Problem**:
+- Both `image_url` and `thumbnail_url` point to same endpoint
+- No benefit from having thumbnail field
+
+**Fix**:
+- Update thumbnail_url to point to `/ui/captures/{record_id}/thumbnail`
+- Estimated time: 1 line change
+- Expected improvement: Proper thumbnail serving once endpoint exists
+
+### Implementation Timeline
+
+**Week 1 (Immediate)**:
+- [ ] Day 1: Add thumbnail endpoint (Priority 1)
+- [ ] Day 1: Fix thumbnail URL in API response (Priority 5)
+- [ ] Day 2: Add cache headers (Priority 3)
+- [ ] Day 2: Test and verify 4-5x improvement
+
+**Week 1-2 (High Priority)**:
+- [ ] Day 3: Create composite index migration (Priority 2)
+- [ ] Day 3: Refactor thumbnail generation to async (Priority 4)
+- [ ] Day 4: Deploy and test in production
+- [ ] Day 5: Monitor performance metrics
+
+### Success Metrics
+
+**Before Optimization**:
+- Image gallery load time: 20-30 seconds
+- Total payload: 340-580KB (20 full images)
+- Database query time: High variance due to scanning
+- Browser caching: None
+
+**After Optimization (Target)**:
+- Image gallery load time: <3 seconds (first load), <1 second (cached)
+- Total payload: 40-80KB (20 thumbnails)
+- Database query time: Consistent <100ms with composite index
+- Browser caching: 100% hit rate for unchanged images
+- Upload response time: <500ms (async thumbnail generation)
+
+**Overall Target**: 90% reduction in initial load time (from 20-30s to 2-3s)
+
+### Files to Modify
+
+1. **cloud/api/routes/captures.py**
+   - Add thumbnail endpoint after line 514
+   - Move thumbnail generation to background task (lines 44-52)
+
+2. **cloud/api/routes/devices.py**
+   - Fix thumbnail_url response (line 959)
+
+3. **cloud/web/routes.py**
+   - Add cache headers to FileResponse (line 811)
+
+4. **cloud/api/database/models.py**
+   - Add composite index definition
+
+5. **alembic/versions/[new]_add_composite_index.py**
+   - Create migration for composite index
+
+### Testing Plan
+
+1. **Thumbnail Endpoint Testing**:
+   - [ ] Verify endpoint returns correct thumbnail file
+   - [ ] Test with missing thumbnails (graceful fallback)
+   - [ ] Measure payload size reduction
+
+2. **Cache Testing**:
+   - [ ] Verify cache headers present in response
+   - [ ] Test browser caching behavior
+   - [ ] Measure subsequent load times
+
+3. **Database Index Testing**:
+   - [ ] Run EXPLAIN ANALYZE on capture queries
+   - [ ] Verify index usage in query plan
+   - [ ] Measure query time improvement
+
+4. **End-to-End Performance**:
+   - [ ] Load dashboard with 20+ captures
+   - [ ] Measure total load time
+   - [ ] Test on slow network (throttled)
+   - [ ] Verify mobile performance
+
+### Risk Mitigation
+
+- **Thumbnail missing**: Endpoint will check for thumbnail existence, fallback to generating on-demand
+- **Cache invalidation**: Using content-addressed paths (record_id), no invalidation needed
+- **Index migration**: Low risk, can be created concurrently without locking
+- **Backward compatibility**: All changes are additive, no breaking changes
+
+---
+
 ## Remaining Tasks
 
 ### High Priority (Next 1-2 Weeks)

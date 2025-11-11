@@ -808,7 +808,74 @@ async def serve_capture_image(
             raise HTTPException(status_code=404, detail="Capture image file missing")
 
         filename = image_path.name if download else None
-        return FileResponse(image_path, filename=filename)
+        return FileResponse(
+            image_path,
+            filename=filename,
+            headers={"Cache-Control": "public, max-age=31536000"}  # 1 year cache
+        )
+    finally:
+        db.close()
+
+
+@router.get("/ui/captures/{record_id}/thumbnail")
+async def serve_capture_thumbnail(
+    record_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(None)
+) -> FileResponse:
+    """
+    Serve capture thumbnail image from local filesystem.
+
+    Returns thumbnail if available, otherwise generates on-demand from full image.
+    """
+    from cloud.api.database import get_db, Capture
+    from cloud.datalake.storage import _generate_thumbnail
+    from fastapi.responses import Response
+
+    # Get capture from database
+    db = next(get_db())
+    try:
+        cap = db.query(Capture).filter(
+            Capture.record_id == record_id
+        ).first()
+
+        if not cap:
+            raise HTTPException(status_code=404, detail="Capture not found")
+
+        uploads_dir = Path("uploads")
+
+        # Try to serve pre-generated thumbnail first
+        if cap.thumbnail_stored and cap.s3_thumbnail_key:
+            thumbnail_path = uploads_dir / cap.s3_thumbnail_key
+
+            if thumbnail_path.exists():
+                return FileResponse(
+                    thumbnail_path,
+                    media_type="image/jpeg",
+                    headers={"Cache-Control": "public, max-age=31536000"}  # 1 year cache
+                )
+
+        # Fallback: Generate thumbnail from full image on-demand
+        if cap.image_stored and cap.s3_image_key:
+            image_path = uploads_dir / cap.s3_image_key
+
+            if image_path.exists():
+                try:
+                    image_bytes = image_path.read_bytes()
+                    thumbnail_bytes = _generate_thumbnail(image_bytes, max_size=(400, 300), quality=85)
+
+                    return Response(
+                        content=thumbnail_bytes,
+                        media_type="image/jpeg",
+                        headers={"Cache-Control": "public, max-age=31536000"}  # 1 year cache
+                    )
+                except Exception as e:
+                    # Log error and return 500
+                    print(f"Error generating thumbnail for {record_id}: {e}")
+                    raise HTTPException(status_code=500, detail="Failed to generate thumbnail")
+
+        # No image available
+        raise HTTPException(status_code=404, detail="Thumbnail not available")
     finally:
         db.close()
 
