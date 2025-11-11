@@ -939,6 +939,12 @@
         let settingsExpanded = false;
         let allCaptures = [];
 
+        // WebSocket for real-time capture updates
+        let captureWebSocket = null;
+        let captureEventDeviceId = null;
+        let captureRefreshTimer = null;
+        const CAPTURE_REFRESH_DEBOUNCE_MS = 300;
+
         // Logout handler
         function handleLogout() {
             auth.logout();
@@ -979,6 +985,111 @@
             }, duration);
         }
 
+        // Queue capture reload with debouncing
+        function queueCaptureReload() {
+            if (captureRefreshTimer) {
+                return; // Already queued
+            }
+            captureRefreshTimer = setTimeout(() => {
+                captureRefreshTimer = null;
+                loadCaptures();
+            }, CAPTURE_REFRESH_DEBOUNCE_MS);
+        }
+
+        // WebSocket connection for real-time capture updates
+        function ensureCaptureStream(deviceId) {
+            if (typeof WebSocket === 'undefined') {
+                console.warn('WebSocket not supported');
+                return;
+            }
+
+            const target = deviceId || 'all';
+
+            // Already connected to the right device
+            if (captureEventDeviceId === target && captureWebSocket && captureWebSocket.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            // Close existing connection if any
+            if (captureWebSocket) {
+                captureWebSocket.close();
+                captureWebSocket = null;
+            }
+
+            captureEventDeviceId = target;
+
+            // Construct WebSocket URL with auth token
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const params = new URLSearchParams();
+
+            if (deviceId) {
+                params.set('device_id', deviceId);
+            }
+
+            // Get JWT token from sessionStorage (where auth.js stores it)
+            const token = sessionStorage.getItem('visant_access_token');
+            if (token) {
+                params.set('token', token);
+            }
+
+            const query = params.toString();
+            const url = `${protocol}//${host}/ws/capture-events${query ? `?${query}` : ''}`;
+
+            console.log('[WebSocket] Connecting to capture stream:', url);
+            const ws = new WebSocket(url);
+
+            ws.onopen = () => {
+                console.log('[WebSocket] Connected to capture stream');
+            };
+
+            ws.onmessage = (event) => {
+                if (!event.data) {
+                    return;
+                }
+
+                try {
+                    const payload = JSON.parse(event.data);
+                    console.log('[WebSocket] Received event:', payload);
+
+                    // Ignore connection confirmation
+                    if (payload && payload.event === 'connected') {
+                        return;
+                    }
+
+                    // Ignore ping/pong
+                    if (payload && payload.event === 'ping') {
+                        return;
+                    }
+
+                    // New capture event - reload captures
+                    if (payload && payload.event === 'new_capture') {
+                        console.log('[WebSocket] New capture detected, reloading...');
+                        queueCaptureReload();
+                    }
+                } catch (error) {
+                    console.warn('[WebSocket] Failed to parse message:', error);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('[WebSocket] Connection error:', error);
+            };
+
+            ws.onclose = () => {
+                console.log('[WebSocket] Connection closed, reconnecting in 2s...');
+                captureWebSocket = null;
+                captureEventDeviceId = null;
+
+                // Auto-reconnect after 2 seconds
+                setTimeout(() => {
+                    ensureCaptureStream(deviceId);
+                }, 2000);
+            };
+
+            captureWebSocket = ws;
+        }
+
         // Toggle settings panel
         function toggleSettings() {
             settingsExpanded = !settingsExpanded;
@@ -1010,6 +1121,9 @@
                 renderDeviceDetails();
                 loadDeviceConfig();
                 loadCaptures();
+
+                // Connect to WebSocket for real-time capture updates
+                ensureCaptureStream(deviceId);
             } catch (error) {
                 console.error('Error loading device data:', error);
                 showToast('Failed to load camera data. Please try again.', 'error');
@@ -1443,8 +1557,7 @@
                 // Show success message
                 showToast('Capture triggered successfully! The camera will take a photo shortly.', 'success');
 
-                // Reload captures after a short delay
-                setTimeout(() => loadCaptures(), 2000);
+                // WebSocket will automatically reload captures when the new capture is ready
             } catch (error) {
                 console.error('Error triggering capture:', error);
                 showToast(error.message || 'Failed to trigger capture. Please try again.', 'error');
