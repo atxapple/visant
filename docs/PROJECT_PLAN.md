@@ -14,7 +14,10 @@
 
 **PRODUCTION READY** - Visant v2.0 is deployed and operational on Railway with full multi-tenant SaaS architecture.
 
-**Recent Achievements** (2025-11-10):
+**Recent Achievements** (2025-11-11):
+- ✅ **Real-time capture event streaming** (WebSocket + SSE endpoints)
+- ✅ **JWT authentication flow** (proper org_id lookup from database)
+- ✅ **Auto-refresh dashboard** (camera dashboard + main dashboard)
 - ✅ Railway deployment successful (PostgreSQL + persistent volume)
 - ✅ Performance optimization complete (90% load time reduction)
 - ✅ Requirements.txt fixed (email-validator, python-multipart dependencies)
@@ -22,7 +25,7 @@
 - ✅ Composite database indexes (optimized queries)
 - ✅ Multi-tenant architecture with complete org isolation
 
-**Next Phase**: Legacy Feature Migration + Viral Growth Activation
+**Next Phase**: Notification UI + Normal Description Management
 
 ### What's Working
 - 👥 Multi-tenant authentication (Supabase Auth)
@@ -30,11 +33,11 @@
 - 📱 Device activation & management (activation codes, API keys)
 - 🤖 Cloud AI evaluation (OpenAI GPT-4o-mini, Gemini 2.5 Flash)
 - 📊 Web dashboard (modern gradient UI, multi-device support)
+- ⚡ **Real-time updates** (WebSocket streaming with 300ms debounce)
 - 🚀 Performance optimizations (thumbnails, caching, indexes)
 - ☁️ Production deployment (Railway PostgreSQL + volume storage)
 
 ### What's Missing (From Legacy System)
-- ❌ Real-time event streaming (SSE/WebSocket for capture updates) - **Phase 1 Priority**
 - ❌ Notification configuration UI
 - ❌ Normal description management UI
 - ⏸️ Public sharing integration (deferred to Phase 4)
@@ -63,24 +66,39 @@ Comprehensive analysis of legacy system features not yet integrated into multi-t
 
 Core features that significantly improve user experience.
 
-#### 1. Real-time Capture Event Streaming
-**Status**: CaptureHub exists but not wired
+#### 1. Real-time Capture Event Streaming ✅ **COMPLETE**
+**Status**: ✅ Implemented and tested
 **Complexity**: LOW (existing code in legacy server.py)
 **Impact**: HIGH (improves UX significantly)
+**Completed**: 2025-11-11
 
 **Tasks**:
-- [ ] Add `/v1/capture-events/stream` SSE endpoint to multi-tenant routes
-- [ ] Add `/ws/captures` WebSocket endpoint
-- [ ] Wire CaptureHub pub/sub system to multi-tenant routes
-- [ ] Update dashboard to connect to capture event stream
-- [ ] Test real-time updates when new captures arrive
+- [x] Add `/v1/capture-events/stream` SSE endpoint to multi-tenant routes
+- [x] Add `/ws/capture-events` WebSocket endpoint
+- [x] Wire CaptureHub pub/sub system to multi-tenant routes
+- [x] Update dashboard to connect to capture event stream (main + camera dashboard)
+- [x] Test real-time updates when new captures arrive
+- [x] Fix JWT authentication flow (lookup org_id from database)
+- [x] Fix token storage location (sessionStorage not cookies)
+- [x] Add debounced reload (300ms) to prevent excessive API calls
 
-**Files to Modify**:
-- `cloud/api/server.py`: Lines 475-561 (CaptureHub + WebSocket)
-- `test_server_v2.py`: Mount or include capture event routes
-- `cloud/web/templates/index.html`: Add WebSocket connection
+**Files Modified**:
+- `cloud/api/routes/capture_events.py`: SSE + WebSocket endpoints (217 lines)
+- `cloud/api/workers/capture_hub.py`: Multi-tenant pub/sub system (161 lines)
+- `cloud/api/workers/ai_evaluator.py`: Event publishing after AI evaluation
+- `server.py`: CaptureHub initialization and mounting
+- `cloud/web/templates/index.html`: WebSocket connection (fixed auth)
+- `cloud/web/templates/camera_dashboard.html`: WebSocket connection + auto-refresh
 
-**Expected Time**: 4-6 hours
+**Actual Time**: ~6 hours
+
+**Technical Details**:
+- WebSocket URL: `ws://host/ws/capture-events?device_id={id}&token={jwt}`
+- SSE URL: `GET /v1/capture-events/stream?device_id={id}` (with Bearer token)
+- CaptureHub uses asyncio.Queue for non-blocking event distribution
+- Subscription keys: `"{org_id}:{device_id}"` or `"{org_id}:__all__"`
+- Auto-reconnect on disconnect (2-second delay)
+- Console logging with `[WebSocket]` prefix for debugging
 
 ---
 
