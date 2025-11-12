@@ -574,16 +574,16 @@ def list_devices(
     # Get latest capture for each device
     device_list = []
     for d in devices:
-        # Query latest capture for this device
+        # Query latest capture for this device (with thumbnail)
         latest_capture = db.query(Capture).filter(
             Capture.device_id == d.device_id,
-            Capture.image_stored == True
+            Capture.thumbnail_stored == True
         ).order_by(Capture.captured_at.desc()).first()
 
-        # Build latest capture URL if available
+        # Build latest capture thumbnail URL if available
         latest_capture_url = None
-        if latest_capture and latest_capture.s3_image_key:
-            latest_capture_url = f"/ui/captures/{latest_capture.record_id}/image"
+        if latest_capture and latest_capture.s3_thumbnail_key:
+            latest_capture_url = f"/ui/captures/{latest_capture.record_id}/thumbnail"
 
         device_list.append({
             "device_id": d.device_id,
