@@ -954,6 +954,7 @@ def get_device_captures(
             "state": c.state,
             "score": c.score,
             "reason": c.reason,
+            "evaluation_status": c.evaluation_status,
             "is_abnormal": c.state == "abnormal",
             "image_url": f"/ui/captures/{c.record_id}/image" if c.image_stored else None,
             "thumbnail_url": f"/ui/captures/{c.record_id}/thumbnail" if c.image_stored else None,

@@ -575,6 +575,26 @@
             color: #ef4444;
             font-weight: 600;
         }
+        .capture-status.uncertain {
+            color: #f59e0b;
+            font-weight: 500;
+        }
+        .capture-status.pending {
+            color: #6b7280;
+            font-style: italic;
+        }
+        .capture-reason {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+            line-height: 1.3;
+            max-height: 3.9rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
 
         /* Empty State */
         .empty-state {
@@ -1414,10 +1434,7 @@
                     if (states.length === 2) {
                         // Filter client-side for 2 selected states
                         filteredCaptures = allCaptures.filter(capture => {
-                            if (capture.is_abnormal && states.includes('abnormal')) return true;
-                            if (!capture.is_abnormal && capture.is_abnormal !== null && states.includes('normal')) return true;
-                            if (capture.is_abnormal === null && states.includes('uncertain')) return true;
-                            return false;
+                            return states.includes(capture.state);
                         });
                     }
                     // For single state selection, server already filtered it
@@ -1472,6 +1489,27 @@
                 // Use thumbnail_url for efficient loading, fallback to image_url
                 const imageSource = capture.thumbnail_url || capture.image_url;
 
+                // Determine status display based on evaluation_status
+                let statusClass, statusText;
+                if (capture.evaluation_status === 'pending' || capture.evaluation_status === 'processing') {
+                    statusClass = 'pending';
+                    statusText = '⏳ Evaluating...';
+                } else if (capture.state === 'abnormal') {
+                    statusClass = 'abnormal';
+                    statusText = '⚠️ Abnormal';
+                } else if (capture.state === 'uncertain') {
+                    statusClass = 'uncertain';
+                    statusText = '❓ Uncertain';
+                } else {
+                    statusClass = 'normal';
+                    statusText = '✓ Normal';
+                }
+
+                // Build reason text if available
+                const reasonHtml = capture.reason && capture.evaluation_status === 'completed'
+                    ? `<p class="capture-reason" title="${capture.reason.replace(/"/g, '&quot;')}">${capture.reason}</p>`
+                    : '';
+
                 card.innerHTML = `
                     <div class="capture-thumbnail">
                         ${imageSource
@@ -1483,9 +1521,10 @@
                     </div>
                     <div class="capture-info">
                         <p class="capture-time">${dateString} ${timeString}</p>
-                        <p class="capture-status ${capture.is_abnormal ? 'abnormal' : 'normal'}">
-                            ${capture.is_abnormal ? '⚠️ Abnormal' : '✓ Normal'}
+                        <p class="capture-status ${statusClass}">
+                            ${statusText}
                         </p>
+                        ${reasonHtml}
                     </div>
                 `;
 
