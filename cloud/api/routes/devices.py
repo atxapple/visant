@@ -64,6 +64,7 @@ class DeviceResponse(BaseModel):
     created_at: datetime
     last_seen_at: Optional[datetime]
     device_version: Optional[str]
+    latest_capture_url: Optional[str]
     organization: dict
 
 
@@ -749,6 +750,8 @@ def get_device(
     db: Session = Depends(get_db)
 ):
     """Get details for a specific device."""
+    from cloud.api.database import Capture
+
     device = db.query(Device).filter(
         Device.device_id == device_id,
         Device.org_id == org.id  # Ensure user owns this device
@@ -760,6 +763,17 @@ def get_device(
             detail="Device not found"
         )
 
+    # Get latest capture for this device
+    latest_capture = db.query(Capture).filter(
+        Capture.device_id == device.device_id,
+        Capture.image_stored == True
+    ).order_by(Capture.captured_at.desc()).first()
+
+    # Build latest capture URL if available
+    latest_capture_url = None
+    if latest_capture and latest_capture.s3_image_key:
+        latest_capture_url = f"/ui/captures/{latest_capture.record_id}/image"
+
     return {
         "device_id": device.device_id,
         "friendly_name": device.friendly_name,
@@ -767,6 +781,7 @@ def get_device(
         "created_at": device.created_at,
         "last_seen_at": device.last_seen_at,
         "device_version": device.device_version,
+        "latest_capture_url": latest_capture_url,
         "organization": {
             "name": org.name,
         }
@@ -788,6 +803,8 @@ def update_device(
     - friendly_name: Display name for the device
     - status: 'active' or 'inactive'
     """
+    from cloud.api.database import Capture
+
     device = db.query(Device).filter(
         Device.device_id == device_id,
         Device.org_id == org.id
@@ -814,6 +831,17 @@ def update_device(
     db.commit()
     db.refresh(device)
 
+    # Get latest capture for this device
+    latest_capture = db.query(Capture).filter(
+        Capture.device_id == device.device_id,
+        Capture.image_stored == True
+    ).order_by(Capture.captured_at.desc()).first()
+
+    # Build latest capture URL if available
+    latest_capture_url = None
+    if latest_capture and latest_capture.s3_image_key:
+        latest_capture_url = f"/ui/captures/{latest_capture.record_id}/image"
+
     return {
         "device_id": device.device_id,
         "friendly_name": device.friendly_name,
@@ -821,6 +849,7 @@ def update_device(
         "created_at": device.created_at,
         "last_seen_at": device.last_seen_at,
         "device_version": device.device_version,
+        "latest_capture_url": latest_capture_url,
         "organization": {
             "name": org.name,
         }
