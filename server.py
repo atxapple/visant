@@ -205,6 +205,38 @@ if __name__ == "__main__":
     def health():
         return {"status": "ok", "version": "2.0.0"}
 
+    @main_app.get("/debug/storage")
+    def debug_storage():
+        """Debug endpoint to check storage configuration and file counts."""
+        import os
+        from pathlib import Path
+
+        # Show uploads directory configuration
+        is_railway = os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_ENVIRONMENT_NAME")
+
+        result = {
+            "uploads_dir": str(UPLOADS_DIR),
+            "is_railway": bool(is_railway),
+            "railway_env": os.getenv("RAILWAY_ENVIRONMENT"),
+            "exists": UPLOADS_DIR.exists(),
+            "is_directory": UPLOADS_DIR.is_dir() if UPLOADS_DIR.exists() else False,
+        }
+
+        # Count files if directory exists
+        if UPLOADS_DIR.exists() and UPLOADS_DIR.is_dir():
+            try:
+                # Count total files recursively
+                all_files = list(UPLOADS_DIR.rglob("*"))
+                image_files = list(UPLOADS_DIR.rglob("*.jpg")) + list(UPLOADS_DIR.rglob("*.jpeg")) + list(UPLOADS_DIR.rglob("*.png"))
+
+                result["total_items"] = len(all_files)
+                result["image_files"] = len(image_files)
+                result["sample_paths"] = [str(p.relative_to(UPLOADS_DIR)) for p in image_files[:5]]
+            except Exception as e:
+                result["error"] = str(e)
+
+        return result
+
     @main_app.get("/")
     def root():
         return {
