@@ -58,6 +58,31 @@ class CloudAIEvaluator:
 
             logger.info(f"Starting AI evaluation for capture: {record_id}")
 
+            # Get device config to fetch normal_description
+            from cloud.api.database import Device
+            device = db.query(Device).filter(Device.device_id == capture.device_id).first()
+
+            # Extract normal_description from device config
+            normal_description = ""
+            if device and device.config:
+                normal_description = device.config.get("normal_description", "")
+
+            # Update classifier's normal_description before evaluation
+            classifier = self.inference_service.classifier
+
+            # Check if it's a ConsensusClassifier (has primary/secondary)
+            if hasattr(classifier, "primary") and hasattr(classifier, "secondary"):
+                # Update both primary and secondary classifiers
+                if hasattr(classifier.primary, "normal_description"):
+                    classifier.primary.normal_description = normal_description
+                if hasattr(classifier.secondary, "normal_description"):
+                    classifier.secondary.normal_description = normal_description
+                logger.debug(f"Updated ConsensusClassifier descriptions for device {capture.device_id}")
+            elif hasattr(classifier, "normal_description"):
+                # Single classifier (OpenAI, Gemini, etc.)
+                classifier.normal_description = normal_description
+                logger.debug(f"Updated classifier description for device {capture.device_id}")
+
             # Run classification using existing InferenceService
             # The classifier.classify() method expects bytes and returns Classification object
             classification = self.inference_service.classifier.classify(image_bytes)
