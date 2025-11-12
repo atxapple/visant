@@ -49,6 +49,8 @@ DEVICES_HTML = Path(__file__).parent / "templates" / "devices.html"
 SETTINGS_HTML = Path(__file__).parent / "templates" / "settings.html"
 ADMIN_DEVICES_HTML = Path(__file__).parent / "templates" / "admin_devices.html"
 ADMIN_CODES_HTML = Path(__file__).parent / "templates" / "admin_codes.html"
+ADMIN_HTML = Path(__file__).parent / "templates" / "admin.html"
+TIME_LOG_HTML = Path(__file__).parent / "templates" / "time_log.html"
 
 # JWT verification for UI routes (optional - can be disabled for now)
 # Set SUPABASE_JWT_SECRET environment variable to enable authentication
@@ -222,6 +224,14 @@ async def cameras_page() -> HTMLResponse:
     if not CAMERAS_HTML.exists():
         raise HTTPException(status_code=500, detail="Cameras template missing")
     return HTMLResponse(CAMERAS_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/ui/admin", response_class=HTMLResponse)
+async def admin_page() -> HTMLResponse:
+    """Admin page - comprehensive management interface."""
+    if not ADMIN_HTML.exists():
+        raise HTTPException(status_code=500, detail="Admin template missing")
+    return HTMLResponse(ADMIN_HTML.read_text(encoding="utf-8"))
 
 
 @router.get("/ui/admin/devices", response_class=HTMLResponse)

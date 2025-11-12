@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Admin - Visant</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png" />
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: "Segoe UI", Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f6f8fa;
+            color: #101820;
+        }
+
+        /* Header */
+        header {
+            background: #ffffff;
+            border-bottom: 1px solid #d0d7de;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2563eb;
+            text-decoration: none;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .btn-back {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid #d0d7de;
+            background: #ffffff;
+            color: #374151;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: background 0.2s;
+        }
+        .btn-back:hover {
+            background: #f3f4f6;
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        h1 {
+            margin: 0 0 1.5rem 0;
+            font-size: 1.875rem;
+            color: #111827;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 2rem;
+        }
+        .tab {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: none;
+            color: #6b7280;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab:hover {
+            color: #2563eb;
+        }
+        .tab.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+        }
+        .stat-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+        .stat-value {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        /* Table */
+        .table-container {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            overflow: hidden;
+        }
+        .table-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .table-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #111827;
+        }
+        .btn-action {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: none;
+            background: #2563eb;
+            color: #ffffff;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background 0.2s;
+        }
+        .btn-action:hover {
+            background: #1d4ed8;
+        }
+        .btn-danger {
+            background: #ef4444;
+        }
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead {
+            background: #f9fafb;
+        }
+        th {
+            text-align: left;
+            padding: 1rem 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        td {
+            padding: 1rem 1.5rem;
+            font-size: 0.9375rem;
+            color: #111827;
+            border-top: 1px solid #e5e7eb;
+        }
+        tbody tr:hover {
+            background: #f9fafb;
+        }
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            font-weight: 600;
+        }
+        .badge-active {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .badge-inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .badge-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        /* Prune Form */
+        .prune-form {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            margin-bottom: 2rem;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            font-family: inherit;
+        }
+        .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.9375rem;
+            font-family: inherit;
+            background: #ffffff;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #6b7280;
+        }
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Alert */
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9375rem;
+        }
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/ui" class="logo">Visant Admin</a>
+        <div class="header-right">
+            <a href="/ui" class="btn-back">Back to Dashboard</a>
+        </div>
+    </header>
+
+    <main>
+        <h1>System Administration</h1>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('users')">Users</button>
+            <button class="tab" onclick="showTab('devices')">Devices</button>
+            <button class="tab" onclick="showTab('captures')">Captures</button>
+            <button class="tab" onclick="showTab('storage')">Storage & Pruning</button>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="users-tab" class="tab-content active">
+            <div class="table-container">
+                <div class="table-header">
+                    <div class="table-title">All Users</div>
+                    <button class="btn-action" onclick="loadUsers()">Refresh</button>
+                </div>
+                <div id="users-loading" class="loading">Loading users...</div>
+                <div id="users-content" style="display:none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Name</th>
+                                <th>Organization</th>
+                                <th>Role</th>
+                                <th>Created</th>
+                                <th>Last Login</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Devices Tab -->
+        <div id="devices-tab" class="tab-content">
+            <div class="table-container">
+                <div class="table-header">
+                    <div class="table-title">All Devices</div>
+                    <button class="btn-action" onclick="loadDevices()">Refresh</button>
+                </div>
+                <div id="devices-loading" class="loading">Loading devices...</div>
+                <div id="devices-content" style="display:none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Device ID</th>
+                                <th>Name</th>
+                                <th>Organization</th>
+                                <th>Status</th>
+                                <th>Version</th>
+                                <th>Last Seen</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="devices-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Captures Tab -->
+        <div id="captures-tab" class="tab-content">
+            <div class="table-container">
+                <div class="table-header">
+                    <div class="table-title">Recent Captures</div>
+                    <button class="btn-action" onclick="loadCaptures()">Refresh</button>
+                </div>
+                <div id="captures-loading" class="loading">Loading captures...</div>
+                <div id="captures-content" style="display:none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Record ID</th>
+                                <th>Device</th>
+                                <th>Organization</th>
+                                <th>State</th>
+                                <th>Eval Status</th>
+                                <th>Size (MB)</th>
+                                <th>Captured</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="captures-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Storage Tab -->
+        <div id="storage-tab" class="tab-content">
+            <!-- Storage Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Captures</div>
+                    <div class="stat-value" id="stat-total-captures">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Storage</div>
+                    <div class="stat-value" id="stat-total-storage">- MB</div>
+                </div>
+            </div>
+
+            <!-- Pruning Form -->
+            <div class="prune-form">
+                <h3 style="margin-top:0;">Bulk Delete Captures</h3>
+                <p style="color:#6b7280; margin-bottom: 1.5rem;">Use filters to delete captures in bulk. <strong>Use with caution!</strong></p>
+
+                <div id="prune-alert"></div>
+
+                <form id="prune-form" onsubmit="pruneCaptures(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Before Date</label>
+                            <input type="datetime-local" id="prune-before-date" class="form-input" />
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">State</label>
+                            <select id="prune-state" class="form-select">
+                                <option value="">All States</option>
+                                <option value="normal">Normal</option>
+                                <option value="abnormal">Abnormal</option>
+                                <option value="uncertain">Uncertain</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Max Deletions</label>
+                            <input type="number" id="prune-limit" class="form-input" placeholder="Leave empty for no limit" min="1" />
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-action btn-danger" style="margin-top: 1rem;">
+                        Delete Captures
+                    </button>
+                </form>
+            </div>
+
+            <div style="text-align: center; margin-top: 1rem;">
+                <button class="btn-action" onclick="loadStorageStats()">Refresh Stats</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const auth = {
+            getAuthHeaders() {
+                const token = localStorage.getItem('accessToken');
+                return token ? { 'Authorization': `Bearer ${token}` } : {};
+            }
+        };
+
+        let currentTab = 'users';
+
+        function showTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            currentTab = tabName;
+
+            // Load data for the tab
+            if (tabName === 'users') loadUsers();
+            else if (tabName === 'devices') loadDevices();
+            else if (tabName === 'captures') loadCaptures();
+            else if (tabName === 'storage') loadStorageStats();
+        }
+
+        // Users Management
+        async function loadUsers() {
+            document.getElementById('users-loading').style.display = 'block';
+            document.getElementById('users-content').style.display = 'none';
+
+            try {
+                const response = await fetch('/v1/admin/users?limit=50', {
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) throw new Error('Failed to load users');
+
+                const users = await response.json();
+
+                const tbody = document.getElementById('users-tbody');
+                tbody.innerHTML = users.map(user => `
+                    <tr>
+                        <td>${user.email}</td>
+                        <td>${user.name || '-'}</td>
+                        <td>${user.org_name}</td>
+                        <td><span class="badge badge-${user.role === 'admin' ? 'active' : 'pending'}">${user.role}</span></td>
+                        <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                        <td>${user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : 'Never'}</td>
+                        <td>
+                            <button class="btn-action btn-danger" style="padding: 0.25rem 0.75rem; font-size: 0.8125rem;" onclick="deleteUser('${user.id}', '${user.email}')">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('users-loading').style.display = 'none';
+                document.getElementById('users-content').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('users-loading').innerHTML = '<div class="alert alert-error">Failed to load users</div>';
+            }
+        }
+
+        async function deleteUser(userId, email) {
+            if (!confirm(`Are you sure you want to delete user ${email}?`)) return;
+
+            try {
+                const response = await fetch(`/v1/admin/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) throw new Error('Failed to delete user');
+
+                alert(`User ${email} deleted successfully`);
+                loadUsers();
+            } catch (error) {
+                alert('Error deleting user: ' + error.message);
+            }
+        }
+
+        // Devices Management
+        async function loadDevices() {
+            document.getElementById('devices-loading').style.display = 'block';
+            document.getElementById('devices-content').style.display = 'none';
+
+            try {
+                const response = await fetch('/v1/admin/devices?limit=50', {
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) throw new Error('Failed to load devices');
+
+                const devices = await response.json();
+
+                const tbody = document.getElementById('devices-tbody');
+                tbody.innerHTML = devices.map(device => `
+                    <tr>
+                        <td>${device.device_id}</td>
+                        <td>${device.friendly_name || '-'}</td>
+                        <td>${device.org_name}</td>
+                        <td><span class="badge badge-${device.status === 'active' ? 'active' : 'inactive'}">${device.status}</span></td>
+                        <td>${device.device_version || '-'}</td>
+                        <td>${device.last_seen_at ? new Date(device.last_seen_at).toLocaleString() : 'Never'}</td>
+                        <td>
+                            <button class="btn-action btn-danger" style="padding: 0.25rem 0.75rem; font-size: 0.8125rem;" onclick="deleteDevice('${device.device_id}')">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('devices-loading').style.display = 'none';
+                document.getElementById('devices-content').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading devices:', error);
+                document.getElementById('devices-loading').innerHTML = '<div class="alert alert-error">Failed to load devices</div>';
+            }
+        }
+
+        async function deleteDevice(deviceId) {
+            if (!confirm(`Are you sure you want to delete device ${deviceId}? This will also delete all associated captures.`)) return;
+
+            try {
+                const response = await fetch(`/v1/admin/devices/${deviceId}`, {
+                    method: 'DELETE',
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) throw new Error('Failed to delete device');
+
+                const result = await response.json();
+                alert(`Device ${deviceId} deleted successfully.\nDeleted ${result.deleted_captures} captures.\nFreed ${result.freed_space_mb} MB.`);
+                loadDevices();
+            } catch (error) {
+                alert('Error deleting device: ' + error.message);
+            }
+        }
+
+        // Captures Management
+        async function loadCaptures() {
+            document.getElementById('captures-loading').style.display = 'block';
+            document.getElementById('captures-content').style.display = 'none';
+
+            try {
+                const response = await fetch('/v1/admin/captures?limit=100', {
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) throw new Error('Failed to load captures');
+
+                const captures = await response.json();
+
+                const tbody = document.getElementById('captures-tbody');
+                tbody.innerHTML = captures.map(capture => `
+                    <tr>
+                        <td>${capture.record_id.substring(0, 8)}...</td>
+                        <td>${capture.device_id}</td>
+                        <td>${capture.org_name}</td>
+                        <td><span class="badge badge-${capture.state === 'normal' ? 'active' : (capture.state === 'abnormal' ? 'inactive' : 'pending')}">${capture.state || '-'}</span></td>
+                        <td><span class="badge badge-${capture.evaluation_status === 'completed' ? 'active' : 'pending'}">${capture.evaluation_status}</span></td>
+                        <td>${capture.file_size_mb ? capture.file_size_mb.toFixed(2) : '-'}</td>
+                        <td>${new Date(capture.captured_at).toLocaleString()}</td>
+                        <td>
+                            <button class="btn-action btn-danger" style="padding: 0.25rem 0.75rem; font-size: 0.8125rem;" onclick="deleteCapture('${capture.record_id}')">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('captures-loading').style.display = 'none';
+                document.getElementById('captures-content').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading captures:', error);
+                document.getElementById('captures-loading').innerHTML = '<div class="alert alert-error">Failed to load captures</div>';
+            }
+        }
+
+        async function deleteCapture(recordId) {
+            if (!confirm(`Are you sure you want to delete this capture?`)) return;
+
+            try {
+                const response = await fetch(`/v1/admin/captures/${recordId}`, {
+                    method: 'DELETE',
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) throw new Error('Failed to delete capture');
+
+                const result = await response.json();
+                alert(`Capture deleted. Freed ${result.freed_space_mb} MB.`);
+                loadCaptures();
+            } catch (error) {
+                alert('Error deleting capture: ' + error.message);
+            }
+        }
+
+        // Storage Management
+        async function loadStorageStats() {
+            try {
+                const response = await fetch('/v1/admin/storage/stats', {
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) throw new Error('Failed to load stats');
+
+                const stats = await response.json();
+
+                document.getElementById('stat-total-captures').textContent = stats.total_captures.toLocaleString();
+                document.getElementById('stat-total-storage').textContent = stats.total_size_mb.toFixed(2) + ' MB';
+            } catch (error) {
+                console.error('Error loading storage stats:', error);
+            }
+        }
+
+        async function pruneCaptures(event) {
+            event.preventDefault();
+
+            const beforeDate = document.getElementById('prune-before-date').value;
+            const state = document.getElementById('prune-state').value;
+            const limit = document.getElementById('prune-limit').value;
+
+            if (!beforeDate && !state) {
+                alert('Please select at least one filter (date or state)');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to delete captures matching these filters? This cannot be undone!')) {
+                return;
+            }
+
+            const payload = {};
+            if (beforeDate) payload.before_date = new Date(beforeDate).toISOString();
+            if (state) payload.state = state;
+            if (limit) payload.limit = parseInt(limit);
+
+            try {
+                const response = await fetch('/v1/admin/captures/prune', {
+                    method: 'POST',
+                    headers: {
+                        ...auth.getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error('Failed to prune captures');
+
+                const result = await response.json();
+
+                const alertDiv = document.getElementById('prune-alert');
+                alertDiv.innerHTML = `<div class="alert alert-success">Successfully deleted ${result.deleted_count} captures, freed ${result.freed_space_mb} MB</div>`;
+
+                // Reset form
+                document.getElementById('prune-form').reset();
+
+                // Reload stats
+                loadStorageStats();
+            } catch (error) {
+                const alertDiv = document.getElementById('prune-alert');
+                alertDiv.innerHTML = `<div class="alert alert-error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUsers();
+            loadStorageStats();
+        });
+    </script>
+</body>
+</html>

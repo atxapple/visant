@@ -157,6 +157,35 @@ def verify_device_by_id(
     return device
 
 
+def get_admin_user(
+    user: User = Depends(get_current_user)
+) -> User:
+    """
+    FastAPI dependency to verify current user is an admin.
+
+    Usage:
+        @app.get("/v1/admin/users")
+        def list_users(admin: User = Depends(get_admin_user)):
+            ...
+
+    Args:
+        user: Current authenticated user
+
+    Returns:
+        User object if user is admin
+
+    Raises:
+        HTTPException: If user is not an admin
+    """
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+
+    return user
+
+
 def require_org_ownership(
     resource_org_id,
     current_org: Organization = Depends(get_current_org)
