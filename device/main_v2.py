@@ -18,6 +18,9 @@ import json
 import base64
 import argparse
 import logging
+
+# Import version number
+from version import __version__ as DEVICE_VERSION
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -223,10 +226,10 @@ def main():
     # Setup camera
     camera = setup_camera(args)
 
-    # Connect to command stream
-    stream_url = f"{args.api_url}/v1/devices/{args.device_id}/commands"
+    # Connect to command stream with device version
+    stream_url = f"{args.api_url}/v1/devices/{args.device_id}/commands?device_version={DEVICE_VERSION}"
 
-    logger.info(f"Connecting to command stream: {stream_url}")
+    logger.info(f"Connecting to command stream: {stream_url} (version: {DEVICE_VERSION})")
 
     while True:
         try:

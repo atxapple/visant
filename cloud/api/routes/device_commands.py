@@ -21,6 +21,7 @@ router = APIRouter()
 @router.get("/v1/devices/{device_id}/commands")
 async def device_command_stream(
     device_id: str,
+    device_version: str = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -32,7 +33,7 @@ async def device_command_stream(
     - {"cmd": "update_config", "config": {...}}
 
     The device should:
-    1. Connect to this endpoint on startup
+    1. Connect to this endpoint on startup with device_version query parameter
     2. Listen for commands continuously
     3. Execute commands when received
     4. Reconnect if connection drops
@@ -47,6 +48,12 @@ async def device_command_stream(
             status_code=403,
             detail=f"Device {device_id} is not active (status: {device.status})"
         )
+
+    # Update device version if provided
+    if device_version and device.device_version != device_version:
+        device.device_version = device_version
+        db.commit()
+        logger.info(f"[device_commands] Updated device {device_id} version to {device_version}")
 
     # Get command hub from app state
     from cloud.api.server import get_command_hub
