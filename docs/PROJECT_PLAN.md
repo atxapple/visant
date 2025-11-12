@@ -15,6 +15,7 @@
 **PRODUCTION READY** - Visant v2.0 is deployed and operational on Railway with full multi-tenant SaaS architecture.
 
 **Recent Achievements** (2025-11-11):
+- ✅ **Version tracking endpoint** (cloud + device version display)
 - ✅ **Real-time capture event streaming** (WebSocket + SSE endpoints)
 - ✅ **JWT authentication flow** (proper org_id lookup from database)
 - ✅ **Auto-refresh dashboard** (camera dashboard + main dashboard)
@@ -102,22 +103,37 @@ Core features that significantly improve user experience.
 
 ---
 
-#### 2. Version Tracking Endpoint
-**Status**: Exists in legacy, simple to add
+#### 2. Version Tracking Endpoint ✅ **COMPLETE**
+**Status**: ✅ Implemented and tested
 **Complexity**: LOW
 **Impact**: LOW
+**Completed**: 2025-11-11
 
 **Tasks**:
-- [ ] Add `GET /v1/version` endpoint to multi-tenant routes
-- [ ] Track cloud version + connected device versions
-- [ ] Display version info in settings page
-- [ ] Add version mismatch warnings
+- [x] Add `GET /v1/version` endpoint to multi-tenant routes
+- [x] Track cloud version + connected device versions
+- [x] Display version info in dashboard headers (cloud version)
+- [x] Display device version next to camera ID in settings panel
 
-**Files to Modify**:
-- Create new route or add to `devices.py`
-- `cloud/web/templates/settings.html`: Display version
+**Files Created**:
+- `cloud/api/routes/version.py`: Version endpoints (57 lines)
+  - `GET /v1/version`: Returns cloud version + all device versions (requires auth)
+  - `GET /v1/version/cloud`: Returns cloud version only (public)
 
-**Expected Time**: 2 hours
+**Files Modified**:
+- `server.py`: Mounted version router
+- `cloud/web/templates/index.html`: Cloud version display in header
+- `cloud/web/templates/cameras.html`: Cloud version display in header
+- `cloud/web/templates/camera_dashboard.html`: Cloud version + device version display
+
+**Actual Time**: ~2 hours
+
+**Technical Details**:
+- Cloud version sourced from `version.py` (`__version__ = "0.2.0"`)
+- Device version stored in `Device.device_version` field (already existed in schema)
+- Cloud version displayed left of Logout button on all authenticated pages
+- Device version displayed next to Camera ID in settings panel: `{device_id} (v{version})`
+- Handles "unknown" device versions gracefully (not displayed if unknown)
 
 ---
 

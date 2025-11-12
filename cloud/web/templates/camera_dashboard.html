@@ -723,6 +723,7 @@
             </div>
         </div>
         <div class="header-right">
+            <span id="cloudVersion" style="margin-right: 1rem; color: #6b7280; font-size: 0.875rem;"></span>
             <span id="userName" style="margin-right: 1rem; color: #374151; font-weight: 500;"></span>
             <button class="btn-logout" onclick="handleLogout()">Logout</button>
         </div>
@@ -1570,8 +1571,38 @@
             window.location.href = `/ui/capture/${captureId}`;
         }
 
+        // Load version information
+        async function loadVersionInfo() {
+            try {
+                // Fetch cloud version (public endpoint)
+                const cloudResponse = await fetch('/v1/version/cloud');
+                if (cloudResponse.ok) {
+                    const cloudData = await cloudResponse.json();
+                    document.getElementById('cloudVersion').textContent = `Cloud v${cloudData.version}`;
+                }
+
+                // Fetch device versions (requires auth)
+                const devicesResponse = await fetch('/v1/version', {
+                    headers: auth.getAuthHeaders()
+                });
+                if (devicesResponse.ok) {
+                    const devicesData = await devicesResponse.json();
+                    // Find current device in the list
+                    const deviceInfo = devicesData.devices.find(d => d.device_id === deviceId);
+                    if (deviceInfo && deviceInfo.device_version && deviceInfo.device_version !== 'unknown') {
+                        // Update settings device ID to include version
+                        const settingsDeviceIdSpan = document.getElementById('settingsDeviceId');
+                        settingsDeviceIdSpan.innerHTML = `${deviceInfo.device_id} <span style="color: #9ca3af; font-weight: 400; font-size: 0.875rem;">(v${deviceInfo.device_version})</span>`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading version info:', error);
+            }
+        }
+
         // Load data on page load
         loadDeviceData();
+        loadVersionInfo();
     </script>
 </body>
 </html>

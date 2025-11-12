@@ -686,6 +686,7 @@
                     <strong id="userEmail" style="color: #101820;"></strong>
                 </div>
             </div>
+            <span id="cloudVersion" style="color: #6b7280; font-size: 0.875rem;"></span>
             <button onclick="handleLogout()" style="padding: 0.6rem 1.2rem; border-radius: 8px; background: transparent; border: 1px solid #dc2626; color: #dc2626; font-weight: 600; cursor: pointer; transition: background 0.2s;">
                 Logout
             </button>
@@ -1812,9 +1813,23 @@
         // Use global auth instance from auth.js (already initialized)
         // auth variable is available globally
 
+        // Load cloud version from new multi-tenant API
+        async function loadCloudVersion() {
+            try {
+                const response = await fetch('/v1/version/cloud');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('cloudVersion').textContent = `Cloud v${data.version}`;
+                }
+            } catch (error) {
+                console.error('Error loading cloud version:', error);
+            }
+        }
+
         (async () => {
             await loadPreferences();
             loadUserInfo();
+            loadCloudVersion();
             loadState();
             loadCaptures();
             scheduleStateRefresh();

@@ -411,6 +411,7 @@
         <div class="header-right">
             <button class="btn-add" onclick="addCamera()">+ Add Camera</button>
             <div class="user-menu">
+                <span id="cloudVersion" style="margin-right: 1rem; color: #6b7280; font-size: 0.875rem;"></span>
                 <span id="userName" style="margin-right: 1rem; color: #374151; font-weight: 500;"></span>
                 <button class="btn-logout" onclick="handleLogout()">Logout</button>
             </div>
@@ -694,8 +695,22 @@
             });
         }
 
+        // Load cloud version
+        async function loadCloudVersion() {
+            try {
+                const response = await fetch('/v1/version/cloud');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('cloudVersion').textContent = `Cloud v${data.version}`;
+                }
+            } catch (error) {
+                console.error('Error loading cloud version:', error);
+            }
+        }
+
         // Load cameras on page load
         loadCameras();
+        loadCloudVersion();
     </script>
 </body>
 </html>
