@@ -106,6 +106,69 @@
             color: #111827;
             margin: 0;
         }
+        .camera-title-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .btn-edit-name {
+            background: transparent;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-edit-name:hover {
+            background: #f3f4f6;
+            color: #2563eb;
+        }
+        .camera-name-input {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #111827;
+            border: 2px solid #2563eb;
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            font-family: inherit;
+            max-width: 400px;
+        }
+        .camera-name-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .camera-name-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn-save-name, .btn-cancel-name {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-save-name {
+            background: #2563eb;
+            color: white;
+        }
+        .btn-save-name:hover {
+            background: #1d4ed8;
+        }
+        .btn-cancel-name {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        .btn-cancel-name:hover {
+            background: #e5e7eb;
+        }
         .btn-settings-header {
             padding: 0.5rem 1rem;
             background: #6b7280;
@@ -755,7 +818,17 @@
         <div class="camera-header">
             <div class="camera-title-row">
                 <div class="camera-title-left">
-                    <h1 id="cameraName" class="camera-title">Loading...</h1>
+                    <div class="camera-title-container">
+                        <h1 id="cameraName" class="camera-title">Loading...</h1>
+                        <button id="btnEditName" class="btn-edit-name" onclick="startEditingName()" title="Rename camera">
+                            ✏️
+                        </button>
+                        <div id="cameraNameEditContainer" class="camera-name-actions" style="display: none;">
+                            <input type="text" id="cameraNameInput" class="camera-name-input" maxlength="100" />
+                            <button class="btn-save-name" onclick="saveCameraName()">Save</button>
+                            <button class="btn-cancel-name" onclick="cancelEditingName()">Cancel</button>
+                        </div>
+                    </div>
                     <button id="btnToggleSettings" class="btn-settings-header" onclick="toggleSettings()">
                         ⚙️ Settings
                     </button>
@@ -1223,6 +1296,102 @@
             // Show device ID in settings header
             document.getElementById('settingsDeviceId').textContent = currentDevice.device_id;
         }
+
+        // Camera name editing functions
+        function startEditingName() {
+            const nameElement = document.getElementById('cameraName');
+            const editButton = document.getElementById('btnEditName');
+            const editContainer = document.getElementById('cameraNameEditContainer');
+            const nameInput = document.getElementById('cameraNameInput');
+
+            // Set input value to current name
+            nameInput.value = currentDevice.friendly_name || currentDevice.device_id;
+
+            // Hide name and edit button, show input and actions
+            nameElement.style.display = 'none';
+            editButton.style.display = 'none';
+            editContainer.style.display = 'flex';
+
+            // Focus input and select text
+            nameInput.focus();
+            nameInput.select();
+        }
+
+        function cancelEditingName() {
+            const nameElement = document.getElementById('cameraName');
+            const editButton = document.getElementById('btnEditName');
+            const editContainer = document.getElementById('cameraNameEditContainer');
+
+            // Show name and edit button, hide input and actions
+            nameElement.style.display = 'block';
+            editButton.style.display = 'flex';
+            editContainer.style.display = 'none';
+        }
+
+        async function saveCameraName() {
+            const nameInput = document.getElementById('cameraNameInput');
+            const newName = nameInput.value.trim();
+
+            if (!newName) {
+                showToast('Camera name cannot be empty', 'error');
+                return;
+            }
+
+            // Disable buttons during save
+            const saveButton = document.querySelector('.btn-save-name');
+            const cancelButton = document.querySelector('.btn-cancel-name');
+            const originalSaveText = saveButton.textContent;
+            saveButton.disabled = true;
+            cancelButton.disabled = true;
+            saveButton.textContent = 'Saving...';
+
+            try {
+                const response = await fetch(`/v1/devices/${deviceId}?friendly_name=${encodeURIComponent(newName)}`, {
+                    method: 'PUT',
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to update camera name');
+                }
+
+                const updatedDevice = await response.json();
+
+                // Update local device object
+                currentDevice.friendly_name = updatedDevice.friendly_name;
+
+                // Update UI
+                document.getElementById('cameraName').textContent = updatedDevice.friendly_name;
+                cancelEditingName();
+
+                showToast('Camera name updated successfully', 'success');
+            } catch (error) {
+                console.error('Error updating camera name:', error);
+                showToast(error.message || 'Failed to update camera name', 'error');
+            } finally {
+                // Re-enable buttons
+                saveButton.disabled = false;
+                cancelButton.disabled = false;
+                saveButton.textContent = originalSaveText;
+            }
+        }
+
+        // Handle Enter key to save, Escape to cancel
+        document.addEventListener('DOMContentLoaded', () => {
+            const nameInput = document.getElementById('cameraNameInput');
+            if (nameInput) {
+                nameInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        saveCameraName();
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        cancelEditingName();
+                    }
+                });
+            }
+        });
 
         // Load device config
         async function loadDeviceConfig() {
