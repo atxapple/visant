@@ -125,15 +125,20 @@ Core features that significantly improve user experience.
 - `cloud/web/templates/index.html`: Cloud version display in header
 - `cloud/web/templates/cameras.html`: Cloud version display in header
 - `cloud/web/templates/camera_dashboard.html`: Cloud version + device version display
+- `device/main_v2.py`: Device client sends version on SSE connection
+- `cloud/api/routes/device_commands.py`: Server accepts and stores device version
 
-**Actual Time**: ~2 hours
+**Actual Time**: ~3 hours
 
 **Technical Details**:
 - Cloud version sourced from `version.py` (`__version__ = "0.2.0"`)
 - Device version stored in `Device.device_version` field (already existed in schema)
 - Cloud version displayed left of Logout button on all authenticated pages
 - Device version displayed next to Camera ID in settings panel: `{device_id} (v{version})`
+- Device client sends version as query parameter when connecting to command stream
+- Server updates device version in database on each connection
 - Handles "unknown" device versions gracefully (not displayed if unknown)
+- Full end-to-end version tracking from device → cloud → UI ✅ Working
 
 ---
 
