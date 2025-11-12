@@ -138,8 +138,9 @@ if __name__ == "__main__":
         print(f"Initialized {classifier.__class__.__name__}")
 
     # Initialize InferenceService for captures endpoint
-    datalake = FileSystemDatalake(root=Path("uploads"))
-    capture_index = RecentCaptureIndex(root=Path("uploads"))
+    from cloud.api.storage.config import UPLOADS_DIR
+    datalake = FileSystemDatalake(root=UPLOADS_DIR)
+    capture_index = RecentCaptureIndex(root=UPLOADS_DIR)
     inference_service = InferenceService(
         classifier=classifier,
         datalake=datalake,

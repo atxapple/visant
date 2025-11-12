@@ -11,11 +11,9 @@ from sqlalchemy.orm import Session
 
 from cloud.api.database import get_db, User, Device, Capture, Organization
 from cloud.api.auth.dependencies import get_current_user
+from cloud.api.storage.config import UPLOADS_DIR
 
 router = APIRouter(prefix="/v1/admin", tags=["Admin"])
-
-# Storage configuration
-UPLOADS_DIR = Path("uploads")
 
 
 # ====================

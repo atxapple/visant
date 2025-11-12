@@ -811,8 +811,8 @@ async def serve_capture_image(
 
         # Build path to image file
         # s3_image_key stores relative path like: "c472e36a.../devices/TEST3/captures/TEST3_20251109_035751_25bdcc09.jpg"
-        uploads_dir = Path("uploads")
-        image_path = uploads_dir / cap.s3_image_key
+        from cloud.api.storage.config import UPLOADS_DIR
+        image_path = UPLOADS_DIR / cap.s3_image_key
 
         if not image_path.exists():
             raise HTTPException(status_code=404, detail="Capture image file missing")
@@ -852,11 +852,11 @@ async def serve_capture_thumbnail(
         if not cap:
             raise HTTPException(status_code=404, detail="Capture not found")
 
-        uploads_dir = Path("uploads")
+        from cloud.api.storage.config import UPLOADS_DIR
 
         # Try to serve pre-generated thumbnail first
         if cap.thumbnail_stored and cap.s3_thumbnail_key:
-            thumbnail_path = uploads_dir / cap.s3_thumbnail_key
+            thumbnail_path = UPLOADS_DIR / cap.s3_thumbnail_key
 
             if thumbnail_path.exists():
                 return FileResponse(
@@ -867,7 +867,7 @@ async def serve_capture_thumbnail(
 
         # Fallback: Generate thumbnail from full image on-demand
         if cap.image_stored and cap.s3_image_key:
-            image_path = uploads_dir / cap.s3_image_key
+            image_path = UPLOADS_DIR / cap.s3_image_key
 
             if image_path.exists():
                 try:
