@@ -53,18 +53,93 @@ if __name__ == "__main__":
     from cloud.api.routes import auth, devices, captures, device_commands, admin_codes, capture_events, version
     from cloud.web import routes as web_routes
     from cloud.api.service import InferenceService
-    from cloud.ai import SimpleThresholdModel
+    from cloud.api.config_loader import load_config
+    from cloud.ai import (
+        SimpleThresholdModel,
+        OpenAIImageClassifier,
+        GeminiImageClassifier,
+        ConsensusClassifier,
+    )
     from cloud.datalake.storage import FileSystemDatalake
     from cloud.api.capture_index import RecentCaptureIndex
     from cloud.api.workers.capture_hub import CaptureHub
     from pathlib import Path
     from fastapi import FastAPI
     from fastapi.staticfiles import StaticFiles
+    import os
+
+    # Load configuration from config/cloud.json
+    config_path = Path("config/cloud.json")
+    try:
+        cfg = load_config(config_path if config_path.exists() else None)
+    except (TypeError, ValueError) as e:
+        # Config file has incompatible format, use defaults with manual classifier config
+        print(f"WARNING: Could not load config from {config_path}: {e}")
+        print("Using default config...")
+        cfg = load_config(None)
+
+    # Build classifier based on config (consensus = OpenAI + Gemini)
+    def build_classifier(kind: str, role: str, normal_description: str = ""):
+        if kind == "simple":
+            return SimpleThresholdModel()
+        if kind == "openai":
+            key = os.environ.get(cfg.classifier.openai.api_key_env)
+            if not key:
+                print(f"WARNING: {cfg.classifier.openai.api_key_env} not set, using SimpleThresholdModel")
+                return SimpleThresholdModel()
+            return OpenAIImageClassifier(
+                api_key=key,
+                model=cfg.classifier.openai.model,
+                base_url=cfg.classifier.openai.base_url,
+                normal_description=normal_description,
+                timeout=cfg.classifier.openai.timeout,
+            )
+        if kind == "gemini":
+            key = os.environ.get(cfg.classifier.gemini.api_key_env)
+            if not key:
+                print(f"WARNING: {cfg.classifier.gemini.api_key_env} not set, using SimpleThresholdModel")
+                return SimpleThresholdModel()
+            return GeminiImageClassifier(
+                api_key=key,
+                model=cfg.classifier.gemini.model,
+                base_url=cfg.classifier.gemini.base_url,
+                timeout=cfg.classifier.gemini.timeout,
+                normal_description=normal_description,
+            )
+        print(f"WARNING: Unsupported classifier '{kind}', using SimpleThresholdModel")
+        return SimpleThresholdModel()
+
+    # Determine primary/secondary based on backend setting
+    if cfg.classifier.backend == "consensus":
+        primary_kind = cfg.classifier.primary_backend or "openai"
+        secondary_kind = cfg.classifier.secondary_backend or "gemini"
+    elif cfg.classifier.backend in ["openai", "gemini", "simple"]:
+        primary_kind = cfg.classifier.backend
+        secondary_kind = None
+    else:
+        primary_kind = "simple"
+        secondary_kind = None
+
+    # Build classifiers
+    primary_classifier = build_classifier(primary_kind, "primary")
+    secondary_classifier = build_classifier(secondary_kind, "secondary") if secondary_kind else None
+
+    # Create consensus classifier if we have both
+    if secondary_classifier:
+        classifier = ConsensusClassifier(
+            primary=primary_classifier,
+            secondary=secondary_classifier,
+            primary_label="OpenAI",
+            secondary_label="Gemini",
+        )
+        print(f"Initialized ConsensusClassifier (OpenAI + Gemini)")
+    else:
+        classifier = primary_classifier
+        print(f"Initialized {classifier.__class__.__name__}")
 
     # Initialize InferenceService for captures endpoint
     datalake = FileSystemDatalake(root=Path("uploads"))
     capture_index = RecentCaptureIndex(root=Path("uploads"))
-    classifier = SimpleThresholdModel()
     inference_service = InferenceService(
         classifier=classifier,
         datalake=datalake,
