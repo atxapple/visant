@@ -50,7 +50,7 @@ if __name__ == "__main__":
     # Create FastAPI app with multi-tenant architecture
     from cloud.api.database import Base, engine
     from cloud.api.server import create_app
-    from cloud.api.routes import auth, devices, captures, device_commands, admin_codes, capture_events, version
+    from cloud.api.routes import auth, devices, captures, device_commands, admin_codes, capture_events, version, admin
     from cloud.web import routes as web_routes
     from cloud.api.service import InferenceService
     from cloud.api.config_loader import load_config
@@ -138,8 +138,9 @@ if __name__ == "__main__":
         print(f"Initialized {classifier.__class__.__name__}")
 
     # Initialize InferenceService for captures endpoint
-    datalake = FileSystemDatalake(root=Path("uploads"))
-    capture_index = RecentCaptureIndex(root=Path("uploads"))
+    from cloud.api.storage.config import UPLOADS_DIR
+    datalake = FileSystemDatalake(root=UPLOADS_DIR)
+    capture_index = RecentCaptureIndex(root=UPLOADS_DIR)
     inference_service = InferenceService(
         classifier=classifier,
         datalake=datalake,
@@ -175,6 +176,7 @@ if __name__ == "__main__":
     main_app.include_router(device_commands.router)  # Cloud-triggered device commands (SSE)
     main_app.include_router(capture_events.router)  # Real-time capture events (SSE/WebSocket)
     main_app.include_router(admin_codes.router)  # Admin: Activation code management
+    main_app.include_router(admin.router)  # Admin: System management (users, devices, captures)
     main_app.include_router(version.router)  # Version tracking
     main_app.include_router(web_routes.router)  # Web UI routes (login, signup, dashboard)
 
@@ -202,6 +204,38 @@ if __name__ == "__main__":
     @main_app.get("/health")
     def health():
         return {"status": "ok", "version": "2.0.0"}
+
+    @main_app.get("/debug/storage")
+    def debug_storage():
+        """Debug endpoint to check storage configuration and file counts."""
+        import os
+        from pathlib import Path
+
+        # Show uploads directory configuration
+        is_railway = os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_ENVIRONMENT_NAME")
+
+        result = {
+            "uploads_dir": str(UPLOADS_DIR),
+            "is_railway": bool(is_railway),
+            "railway_env": os.getenv("RAILWAY_ENVIRONMENT"),
+            "exists": UPLOADS_DIR.exists(),
+            "is_directory": UPLOADS_DIR.is_dir() if UPLOADS_DIR.exists() else False,
+        }
+
+        # Count files if directory exists
+        if UPLOADS_DIR.exists() and UPLOADS_DIR.is_dir():
+            try:
+                # Count total files recursively
+                all_files = list(UPLOADS_DIR.rglob("*"))
+                image_files = list(UPLOADS_DIR.rglob("*.jpg")) + list(UPLOADS_DIR.rglob("*.jpeg")) + list(UPLOADS_DIR.rglob("*.png"))
+
+                result["total_items"] = len(all_files)
+                result["image_files"] = len(image_files)
+                result["sample_paths"] = [str(p.relative_to(UPLOADS_DIR)) for p in image_files[:5]]
+            except Exception as e:
+                result["error"] = str(e)
+
+        return result
 
     @main_app.get("/")
     def root():

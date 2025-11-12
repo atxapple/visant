@@ -579,11 +579,11 @@ def create_app(
             )
 
         # Determine which file to serve (thumbnail or full image)
-        uploads_root = Path("uploads")
+        from cloud.api.storage.config import UPLOADS_DIR
 
         if capture.thumbnail_stored and capture.s3_thumbnail_key:
             # Serve thumbnail
-            thumbnail_path = uploads_root / capture.s3_thumbnail_key
+            thumbnail_path = UPLOADS_DIR / capture.s3_thumbnail_key
             if thumbnail_path.exists():
                 return FileResponse(
                     thumbnail_path,
@@ -593,7 +593,7 @@ def create_app(
 
         # Fallback to full image if thumbnail not available
         if capture.image_stored and capture.s3_image_key:
-            image_path = uploads_root / capture.s3_image_key
+            image_path = UPLOADS_DIR / capture.s3_image_key
             if image_path.exists():
                 return FileResponse(
                     image_path,

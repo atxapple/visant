@@ -49,6 +49,8 @@ DEVICES_HTML = Path(__file__).parent / "templates" / "devices.html"
 SETTINGS_HTML = Path(__file__).parent / "templates" / "settings.html"
 ADMIN_DEVICES_HTML = Path(__file__).parent / "templates" / "admin_devices.html"
 ADMIN_CODES_HTML = Path(__file__).parent / "templates" / "admin_codes.html"
+ADMIN_HTML = Path(__file__).parent / "templates" / "admin.html"
+TIME_LOG_HTML = Path(__file__).parent / "templates" / "time_log.html"
 
 # JWT verification for UI routes (optional - can be disabled for now)
 # Set SUPABASE_JWT_SECRET environment variable to enable authentication
@@ -222,6 +224,14 @@ async def cameras_page() -> HTMLResponse:
     if not CAMERAS_HTML.exists():
         raise HTTPException(status_code=500, detail="Cameras template missing")
     return HTMLResponse(CAMERAS_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/ui/admin", response_class=HTMLResponse)
+async def admin_page() -> HTMLResponse:
+    """Admin page - comprehensive management interface."""
+    if not ADMIN_HTML.exists():
+        raise HTTPException(status_code=500, detail="Admin template missing")
+    return HTMLResponse(ADMIN_HTML.read_text(encoding="utf-8"))
 
 
 @router.get("/ui/admin/devices", response_class=HTMLResponse)
@@ -801,8 +811,8 @@ async def serve_capture_image(
 
         # Build path to image file
         # s3_image_key stores relative path like: "c472e36a.../devices/TEST3/captures/TEST3_20251109_035751_25bdcc09.jpg"
-        uploads_dir = Path("uploads")
-        image_path = uploads_dir / cap.s3_image_key
+        from cloud.api.storage.config import UPLOADS_DIR
+        image_path = UPLOADS_DIR / cap.s3_image_key
 
         if not image_path.exists():
             raise HTTPException(status_code=404, detail="Capture image file missing")
@@ -842,11 +852,11 @@ async def serve_capture_thumbnail(
         if not cap:
             raise HTTPException(status_code=404, detail="Capture not found")
 
-        uploads_dir = Path("uploads")
+        from cloud.api.storage.config import UPLOADS_DIR
 
         # Try to serve pre-generated thumbnail first
         if cap.thumbnail_stored and cap.s3_thumbnail_key:
-            thumbnail_path = uploads_dir / cap.s3_thumbnail_key
+            thumbnail_path = UPLOADS_DIR / cap.s3_thumbnail_key
 
             if thumbnail_path.exists():
                 return FileResponse(
@@ -857,7 +867,7 @@ async def serve_capture_thumbnail(
 
         # Fallback: Generate thumbnail from full image on-demand
         if cap.image_stored and cap.s3_image_key:
-            image_path = uploads_dir / cap.s3_image_key
+            image_path = UPLOADS_DIR / cap.s3_image_key
 
             if image_path.exists():
                 try:

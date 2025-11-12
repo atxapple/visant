@@ -18,7 +18,7 @@ from cloud.datalake.storage import _generate_thumbnail
 router = APIRouter(prefix="/v1/captures", tags=["Captures"])
 
 # Storage configuration
-UPLOADS_DIR = Path("uploads")  # Local filesystem storage for development
+from cloud.api.storage.config import UPLOADS_DIR
 
 
 def save_capture_image(org_id: str, device_id: str, record_id: str, image_bytes: bytes) -> tuple[str, Optional[str]]:
