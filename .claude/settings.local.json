@@ -48,7 +48,9 @@
       "Bash(fi)",
       "Bash(if [ -f DEV-BRANCH.md ])",
       "Bash(then git mv DEV-BRANCH.md archive/docs/)",
-      "Bash(else echo \"DEV-BRANCH.md not found (okay)\")"
+      "Bash(else echo \"DEV-BRANCH.md not found (okay)\")",
+      "Bash(test:*)",
+      "Bash(.venv/Scripts/pip:*)"
     ],
     "deny": [],
     "ask": []
