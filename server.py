@@ -83,42 +83,42 @@ if __name__ == "__main__":
         if kind == "simple":
             return SimpleThresholdModel()
         if kind == "openai":
-            key = os.environ.get(cfg.classifier.openai.api_key_env)
+            # Try to get API key from config env var name, fallback to standard name
+            api_key_env = getattr(cfg.classifier.openai, 'api_key_env', 'OPENAI_API_KEY')
+            key = os.environ.get(api_key_env)
             if not key:
-                print(f"WARNING: {cfg.classifier.openai.api_key_env} not set, using SimpleThresholdModel")
+                print(f"WARNING: {api_key_env} not set, using SimpleThresholdModel")
                 return SimpleThresholdModel()
+            print(f"✓ OpenAI API key found, initializing GPT-4o-mini classifier")
             return OpenAIImageClassifier(
                 api_key=key,
-                model=cfg.classifier.openai.model,
-                base_url=cfg.classifier.openai.base_url,
+                model=getattr(cfg.classifier.openai, 'model', 'gpt-4o-mini'),
+                base_url=getattr(cfg.classifier.openai, 'base_url', 'https://api.openai.com/v1'),
                 normal_description=normal_description,
-                timeout=cfg.classifier.openai.timeout,
+                timeout=getattr(cfg.classifier.openai, 'timeout', 30.0),
             )
         if kind == "gemini":
-            key = os.environ.get(cfg.classifier.gemini.api_key_env)
+            # Try to get API key from config env var name, fallback to standard name
+            api_key_env = getattr(cfg.classifier.gemini, 'api_key_env', 'GEMINI_API_KEY')
+            key = os.environ.get(api_key_env)
             if not key:
-                print(f"WARNING: {cfg.classifier.gemini.api_key_env} not set, using SimpleThresholdModel")
+                print(f"WARNING: {api_key_env} not set, using SimpleThresholdModel")
                 return SimpleThresholdModel()
+            print(f"✓ Gemini API key found, initializing Gemini 2.0 Flash classifier")
             return GeminiImageClassifier(
                 api_key=key,
-                model=cfg.classifier.gemini.model,
-                base_url=cfg.classifier.gemini.base_url,
-                timeout=cfg.classifier.gemini.timeout,
+                model=getattr(cfg.classifier.gemini, 'model', 'models/gemini-2.0-flash-exp'),
+                base_url=getattr(cfg.classifier.gemini, 'base_url', 'https://generativelanguage.googleapis.com/v1beta'),
+                timeout=getattr(cfg.classifier.gemini, 'timeout', 30.0),
                 normal_description=normal_description,
             )
         print(f"WARNING: Unsupported classifier '{kind}', using SimpleThresholdModel")
         return SimpleThresholdModel()
 
-    # Determine primary/secondary based on backend setting
-    if cfg.classifier.backend == "consensus":
-        primary_kind = cfg.classifier.primary_backend or "openai"
-        secondary_kind = cfg.classifier.secondary_backend or "gemini"
-    elif cfg.classifier.backend in ["openai", "gemini", "simple"]:
-        primary_kind = cfg.classifier.backend
-        secondary_kind = None
-    else:
-        primary_kind = "simple"
-        secondary_kind = None
+    # Force consensus mode (OpenAI + Gemini) - hardcoded to ensure AI evaluation works
+    # If API keys are missing, build_classifier will fall back to SimpleThresholdModel
+    primary_kind = "openai"
+    secondary_kind = "gemini"
 
     # Build classifiers
     primary_classifier = build_classifier(primary_kind, "primary")
