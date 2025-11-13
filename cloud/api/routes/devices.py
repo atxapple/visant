@@ -689,7 +689,24 @@ def update_device_config(
 
     # Merge top-level fields
     if "normal_description" in config_update:
-        current_config["normal_description"] = config_update["normal_description"]
+        old_description = current_config.get("normal_description", "")
+        new_description = config_update["normal_description"]
+        current_config["normal_description"] = new_description
+
+        # Clear similarity cache when normal_description changes
+        # This ensures cached evaluations based on old descriptions aren't reused
+        if old_description != new_description:
+            from cloud.api.server import _current_app
+            if _current_app is not None:
+                service = getattr(_current_app.state, 'service', None)
+                if service and hasattr(service, 'similarity_cache') and service.similarity_cache:
+                    # Clear cache for this specific device
+                    device_key = f"device_{device_id}"
+                    if service.similarity_cache.get(device_key) is not None:
+                        # Remove cache entry for this device
+                        service.similarity_cache._entries.pop(device_key, None)
+                        service.similarity_cache._dirty = True
+                        logger.info(f"Cleared similarity cache for device {device_id} after normal_description update")
 
     # Merge trigger config
     if "trigger" in config_update and config_update["trigger"] is not None:

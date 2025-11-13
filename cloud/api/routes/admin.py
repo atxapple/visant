@@ -61,6 +61,18 @@ class StorageStats(BaseModel):
     by_state: List[dict]
 
 
+class SimilarityStats(BaseModel):
+    enabled: bool
+    cache_hits: int
+    cache_misses: int
+    total_evaluations: int
+    hit_rate_percent: float
+    avg_hamming_distance: Optional[float]
+    estimated_savings_usd: float
+    threshold: int
+    expiry_minutes: float
+
+
 class PruneRequest(BaseModel):
     before_date: Optional[str] = None  # ISO 8601 date string
     state: Optional[str] = None  # normal, alert, uncertain
@@ -516,4 +528,63 @@ def get_storage_stats(
         total_size_mb=round(total_size / (1024 * 1024), 2),
         by_org=[{"org_name": org_name, "count": count} for org_name, count in by_org],
         by_state=[{"state": state or "null", "count": count} for state, count in by_state]
+    )
+
+
+@router.get("/similarity/stats", response_model=SimilarityStats)
+def get_similarity_stats(
+    admin: User = Depends(get_admin_user)
+):
+    """
+    Get similarity reuse feature statistics.
+
+    Shows cache hit/miss rates, estimated cost savings, and performance metrics.
+    Admin-only endpoint.
+    """
+    from cloud.api.server import _current_app
+
+    # Get InferenceService from app state
+    service = None
+    if _current_app is not None:
+        service = getattr(_current_app.state, 'service', None)
+
+    if service is None or not service.similarity_enabled:
+        # Similarity feature disabled or service not available
+        return SimilarityStats(
+            enabled=False,
+            cache_hits=0,
+            cache_misses=0,
+            total_evaluations=0,
+            hit_rate_percent=0.0,
+            avg_hamming_distance=None,
+            estimated_savings_usd=0.0,
+            threshold=0,
+            expiry_minutes=0.0
+        )
+
+    # Calculate metrics
+    hits = service.similarity_cache_hits
+    misses = service.similarity_cache_misses
+    total = hits + misses
+    hit_rate = (hits / total * 100) if total > 0 else 0.0
+
+    # Calculate average Hamming distance
+    avg_distance = None
+    if service.similarity_distance_count > 0:
+        avg_distance = service.similarity_total_distance / service.similarity_distance_count
+
+    # Estimate cost savings (conservative estimate: $0.001 per AI call)
+    cost_per_call = 0.001
+    estimated_savings = hits * cost_per_call
+
+    return SimilarityStats(
+        enabled=True,
+        cache_hits=hits,
+        cache_misses=misses,
+        total_evaluations=total,
+        hit_rate_percent=round(hit_rate, 2),
+        avg_hamming_distance=round(avg_distance, 2) if avg_distance is not None else None,
+        estimated_savings_usd=round(estimated_savings, 4),
+        threshold=service.similarity_threshold,
+        expiry_minutes=service.similarity_expiry_minutes
     )

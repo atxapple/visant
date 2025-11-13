@@ -406,6 +406,53 @@
                 </div>
             </div>
 
+            <!-- Similarity Stats -->
+            <div class="prune-form" style="margin-top: 2rem;">
+                <h3 style="margin-top:0;">💾 Similarity Reuse Statistics</h3>
+                <p style="color:#6b7280; margin-bottom: 1.5rem;">
+                    Tracks AI cost savings from similarity-based cache reuse. When images are similar, previous AI evaluations are reused instead of making expensive API calls.
+                </p>
+
+                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    <div class="stat-card">
+                        <div class="stat-label">Status</div>
+                        <div class="stat-value" id="sim-status">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Cache Hit Rate</div>
+                        <div class="stat-value" id="sim-hit-rate">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Estimated Savings</div>
+                        <div class="stat-value" id="sim-savings">$0.00</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Evaluations</div>
+                        <div class="stat-value" id="sim-total">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Cache Hits</div>
+                        <div class="stat-value" id="sim-hits">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Cache Misses</div>
+                        <div class="stat-value" id="sim-misses">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Avg Distance</div>
+                        <div class="stat-value" id="sim-distance">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Threshold</div>
+                        <div class="stat-value" id="sim-threshold">-</div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 1rem;">
+                    <button class="btn-action" onclick="loadSimilarityStats()">Refresh Similarity Stats</button>
+                </div>
+            </div>
+
             <!-- Pruning Form -->
             <div class="prune-form">
                 <h3 style="margin-top:0;">Bulk Delete Captures</h3>
@@ -473,7 +520,10 @@
             if (tabName === 'users') loadUsers();
             else if (tabName === 'devices') loadDevices();
             else if (tabName === 'captures') loadCaptures();
-            else if (tabName === 'storage') loadStorageStats();
+            else if (tabName === 'storage') {
+                loadStorageStats();
+                loadSimilarityStats();
+            }
         }
 
         // Users Management
@@ -659,6 +709,40 @@
                 document.getElementById('stat-total-storage').textContent = stats.total_size_mb.toFixed(2) + ' MB';
             } catch (error) {
                 console.error('Error loading storage stats:', error);
+            }
+        }
+
+        async function loadSimilarityStats() {
+            try {
+                const response = await fetch('/v1/admin/similarity/stats', {
+                    headers: auth.getAuthHeaders()
+                });
+
+                if (!response.ok) throw new Error('Failed to load similarity stats');
+
+                const stats = await response.json();
+
+                // Update UI elements
+                document.getElementById('sim-status').textContent = stats.enabled ? '✅ Enabled' : '❌ Disabled';
+                document.getElementById('sim-status').style.color = stats.enabled ? '#10b981' : '#ef4444';
+
+                document.getElementById('sim-hit-rate').textContent = stats.hit_rate_percent.toFixed(1) + '%';
+                document.getElementById('sim-hit-rate').style.color = stats.hit_rate_percent > 20 ? '#10b981' : (stats.hit_rate_percent > 10 ? '#f59e0b' : '#6b7280');
+
+                document.getElementById('sim-savings').textContent = '$' + stats.estimated_savings_usd.toFixed(4);
+                document.getElementById('sim-total').textContent = stats.total_evaluations.toLocaleString();
+                document.getElementById('sim-hits').textContent = stats.cache_hits.toLocaleString();
+                document.getElementById('sim-misses').textContent = stats.cache_misses.toLocaleString();
+
+                document.getElementById('sim-distance').textContent = stats.avg_hamming_distance !== null
+                    ? stats.avg_hamming_distance.toFixed(2) + ' bits'
+                    : 'N/A';
+
+                document.getElementById('sim-threshold').textContent = stats.threshold + ' bits';
+            } catch (error) {
+                console.error('Error loading similarity stats:', error);
+                document.getElementById('sim-status').textContent = 'Error loading stats';
+                document.getElementById('sim-status').style.color = '#ef4444';
             }
         }
 

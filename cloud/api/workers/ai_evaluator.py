@@ -83,9 +83,73 @@ class CloudAIEvaluator:
                 classifier.normal_description = normal_description
                 logger.debug(f"Updated classifier description for device {capture.device_id}")
 
-            # Run classification using existing InferenceService
-            # The classifier.classify() method expects bytes and returns Classification object
-            classification = self.inference_service.classifier.classify(image_bytes)
+            # === SIMILARITY REUSE INTEGRATION ===
+            # Check if we can reuse a cached classification to save AI cost
+            similarity_hash = None
+            reused_entry = None
+            reuse_distance = None
+
+            if self.inference_service.similarity_enabled:
+                # Compute perceptual hash for similarity detection
+                similarity_hash = self.inference_service._compute_similarity_hash(image_bytes)
+                if similarity_hash is not None:
+                    # Check cache for reusable classification
+                    device_key = self.inference_service._device_key({"device_id": capture.device_id})
+                    reused_entry, reuse_distance = self.inference_service._maybe_reuse_classification(
+                        device_key, similarity_hash
+                    )
+
+            # Use cached result or run AI classifier
+            if reused_entry is not None:
+                # Cache hit - reuse previous classification (skip AI call)
+                from cloud.api.similarity_cache import CachedEvaluation
+                from cloud.ai.types import Classification
+
+                classification = Classification(
+                    state=reused_entry.state,
+                    score=reused_entry.score,
+                    reason=reused_entry.reason,
+                )
+
+                # Update metrics
+                if hasattr(self.inference_service, 'similarity_cache_hits'):
+                    self.inference_service.similarity_cache_hits += 1
+
+                logger.info(
+                    f"Reusing cached classification for {record_id}: "
+                    f"state={classification.state}, score={classification.score:.2f}, "
+                    f"hash_distance={reuse_distance}, threshold={self.inference_service.similarity_threshold}"
+                )
+            else:
+                # Cache miss - run AI classification
+                classification = self.inference_service.classifier.classify(image_bytes)
+
+                # Update metrics
+                if hasattr(self.inference_service, 'similarity_cache_misses'):
+                    self.inference_service.similarity_cache_misses += 1
+
+                logger.info(
+                    f"AI evaluation for {record_id}: "
+                    f"state={classification.state}, score={classification.score:.2f}"
+                )
+
+            # Update similarity cache with new result (if similarity enabled and cache available)
+            if (
+                self.inference_service.similarity_enabled
+                and self.inference_service.similarity_cache is not None
+                and similarity_hash is not None
+                and reused_entry is None
+            ):
+                device_key = self.inference_service._device_key({"device_id": capture.device_id})
+                self.inference_service.similarity_cache.update(
+                    device_id=device_key,
+                    record_id=record_id,
+                    hash_hex=similarity_hash,
+                    state=classification.state,
+                    score=classification.score,
+                    reason=classification.reason,
+                    captured_at=capture.captured_at or datetime.now(timezone.utc)
+                )
 
             # Update capture with results
             capture.state = classification.state

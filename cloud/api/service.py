@@ -61,6 +61,11 @@ class InferenceService:
     _last_abnormal_sent: Dict[str, datetime] = field(init=False, default_factory=dict)
     _dedupe_tracker: Dict[str, _DedupeEntry] = field(init=False, default_factory=dict)
     _streak_tracker: Dict[str, _StreakEntry] = field(init=False, default_factory=dict)
+    # Similarity metrics
+    similarity_cache_hits: int = field(init=False, default=0)
+    similarity_cache_misses: int = field(init=False, default=0)
+    similarity_total_distance: int = field(init=False, default=0)
+    similarity_distance_count: int = field(init=False, default=0)
 
     def __post_init__(self) -> None:
         self.update_alert_cooldown(self.alert_cooldown_minutes)
@@ -131,6 +136,11 @@ class InferenceService:
                 reason=reused_entry.reason,
             )
             record_id_for_response = reused_entry.record_id
+            # Update similarity metrics
+            self.similarity_cache_hits += 1
+            if reuse_distance is not None:
+                self.similarity_total_distance += reuse_distance
+                self.similarity_distance_count += 1
             # Timing debug: Mark as cache hit
             if timing:
                 timing.similarity_cache_hit = True
@@ -145,6 +155,9 @@ class InferenceService:
             )
         else:
             classification = self.classifier.classify(image_bytes)
+            # Update similarity metrics (cache miss)
+            if self.similarity_enabled:
+                self.similarity_cache_misses += 1
             # Timing debug: Record inference complete
             if timing:
                 timing.t6_server_inference_complete = time.time()

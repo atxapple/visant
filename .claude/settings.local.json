@@ -70,7 +70,8 @@
       "Bash(if [ -f .env ])",
       "Bash(then grep -E \"DATABASE_URL|RAILWAY\" .env)",
       "Bash(else echo \"No .env file found\")",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []
