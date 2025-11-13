@@ -705,18 +705,21 @@ async def list_captures(
 
             captures.append({
                 "record_id": cap.record_id,
+                "device_id": cap.device_id,
                 "captured_at": cap.captured_at.isoformat() if cap.captured_at else None,
                 "ingested_at": cap.ingested_at.isoformat() if cap.ingested_at else None,
                 "state": cap.state,
                 "score": cap.score,
                 "reason": cap.reason,
                 "trigger_label": cap.trigger_label,
+                "evaluation_status": cap.evaluation_status,
                 "normal_description_file": None,  # Not used in database captures
                 "image_available": cap.image_stored,
                 "image_url": image_url,
                 "thumbnail_url": thumbnail_url,
                 "download_url": download_url,
                 "agent_details": None,  # Not used in database captures
+                "metadata": cap.metadata if cap.metadata is not None else {},
             })
 
         return captures
@@ -762,18 +765,21 @@ async def fetch_capture_metadata(
 
         return {
             "record_id": cap.record_id,
+            "device_id": cap.device_id,
             "captured_at": cap.captured_at.isoformat() if cap.captured_at else None,
             "ingested_at": cap.ingested_at.isoformat() if cap.ingested_at else None,
             "state": cap.state,
             "score": cap.score,
             "reason": cap.reason,
             "trigger_label": cap.trigger_label,
+            "evaluation_status": cap.evaluation_status,
             "normal_description_file": None,  # Not used in database captures
             "image_available": cap.image_stored,
             "image_url": image_url,
             "thumbnail_url": thumbnail_url,
             "download_url": download_url,
             "agent_details": None,  # Not used in database captures
+            "metadata": cap.metadata if cap.metadata is not None else {},
         }
     finally:
         db.close()

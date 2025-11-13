@@ -143,6 +143,49 @@
             display: flex;
             flex-direction: column;
         }
+        .capture-details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .capture-detail {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 0.65rem 0.75rem;
+        }
+        .capture-detail-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+        }
+        .capture-detail-value {
+            font-weight: 600;
+            color: #0f172a;
+            word-break: break-word;
+        }
+        .capture-detail-full {
+            grid-column: 1 / -1;
+        }
+        .capture-detail pre {
+            margin: 0;
+            font-size: 0.82rem;
+            background: transparent;
+            padding: 0;
+            color: #0f172a;
+            white-space: pre-wrap;
+        }
+        .definition-section {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 0.75rem;
+        }
+        .definition-subtitle {
+            margin: 0 0 0.4rem 0;
+            font-size: 0.95rem;
+            color: #475467;
+        }
         .definition-header {
             display: flex;
             align-items: center;
@@ -305,6 +348,9 @@
             button { background: #3b82f6; }
             .secondary-button { border-color: #60a5fa; color: #bfdbfe; }
             .secondary-button:hover { background: rgba(96, 165, 250, 0.2); }
+            .capture-detail { background: #14203b; }
+            .capture-detail-value, .capture-detail pre { color: #e2e8f0; }
+            .definition-section { border-color: #1f2937; }
             .status { color: #94a3b8; }
             .muted { color: #94a3b8; }
         }
@@ -814,7 +860,11 @@
             </div>
             <div id="definition-status" class="definition-status"></div>
             <div class="definition-body">
-                <pre id="definition-text"></pre>
+                <div id="capture-details" class="capture-details-grid"></div>
+                <div id="definition-section" class="definition-section">
+                    <h4 class="definition-subtitle">Normal Definition</h4>
+                    <pre id="definition-text"></pre>
+                </div>
             </div>
             <div id="definition-meta" class="definition-meta"></div>
         </div>
@@ -846,6 +896,8 @@
         const definitionMeta = document.getElementById('definition-meta');
         const definitionStatus = document.getElementById('definition-status');
         const definitionClose = document.getElementById('definition-close');
+        const captureDetailsGrid = document.getElementById('capture-details');
+        const definitionSection = document.getElementById('definition-section');
         const manualStatus = document.getElementById('manual-status');
         const captureFilterForm = document.getElementById('capture-filter-form');
         const captureFilterStatus = document.getElementById('capture-filter-status');
@@ -1210,10 +1262,16 @@
             if (definitionText) {
                 definitionText.textContent = '';
             }
+            if (captureDetailsGrid) {
+                captureDetailsGrid.innerHTML = '';
+            }
+            if (definitionSection) {
+                definitionSection.style.display = 'block';
+            }
         }
 
-        async function showDefinition(fileName, recordId, capturedAt, ingestedAt, state, score, reason, agentDetails) {
-            if (!fileName || !definitionOverlay) {
+        async function showCaptureDetails(recordId, fallbackCapture) {
+            if (!definitionOverlay) {
                 return;
             }
             definitionOverlay.classList.add('active');
@@ -1227,99 +1285,196 @@
             if (definitionMeta) {
                 definitionMeta.textContent = '';
             }
+            if (captureDetailsGrid) {
+                captureDetailsGrid.innerHTML = '';
+            }
+            if (definitionSection) {
+                definitionSection.style.display = 'block';
+            }
             if (definitionStatus) {
-                definitionStatus.textContent = 'Loading definition...';
+                definitionStatus.textContent = 'Loading capture details...';
+            }
+
+            let capturePayload = fallbackCapture ? { ...fallbackCapture } : null;
+            let captureFetchError = '';
+            try {
+                const response = await fetch(`/ui/captures/${encodeURIComponent(recordId)}`);
+                if (!response.ok) {
+                    throw new Error('Failed to load capture details');
+                }
+                capturePayload = await response.json();
+            } catch (error) {
+                captureFetchError = error.message;
+            }
+
+            if (!capturePayload) {
+                if (definitionStatus) {
+                    definitionStatus.textContent = captureFetchError || 'Unable to load capture details.';
+                }
+                return;
+            }
+
+            renderCaptureDetails(capturePayload);
+
+            const statusMessages = [];
+            if (captureFetchError) {
+                statusMessages.push(`Showing cached data. ${captureFetchError}`);
+            }
+
+            const definitionError = await loadNormalDefinition(capturePayload);
+            if (definitionError) {
+                statusMessages.push(definitionError);
+            }
+
+            if (definitionStatus) {
+                definitionStatus.textContent = statusMessages.join(' ');
+            }
+
+            if (definitionClose) {
+                definitionClose.focus();
+            }
+        }
+
+        function renderCaptureDetails(capture) {
+            if (!captureDetailsGrid) {
+                return;
+            }
+            captureDetailsGrid.innerHTML = '';
+            const addDetail = (label, value, options = {}) => {
+                if (value === undefined || value === null || value === '') {
+                    return;
+                }
+                const detail = document.createElement('div');
+                detail.className = 'capture-detail';
+                if (options.fullWidth) {
+                    detail.classList.add('capture-detail-full');
+                }
+                const labelEl = document.createElement('div');
+                labelEl.className = 'capture-detail-label';
+                labelEl.textContent = label;
+                const valueEl = options.preformatted ? document.createElement('pre') : document.createElement('div');
+                valueEl.className = 'capture-detail-value';
+                valueEl.textContent = String(value);
+                detail.appendChild(labelEl);
+                detail.appendChild(valueEl);
+                captureDetailsGrid.appendChild(detail);
+            };
+
+            addDetail('Record ID', capture.record_id);
+            addDetail('Device', capture.device_name || capture.device_id);
+            addDetail('Trigger', capture.trigger_label);
+            addDetail('Evaluation', capture.evaluation_status);
+            addDetail('State', capture.state ? capture.state.toUpperCase() : undefined);
+            if (typeof capture.score === 'number') {
+                addDetail('Confidence', capture.score.toFixed(2));
+            }
+            if (typeof capture.image_available === 'boolean') {
+                addDetail('Image Stored', capture.image_available ? 'Yes' : 'No');
+            }
+            if (capture.reason) {
+                addDetail('Reason', capture.reason, { fullWidth: true });
+            }
+            const agentSummary = buildAgentSummary(capture.agent_details);
+            if (agentSummary) {
+                addDetail('Classifier Agents', agentSummary, { fullWidth: true, preformatted: true });
+            }
+            const metadataText = formatMetadata(capture.metadata);
+            if (metadataText) {
+                addDetail('Metadata', metadataText, { fullWidth: true, preformatted: true });
+            }
+        }
+
+        function formatMetadata(metadata) {
+            if (!metadata || (typeof metadata === 'object' && Object.keys(metadata).length === 0)) {
+                return '';
+            }
+            if (typeof metadata === 'string') {
+                return metadata;
             }
             try {
-                const response = await fetch(`/ui/normal-definitions/${encodeURIComponent(fileName)}`);
+                return JSON.stringify(metadata, null, 2);
+            } catch (error) {
+                return String(metadata);
+            }
+        }
+
+        function buildAgentSummary(agentDetails) {
+            if (!agentDetails || typeof agentDetails !== 'object') {
+                return '';
+            }
+            const lines = [];
+            for (const [name, details] of Object.entries(agentDetails)) {
+                if (!details) {
+                    continue;
+                }
+                const label = name.replace(/^./, (char) => char.toUpperCase());
+                const state = details.state || 'unknown';
+                const score = typeof details.score === 'number' ? ` (${details.score.toFixed(2)})` : '';
+                const reason = details.reason ? ` — ${details.reason}` : '';
+                lines.push(`${label}: ${state}${score}${reason}`);
+            }
+            return lines.join('\n');
+        }
+
+        function updateCaptureMeta(capture, definitionPayload) {
+            if (!definitionMeta) {
+                return;
+            }
+            const metaPieces = [];
+            if (capture && capture.captured_at) {
+                const captureTime = new Date(capture.captured_at);
+                if (!Number.isNaN(captureTime.getTime())) {
+                    metaPieces.push(`Capture: ${captureTime.toLocaleString()}`);
+                } else {
+                    metaPieces.push(`Capture: ${capture.captured_at}`);
+                }
+            }
+            if (capture && capture.ingested_at) {
+                const ingestTime = new Date(capture.ingested_at);
+                if (!Number.isNaN(ingestTime.getTime())) {
+                    metaPieces.push(`Cloud ingest: ${ingestTime.toLocaleString()}`);
+                } else {
+                    metaPieces.push(`Cloud ingest: ${capture.ingested_at}`);
+                }
+            }
+            if (definitionPayload && definitionPayload.updated_at) {
+                const updatedTime = new Date(definitionPayload.updated_at);
+                if (!Number.isNaN(updatedTime.getTime())) {
+                    metaPieces.push(`Definition updated: ${updatedTime.toLocaleString()}`);
+                } else {
+                    metaPieces.push(`Definition updated: ${definitionPayload.updated_at}`);
+                }
+            }
+            if (definitionPayload && definitionPayload.file) {
+                metaPieces.push(`File: ${definitionPayload.file}`);
+            }
+            definitionMeta.textContent = metaPieces.join(' | ');
+        }
+
+        async function loadNormalDefinition(capture) {
+            if (!definitionText || !definitionSection) {
+                return '';
+            }
+            definitionSection.style.display = 'block';
+            if (!capture || !capture.normal_description_file) {
+                definitionText.textContent = 'No normal definition stored for this capture.';
+                updateCaptureMeta(capture, null);
+                return '';
+            }
+            try {
+                const response = await fetch(`/ui/normal-definitions/${encodeURIComponent(capture.normal_description_file)}`);
                 const payload = await response.json().catch(() => ({}));
                 if (!response.ok) {
                     const detail = payload && payload.detail ? payload.detail : 'Failed to load definition.';
                     throw new Error(detail);
                 }
-                if (definitionText) {
-                    let content = payload.description || '(No definition recorded.)';
-                    // Add capture classification details
-                    if (state || score != null || reason) {
-                        content += '\n\n--- Capture Classification ---';
-                        if (state) {
-                            content += `\nState: ${state}`;
-                        }
-                        if (score != null) {
-                            content += `\nConfidence: ${score.toFixed(2)}`;
-                        }
-                        if (reason) {
-                            content += `\nReason: ${reason}`;
-                        }
-                    }
-                    // Add agent details if available
-                    if (agentDetails && (agentDetails.agent1 || agentDetails.agent2)) {
-                        content += '\n\n--- Agent Details ---';
-                        if (agentDetails.agent1) {
-                            content += `\nAgent1 State: ${agentDetails.agent1.state}`;
-                            content += `\nAgent1 Confidence: ${agentDetails.agent1.score.toFixed(2)}`;
-                            if (agentDetails.agent1.reason) {
-                                content += `\nAgent1 Reason: ${agentDetails.agent1.reason}`;
-                            }
-                        }
-                        if (agentDetails.agent2) {
-                            content += `\nAgent2 State: ${agentDetails.agent2.state}`;
-                            content += `\nAgent2 Confidence: ${agentDetails.agent2.score.toFixed(2)}`;
-                            if (agentDetails.agent2.reason) {
-                                content += `\nAgent2 Reason: ${agentDetails.agent2.reason}`;
-                            }
-                        }
-                    }
-                    definitionText.textContent = content;
-                }
-                if (definitionStatus) {
-                    definitionStatus.textContent = '';
-                }
-                const metaPieces = [];
-                if (capturedAt) {
-                    const captureTime = new Date(capturedAt);
-                    if (!Number.isNaN(captureTime.getTime())) {
-                        metaPieces.push(`Capture: ${captureTime.toLocaleString()}`);
-                    } else {
-                        metaPieces.push(`Capture: ${capturedAt}`);
-                    }
-                }
-                if (ingestedAt && (!capturedAt || ingestedAt !== capturedAt)) {
-                    const ingestTime = new Date(ingestedAt);
-                    if (!Number.isNaN(ingestTime.getTime())) {
-                        metaPieces.push(`Cloud ingest: ${ingestTime.toLocaleString()}`);
-                    } else {
-                        metaPieces.push(`Cloud ingest: ${ingestedAt}`);
-                    }
-                }
-                if (payload.updated_at) {
-                    const updatedTime = new Date(payload.updated_at);
-                    if (!Number.isNaN(updatedTime.getTime())) {
-                        metaPieces.push(`Definition updated: ${updatedTime.toLocaleString()}`);
-                    } else {
-                        metaPieces.push(`Definition updated: ${payload.updated_at}`);
-                    }
-                }
-                if (payload.file) {
-                    metaPieces.push(`File: ${payload.file}`);
-                }
-                if (definitionMeta) {
-                    definitionMeta.textContent = metaPieces.join(' | ');
-                }
+                definitionText.textContent = payload.description || '(No definition recorded.)';
+                updateCaptureMeta(capture, payload);
+                return '';
             } catch (error) {
-                if (definitionText) {
-                    definitionText.textContent = '';
-                }
-                if (definitionMeta) {
-                    definitionMeta.textContent = '';
-                }
-                if (definitionStatus) {
-                    definitionStatus.textContent = error.message;
-                }
-            } finally {
-                if (definitionClose) {
-                    definitionClose.focus();
-                }
+                definitionText.textContent = '';
+                updateCaptureMeta(capture, null);
+                return error.message;
             }
         }
 
@@ -1553,35 +1708,24 @@
                     actionsContainer.className = 'capture-actions';
                     badgeContainer.appendChild(badge);
                     badgeContainer.appendChild(actionsContainer);
-                    if (item.normal_description_file) {
-                        const definitionButton = document.createElement('button');
-                        definitionButton.type = 'button';
-                        definitionButton.className = 'icon-control icon-button';
-                        definitionButton.title = 'View normal definition';
-                        definitionButton.innerHTML = (
-                            '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
-                            '<path d="M6 3h6l4 4v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />' +
-                            '<polyline points="12 3 12 7 16 7" />' +
-                            '<line x1="7" y1="10" x2="13" y2="10" />' +
-                            '<line x1="7" y1="13" x2="13" y2="13" />' +
-                            '<line x1="7" y1="16" x2="11" y2="16" />' +
-                            '</svg>'
-                        );
-                        definitionButton.addEventListener('click', (event) => {
-                            event.preventDefault();
-                            showDefinition(
-                                item.normal_description_file,
-                                item.record_id,
-                                item.captured_at,
-                                item.ingested_at,
-                                item.state,
-                                item.score,
-                                item.reason,
-                                item.agent_details
-                            );
-                        });
-                        actionsContainer.appendChild(definitionButton);
-                    }
+                    const detailsButton = document.createElement('button');
+                    detailsButton.type = 'button';
+                    detailsButton.className = 'icon-control icon-button';
+                    detailsButton.title = 'View capture details';
+                    detailsButton.innerHTML = (
+                        '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+                        '<path d="M6 3h6l4 4v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />' +
+                        '<polyline points="12 3 12 7 16 7" />' +
+                        '<line x1="7" y1="10" x2="13" y2="10" />' +
+                        '<line x1="7" y1="13" x2="13" y2="13" />' +
+                        '<line x1="7" y1="16" x2="11" y2="16" />' +
+                        '</svg>'
+                    );
+                    detailsButton.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        showCaptureDetails(item.record_id, item);
+                    });
+                    actionsContainer.appendChild(detailsButton);
                     if (item.download_url) {
                         const downloadLink = document.createElement('a');
                         downloadLink.href = item.download_url;
