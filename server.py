@@ -80,11 +80,23 @@ if __name__ == "__main__":
         cfg = load_config(config_path if config_path.exists() else None)
         if config_path.exists():
             print(f"[config] ✓ Loaded configuration from {config_path}")
+            # Debug: Show what was actually loaded
+            print(f"[config] similarity.enabled = {cfg.features.similarity.enabled}")
+            print(f"[config] similarity.threshold = {cfg.features.similarity.threshold}")
+            print(f"[config] similarity.expiry_minutes = {cfg.features.similarity.expiry_minutes}")
+            print(f"[config] similarity.cache_path = {cfg.features.similarity.cache_path}")
         else:
             print(f"[config] ⚠ Config file not found, using defaults")
     except (TypeError, ValueError) as e:
         # Config file has incompatible format, use defaults with manual classifier config
         print(f"WARNING: Could not load config from {config_path}: {e}")
+        print("Using default config...")
+        cfg = load_config(None)
+    except Exception as e:
+        # Catch any other exceptions to see what's happening
+        print(f"ERROR: Unexpected exception loading config: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
         print("Using default config...")
         cfg = load_config(None)
 
@@ -159,6 +171,15 @@ if __name__ == "__main__":
     if cfg.features.similarity.enabled and cfg.features.similarity.cache_path:
         similarity_cache = SimilarityCache(Path(cfg.features.similarity.cache_path))
         print(f"✓ Similarity cache initialized: threshold={cfg.features.similarity.threshold} bits, expiry={cfg.features.similarity.expiry_minutes} min")
+    else:
+        print(f"✗ Similarity cache NOT initialized: enabled={cfg.features.similarity.enabled}, cache_path={cfg.features.similarity.cache_path}")
+
+    # Debug: Show exact values being passed to InferenceService
+    print(f"[service] Initializing InferenceService with:")
+    print(f"[service]   similarity_enabled={cfg.features.similarity.enabled}")
+    print(f"[service]   similarity_threshold={cfg.features.similarity.threshold}")
+    print(f"[service]   similarity_expiry_minutes={cfg.features.similarity.expiry_minutes}")
+    print(f"[service]   similarity_cache={'initialized' if similarity_cache else 'None'}")
 
     inference_service = InferenceService(
         classifier=classifier,
@@ -176,6 +197,13 @@ if __name__ == "__main__":
         streak_threshold=cfg.features.streak_pruning.threshold,
         streak_keep_every=cfg.features.streak_pruning.keep_every
     )
+
+    # Debug: Verify what the service actually has
+    print(f"[service] InferenceService initialized. Verifying:")
+    print(f"[service]   service.similarity_enabled={inference_service.similarity_enabled}")
+    print(f"[service]   service.similarity_threshold={inference_service.similarity_threshold}")
+    print(f"[service]   service.similarity_expiry_minutes={inference_service.similarity_expiry_minutes}")
+    print(f"[service]   service.similarity_cache={'present' if inference_service.similarity_cache else 'None'}")
 
     # Set global inference service for captures route
     import cloud.api.routes.captures as captures_module
