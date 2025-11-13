@@ -8,7 +8,12 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from cloud.api.database import get_db, Organization, User
-from cloud.api.auth.supabase_client import create_supabase_user, sign_in_with_password
+from cloud.api.auth.supabase_client import (
+    create_supabase_user,
+    sign_in_with_password,
+    verify_user_password,
+    update_user_password
+)
 from cloud.api.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/v1/auth", tags=["Authentication"])
@@ -234,3 +239,142 @@ def logout(current_user: User = Depends(get_current_user)):
     # TODO: Invalidate refresh token in Supabase
     # For now, client-side logout (discard tokens) is sufficient
     return None
+
+
+class UpdateProfileRequest(BaseModel):
+    name: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "John Doe"
+            }
+        }
+
+
+class UpdateProfileResponse(BaseModel):
+    name: str
+    email: str
+    message: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "current_password": "old_password_123",
+                "new_password": "new_secure_password_456"
+            }
+        }
+
+
+class ChangePasswordResponse(BaseModel):
+    message: str
+
+
+@router.patch("/profile", response_model=UpdateProfileResponse)
+def update_profile(
+    request: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update user profile information.
+
+    Currently supports updating:
+    - name: User's display name
+
+    Requires valid JWT token in Authorization header.
+    """
+    # Validate name
+    if not request.name or len(request.name.strip()) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Name cannot be empty"
+        )
+
+    if len(request.name) > 255:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Name cannot exceed 255 characters"
+        )
+
+    try:
+        # Update user name
+        current_user.name = request.name.strip()
+        db.commit()
+        db.refresh(current_user)
+
+        return {
+            "name": current_user.name,
+            "email": current_user.email,
+            "message": "Profile updated successfully"
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update profile: {str(e)}"
+        )
+
+
+@router.post("/change-password", response_model=ChangePasswordResponse)
+def change_password(
+    request: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Change user password.
+
+    Requires:
+    - current_password: User's current password for verification
+    - new_password: New password (minimum 8 characters)
+
+    Requires valid JWT token in Authorization header.
+    """
+    # Validate new password
+    if len(request.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 8 characters long"
+        )
+
+    if request.current_password == request.new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from current password"
+        )
+
+    try:
+        # Step 1: Verify current password
+        is_valid = verify_user_password(current_user.email, request.current_password)
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Current password is incorrect"
+            )
+
+        # Step 2: Update password in Supabase
+        update_user_password(str(current_user.supabase_user_id), request.new_password)
+
+        return {
+            "message": "Password changed successfully"
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to change password: {str(e)}"
+        )
