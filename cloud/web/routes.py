@@ -215,9 +215,9 @@ async def devices_page() -> HTMLResponse:
     return HTMLResponse(DEVICES_HTML.read_text(encoding="utf-8"))
 
 
-@router.get("/ui/settings", response_class=HTMLResponse)
+@router.get("/ui/profile/settings", response_class=HTMLResponse)
 async def settings_page() -> HTMLResponse:
-    """User settings page."""
+    """User profile settings page."""
     if not SETTINGS_HTML.exists():
         raise HTTPException(status_code=500, detail="Settings template missing")
     return HTMLResponse(SETTINGS_HTML.read_text(encoding="utf-8"))

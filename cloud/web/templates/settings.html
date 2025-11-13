@@ -189,7 +189,7 @@
 </head>
 <body>
     <header>
-        <h1>Settings</h1>
+        <h1>Profile Settings</h1>
         <div style="display: flex; gap: 0.5rem;">
             <button onclick="window.location.href='/ui/'">Back to Dashboard</button>
         </div>
@@ -217,10 +217,6 @@
                 <div class="info-row">
                     <span class="info-label">Email</span>
                     <span class="info-value" id="userEmail">Loading...</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Role</span>
-                    <span class="info-value" id="userRole">Loading...</span>
                 </div>
                 <div class="info-row">
                     <span class="info-label">Joined</span>
@@ -309,7 +305,6 @@
                     currentUserData = await response.json();
                     document.getElementById('userName').textContent = currentUserData.name || 'Not set';
                     document.getElementById('userEmail').textContent = currentUserData.email || 'N/A';
-                    document.getElementById('userRole').textContent = currentUserData.role || 'member';
                     document.getElementById('userJoined').textContent = currentUserData.created_at
                         ? new Date(currentUserData.created_at).toLocaleDateString()
                         : 'N/A';
@@ -327,7 +322,6 @@
         function showLoadError() {
             document.getElementById('userName').textContent = 'Error loading';
             document.getElementById('userEmail').textContent = 'Error loading';
-            document.getElementById('userRole').textContent = 'Error loading';
             document.getElementById('userJoined').textContent = 'Error loading';
             document.getElementById('orgName').textContent = 'Error loading';
         }

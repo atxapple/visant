@@ -405,7 +405,7 @@ if __name__ == "__main__":
                 "login": "/login",
                 "dashboard": "/ui",
                 "devices": "/ui/devices",
-                "settings": "/ui/settings"
+                "settings": "/ui/profile/settings"
             },
             "api_endpoints": {
                 "auth": "/v1/auth/*",
