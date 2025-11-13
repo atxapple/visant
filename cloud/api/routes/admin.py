@@ -18,6 +18,26 @@ router = APIRouter(prefix="/v1/admin", tags=["Admin"])
 
 
 # ====================
+# Timezone Utilities
+# ====================
+
+def ensure_utc_aware(dt: Optional[datetime]) -> Optional[datetime]:
+    """
+    Ensure datetime is timezone-aware in UTC.
+
+    If datetime is naive (no timezone info), assume it's UTC and add timezone.
+    If datetime already has timezone, convert to UTC.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        # Naive datetime - assume UTC
+        return dt.replace(tzinfo=timezone.utc)
+    # Already has timezone - convert to UTC
+    return dt.astimezone(timezone.utc)
+
+
+# ====================
 # Response Models
 # ====================
 
@@ -111,8 +131,8 @@ def list_users(
             org_id=str(user.org_id),
             org_name=org_name,
             role=user.role,
-            created_at=user.created_at,
-            last_login_at=user.last_login_at
+            created_at=ensure_utc_aware(user.created_at),
+            last_login_at=ensure_utc_aware(user.last_login_at)
         )
         for user, org_name in users
     ]
@@ -215,8 +235,8 @@ def list_devices(
             org_name=org_name,
             status=device.status,
             device_version=device.device_version,
-            created_at=device.created_at,
-            last_seen_at=device.last_seen_at
+            created_at=ensure_utc_aware(device.created_at),
+            last_seen_at=ensure_utc_aware(device.last_seen_at)
         )
         for device, org_name in devices
     ]
@@ -322,7 +342,7 @@ def list_captures(
             org_name=org_name,
             state=capture.state,
             evaluation_status=capture.evaluation_status,
-            captured_at=capture.captured_at,
+            captured_at=ensure_utc_aware(capture.captured_at),
             file_size_mb=file_size_mb
         ))
 
