@@ -139,16 +139,32 @@ if __name__ == "__main__":
 
     # Initialize InferenceService for captures endpoint
     from cloud.api.storage.config import UPLOADS_DIR
+    from cloud.api.similarity_cache import SimilarityCache
+
     datalake = FileSystemDatalake(root=UPLOADS_DIR)
     capture_index = RecentCaptureIndex(root=UPLOADS_DIR)
+
+    # Initialize similarity cache if enabled
+    similarity_cache = None
+    if cfg.features.similarity.enabled and cfg.features.similarity.cache_path:
+        similarity_cache = SimilarityCache(Path(cfg.features.similarity.cache_path))
+        print(f"✓ Similarity cache initialized: threshold={cfg.features.similarity.threshold} bits, expiry={cfg.features.similarity.expiry_minutes} min")
+
     inference_service = InferenceService(
         classifier=classifier,
         datalake=datalake,
         capture_index=capture_index,
         notifier=None,
-        dedupe_enabled=False,
-        similarity_enabled=False,
-        streak_pruning_enabled=False
+        dedupe_enabled=cfg.features.dedupe.enabled,
+        dedupe_threshold=cfg.features.dedupe.threshold,
+        dedupe_keep_every=cfg.features.dedupe.keep_every,
+        similarity_enabled=cfg.features.similarity.enabled,
+        similarity_threshold=cfg.features.similarity.threshold,
+        similarity_expiry_minutes=cfg.features.similarity.expiry_minutes,
+        similarity_cache=similarity_cache,
+        streak_pruning_enabled=cfg.features.streak_pruning.enabled,
+        streak_threshold=cfg.features.streak_pruning.threshold,
+        streak_keep_every=cfg.features.streak_pruning.keep_every
     )
 
     # Set global inference service for captures route
@@ -164,6 +180,13 @@ if __name__ == "__main__":
 
     # Create main app
     main_app = FastAPI(title="Visant Cloud API v2.0", version="2.0.0")
+
+    # Store inference service in app state for admin endpoint access
+    main_app.state.service = inference_service
+
+    # Set global app reference for admin routes
+    from cloud.api.server import set_current_app
+    set_current_app(main_app)
 
     # Mount static files for web UI
     static_path = project_root / "cloud" / "web" / "static"
@@ -191,12 +214,39 @@ if __name__ == "__main__":
         await trigger_scheduler.start()
         print("[startup] TriggerScheduler started successfully")
 
+        # Start background task for similarity cache flushing
+        if similarity_cache is not None:
+            import asyncio
+
+            async def flush_similarity_cache_periodically():
+                """Periodically flush similarity cache to disk."""
+                while True:
+                    try:
+                        await asyncio.sleep(10)  # Flush every 10 seconds
+                        if similarity_cache._dirty:
+                            similarity_cache.flush()
+                    except asyncio.CancelledError:
+                        break
+                    except Exception as e:
+                        print(f"[similarity_cache] Error during periodic flush: {e}")
+
+            asyncio.create_task(flush_similarity_cache_periodically())
+            print("[startup] Similarity cache background flush task started")
+
     @main_app.on_event("shutdown")
     async def shutdown_trigger_scheduler():
         """Stop the TriggerScheduler on shutdown."""
         trigger_scheduler = legacy_app.state.trigger_scheduler
         await trigger_scheduler.stop()
         print("[shutdown] TriggerScheduler stopped")
+
+        # Flush similarity cache on shutdown
+        if similarity_cache is not None and similarity_cache._dirty:
+            try:
+                similarity_cache.flush()
+                print("[shutdown] Similarity cache flushed to disk")
+            except Exception as e:
+                print(f"[shutdown] Error flushing similarity cache: {e}")
 
     # Mount legacy app
     main_app.mount("/legacy", legacy_app)
