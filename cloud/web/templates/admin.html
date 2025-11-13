@@ -679,9 +679,22 @@
             }
 
             const payload = {};
-            if (beforeDate) payload.before_date = new Date(beforeDate).toISOString();
+            if (beforeDate) {
+                // datetime-local input is in user's local timezone
+                // Convert to UTC ISO string for backend (backend expects UTC)
+                // Example: User selects "2025-11-13T14:30" in EST → "2025-11-13T19:30:00.000Z" (UTC)
+                payload.before_date = new Date(beforeDate).toISOString();
+            }
             if (state) payload.state = state;
-            if (limit) payload.limit = parseInt(limit);
+            if (limit) {
+                const limitNum = parseInt(limit, 10);
+                if (!isNaN(limitNum) && limitNum > 0) {
+                    payload.limit = limitNum;
+                } else if (limit.trim() !== '') {
+                    alert('Invalid limit value. Please enter a positive number.');
+                    return;
+                }
+            }
 
             try {
                 const response = await fetch('/v1/admin/captures/prune', {
