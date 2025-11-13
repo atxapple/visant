@@ -79,7 +79,7 @@ if __name__ == "__main__":
     try:
         cfg = load_config(config_path if config_path.exists() else None)
         if config_path.exists():
-            print(f"[config] ✓ Loaded configuration from {config_path}")
+            print(f"[config] [OK] Loaded configuration from {config_path}")
             # Debug: Show what was actually loaded
             print(f"[config] similarity.enabled = {cfg.features.similarity.enabled}")
             print(f"[config] similarity.threshold = {cfg.features.similarity.threshold}")
@@ -111,7 +111,7 @@ if __name__ == "__main__":
             if not key:
                 print(f"WARNING: {api_key_env} not set, using SimpleThresholdModel")
                 return SimpleThresholdModel()
-            print(f"✓ OpenAI API key found, initializing GPT-4o-mini classifier")
+            print(f"[OK] OpenAI API key found, initializing GPT-4o-mini classifier")
             return OpenAIImageClassifier(
                 api_key=key,
                 model=getattr(cfg.classifier.openai, 'model', 'gpt-4o-mini'),
@@ -126,7 +126,7 @@ if __name__ == "__main__":
             if not key:
                 print(f"WARNING: {api_key_env} not set, using SimpleThresholdModel")
                 return SimpleThresholdModel()
-            print(f"✓ Gemini API key found, initializing Gemini 2.0 Flash classifier")
+            print(f"[OK] Gemini API key found, initializing Gemini 2.0 Flash classifier")
             return GeminiImageClassifier(
                 api_key=key,
                 model=getattr(cfg.classifier.gemini, 'model', 'models/gemini-2.0-flash-exp'),
@@ -170,9 +170,9 @@ if __name__ == "__main__":
     similarity_cache = None
     if cfg.features.similarity.enabled and cfg.features.similarity.cache_path:
         similarity_cache = SimilarityCache(Path(cfg.features.similarity.cache_path))
-        print(f"✓ Similarity cache initialized: threshold={cfg.features.similarity.threshold} bits, expiry={cfg.features.similarity.expiry_minutes} min")
+        print(f"[OK] Similarity cache initialized: threshold={cfg.features.similarity.threshold} bits, expiry={cfg.features.similarity.expiry_minutes} min")
     else:
-        print(f"✗ Similarity cache NOT initialized: enabled={cfg.features.similarity.enabled}, cache_path={cfg.features.similarity.cache_path}")
+        print(f"[WARN] Similarity cache NOT initialized: enabled={cfg.features.similarity.enabled}, cache_path={cfg.features.similarity.cache_path}")
 
     # Debug: Show exact values being passed to InferenceService
     print(f"[service] Initializing InferenceService with:")

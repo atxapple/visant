@@ -21,9 +21,41 @@ class ServerConfig:
 
 
 @dataclass
-class StorageConfig:
-    """Storage paths configuration."""
+class DatabaseConfig:
+    """Database configuration."""
+    url_env: str = "DATABASE_URL"
+    pool_size: int = 20
+    max_overflow: int = 10
+
+
+@dataclass
+class FilesystemStorageConfig:
+    """Filesystem storage configuration."""
     datalake_root: str = "/mnt/data/datalake"
+
+
+@dataclass
+class S3StorageConfig:
+    """S3 storage configuration."""
+    bucket_env: str = "S3_BUCKET"
+    region_env: str = "S3_REGION"
+    endpoint_url_env: str = "S3_ENDPOINT_URL"
+    access_key_env: str = "AWS_ACCESS_KEY_ID"
+    secret_key_env: str = "AWS_SECRET_ACCESS_KEY"
+
+
+@dataclass
+class StorageConfig:
+    """Storage configuration."""
+    backend: str = "filesystem"
+    filesystem: FilesystemStorageConfig = None
+    s3: S3StorageConfig = None
+
+    def __post_init__(self):
+        if self.filesystem is None or isinstance(self.filesystem, dict):
+            self.filesystem = FilesystemStorageConfig() if self.filesystem is None else FilesystemStorageConfig(**self.filesystem)
+        if self.s3 is None or isinstance(self.s3, dict):
+            self.s3 = S3StorageConfig() if self.s3 is None else S3StorageConfig(**self.s3)
 
 
 @dataclass
@@ -143,6 +175,7 @@ class EmailConfig:
 class CloudConfig:
     """Complete cloud server configuration."""
     server: ServerConfig = None
+    database: DatabaseConfig = None
     storage: StorageConfig = None
     classifier: ClassifierConfig = None
     features: FeaturesConfig = None
@@ -152,6 +185,8 @@ class CloudConfig:
     def __post_init__(self):
         if self.server is None or isinstance(self.server, dict):
             self.server = ServerConfig() if self.server is None else ServerConfig(**self.server)
+        if self.database is None or isinstance(self.database, dict):
+            self.database = DatabaseConfig() if self.database is None else DatabaseConfig(**self.database)
         if self.storage is None or isinstance(self.storage, dict):
             self.storage = StorageConfig() if self.storage is None else StorageConfig(**self.storage)
         if self.classifier is None or isinstance(self.classifier, dict):
