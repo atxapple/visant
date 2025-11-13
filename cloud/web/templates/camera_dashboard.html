@@ -1113,7 +1113,23 @@
         </div>
     
     <!-- Capture Details Modal -->
-    
+    <div id="definition-overlay" class="definition-overlay" role="dialog" aria-hidden="true">
+        <div class="definition-panel">
+            <div class="definition-header">
+                <h3 id="definition-title">Capture Details</h3>
+                <button id="definition-close" class="icon-button" aria-label="Close">✕</button>
+            </div>
+            <div id="definition-status" class="definition-status"></div>
+            <div class="definition-body">
+                <div id="capture-details" class="capture-details-grid"></div>
+                <div id="definition-section" class="definition-section">
+                    <h4 class="definition-subtitle">Normal Definition</h4>
+                    <pre id="definition-text"></pre>
+                </div>
+            </div>
+            <div id="definition-meta" class="definition-meta"></div>
+        </div>
+    </div>
 
 </main>
 
@@ -1146,6 +1162,16 @@
         let captureEventDeviceId = null;
         let captureRefreshTimer = null;
         const CAPTURE_REFRESH_DEBOUNCE_MS = 300;
+
+        // Modal DOM elements
+        const definitionOverlay = document.getElementById('definition-overlay');
+        const definitionTitle = document.getElementById('definition-title');
+        const definitionText = document.getElementById('definition-text');
+        const definitionMeta = document.getElementById('definition-meta');
+        const definitionStatus = document.getElementById('definition-status');
+        const definitionClose = document.getElementById('definition-close');
+        const captureDetailsGrid = document.getElementById('capture-details');
+        const definitionSection = document.getElementById('definition-section');
 
         // Logout handler
         function handleLogout() {
@@ -1886,7 +1912,6 @@
         // View capture details
         function viewCapture(captureId) {
             showCaptureDetails(captureId);
-        }`;
         }
 
         // Load version information
@@ -2653,20 +2678,4 @@
         })();
     </script>
 </body>
-</html>
-
-        // === End Modal Functions ===
-
-    </script>
-</body>
-        // Modal DOM elements
-        const definitionOverlay = document.getElementById('definition-overlay');
-        const definitionTitle = document.getElementById('definition-title');
-        const definitionText = document.getElementById('definition-text');
-        const definitionMeta = document.getElementById('definition-meta');
-        const definitionStatus = document.getElementById('definition-status');
-        const definitionClose = document.getElementById('definition-close');
-        const captureDetailsGrid = document.getElementById('capture-details');
-        const definitionSection = document.getElementById('definition-section');
-
 </html>
