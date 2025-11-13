@@ -152,10 +152,13 @@ async def upload_capture(
     record_id = f"{device.device_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
 
     # Create capture record with pending evaluation
-    # Get the current alert definition file from device config
-    normal_description_file = None
-    if device.config:
-        normal_description_file = device.config.get("normal_description_file")
+    # Get the current alert definition from cache
+    from cloud.api.server import app_state
+
+    definition_cache = getattr(app_state, 'device_definitions', {})
+    alert_definition_id = None
+    if device.device_id in definition_cache:
+        alert_definition_id, _ = definition_cache[device.device_id]
 
     capture = Capture(
         record_id=record_id,
@@ -166,7 +169,7 @@ async def upload_capture(
         trigger_label=request.trigger_label,
         capture_metadata=request.metadata or {},
         # Link to alert definition that was active when capture was created
-        normal_description_file=normal_description_file,
+        alert_definition_id=alert_definition_id,
         # Cloud AI fields - initially null/pending
         evaluation_status="pending",
         state=None,  # Will be set by Cloud AI

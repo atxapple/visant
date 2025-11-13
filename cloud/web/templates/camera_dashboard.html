@@ -2064,13 +2064,13 @@
                 return '';
             }
             definitionSection.style.display = 'block';
-            if (!capture || !capture.normal_description_file) {
-                definitionText.textContent = 'No normal definition stored for this capture.';
+            if (!capture || !capture.alert_definition_id) {
+                definitionText.textContent = 'No alert definition linked to this capture.';
                 updateCaptureMeta(capture, null);
                 return '';
             }
             try {
-                const response = await fetch(`/ui/normal-definitions/${encodeURIComponent(capture.normal_description_file)}`);
+                const response = await fetch(`/ui/alert-definitions/${encodeURIComponent(capture.alert_definition_id)}`);
                 const payload = await response.json().catch(() => ({}));
                 if (!response.ok) {
                     const detail = payload && payload.detail ? payload.detail : 'Failed to load definition.';
@@ -2107,16 +2107,19 @@
                     metaPieces.push(`Cloud ingest: ${capture.ingested_at}`);
                 }
             }
-            if (definitionPayload && definitionPayload.updated_at) {
-                const updatedTime = new Date(definitionPayload.updated_at);
-                if (!Number.isNaN(updatedTime.getTime())) {
-                    metaPieces.push(`Definition updated: ${updatedTime.toLocaleString()}`);
+            if (definitionPayload && definitionPayload.created_at) {
+                const createdTime = new Date(definitionPayload.created_at);
+                if (!Number.isNaN(createdTime.getTime())) {
+                    metaPieces.push(`Definition created: ${createdTime.toLocaleString()}`);
                 } else {
-                    metaPieces.push(`Definition updated: ${definitionPayload.updated_at}`);
+                    metaPieces.push(`Definition created: ${definitionPayload.created_at}`);
                 }
             }
-            if (definitionPayload && definitionPayload.file) {
-                metaPieces.push(`File: ${definitionPayload.file}`);
+            if (definitionPayload && definitionPayload.created_by) {
+                metaPieces.push(`Created by: ${definitionPayload.created_by}`);
+            }
+            if (definitionPayload && definitionPayload.version) {
+                metaPieces.push(`Version: ${definitionPayload.version}`);
             }
             definitionMeta.textContent = metaPieces.join(' | ');
         }

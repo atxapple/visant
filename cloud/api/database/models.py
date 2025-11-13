@@ -133,10 +133,30 @@ class Device(Base):
     organization = relationship("Organization", back_populates="devices")
     captures = relationship("Capture", back_populates="device", cascade="all, delete-orphan")
     share_links = relationship("ShareLink", back_populates="device", cascade="all, delete-orphan")
+    alert_definitions = relationship("AlertDefinition", back_populates="device", cascade="all, delete-orphan")
     activated_by = relationship("User", foreign_keys=[activated_by_user_id])
 
     def __repr__(self):
         return f"<Device(device_id={self.device_id}, org_id={self.org_id}, friendly_name={self.friendly_name})>"
+
+
+class AlertDefinition(Base):
+    """Alert definition with version history per device."""
+    __tablename__ = "alert_definitions"
+
+    id = Column(GUID, primary_key=True, default=uuid.uuid4)
+    device_id = Column(String(255), ForeignKey("devices.device_id", ondelete="CASCADE"), nullable=False, index=True)
+    version = Column(Integer, nullable=False)
+    description = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    created_by = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+
+    # Relationships
+    device = relationship("Device", back_populates="alert_definitions")
+
+    def __repr__(self):
+        return f"<AlertDefinition(id={self.id}, device_id={self.device_id}, version={self.version}, is_active={self.is_active})>"
 
 
 class Capture(Base):
@@ -170,15 +190,16 @@ class Capture(Base):
     # Evaluation tracking
     evaluation_status = Column(String(50), nullable=False, default="pending", index=True)  # pending, processing, completed, failed
     evaluated_at = Column(DateTime, nullable=True)
+    alert_definition_id = Column(GUID, ForeignKey("alert_definitions.id", ondelete="SET NULL"), nullable=True)
 
     # Metadata
     trigger_label = Column(String(100), nullable=True)
-    normal_description_file = Column(String(500), nullable=True)
     capture_metadata = Column(JSON, default={})
 
     # Relationships
     organization = relationship("Organization", back_populates="captures")
     device = relationship("Device", back_populates="captures")
+    alert_definition = relationship("AlertDefinition")
 
     def __repr__(self):
         return f"<Capture(record_id={self.record_id}, device_id={self.device_id}, state={self.state})>"

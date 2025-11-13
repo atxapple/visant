@@ -248,6 +248,26 @@ if __name__ == "__main__":
     @main_app.on_event("startup")
     async def startup_trigger_scheduler():
         """Start the TriggerScheduler on main app startup."""
+        # Initialize alert definitions cache
+        from cloud.api.database import SessionLocal, AlertDefinition
+        db = SessionLocal()
+        try:
+            # Load all active alert definitions into cache
+            active_definitions = db.query(AlertDefinition).filter(
+                AlertDefinition.is_active == True
+            ).all()
+
+            device_definitions = {}
+            for definition in active_definitions:
+                device_definitions[definition.device_id] = (definition.id, definition.description)
+
+            legacy_app.state.device_definitions = device_definitions
+            print(f"[startup] Loaded {len(device_definitions)} alert definitions into cache")
+        except Exception as e:
+            print(f"[startup] Error loading alert definitions: {e}")
+        finally:
+            db.close()
+
         trigger_scheduler = legacy_app.state.trigger_scheduler
         await trigger_scheduler.start()
         print("[startup] TriggerScheduler started successfully")

@@ -6,6 +6,7 @@ from cloud.api.database.models import (
     Organization,
     User,
     Device,
+    AlertDefinition,
     Capture,
     ShareLink,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "Organization",
     "User",
     "Device",
+    "AlertDefinition",
     "Capture",
     "ShareLink",
 ]

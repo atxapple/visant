@@ -58,16 +58,19 @@ class CloudAIEvaluator:
 
             logger.info(f"Starting AI evaluation for capture: {record_id}")
 
-            # Get device config to fetch normal_description
-            from cloud.api.database import Device
-            device = db.query(Device).filter(Device.device_id == capture.device_id).first()
+            # Get alert definition from cache
+            from cloud.api.server import app_state
 
-            # Extract normal_description and normal_description_file from device config
+            # Get definition from cache (device_definitions: {device_id: (definition_id, description_text)})
+            definition_cache = getattr(app_state, 'device_definitions', {})
             normal_description = ""
-            normal_description_file = None
-            if device and device.config:
-                normal_description = device.config.get("normal_description", "")
-                normal_description_file = device.config.get("normal_description_file")
+            alert_definition_id = None
+
+            if capture.device_id in definition_cache:
+                alert_definition_id, normal_description = definition_cache[capture.device_id]
+                logger.debug(f"Using cached definition {alert_definition_id} for device {capture.device_id}")
+            else:
+                logger.warning(f"No alert definition found in cache for device {capture.device_id}")
 
             # Update classifier's normal_description before evaluation
             classifier = self.inference_service.classifier
@@ -159,9 +162,9 @@ class CloudAIEvaluator:
             capture.reason = classification.reason
             capture.evaluation_status = "completed"
             capture.evaluated_at = datetime.now(timezone.utc)
-            # Link to the alert definition file that was used for this evaluation
-            if normal_description_file:
-                capture.normal_description_file = normal_description_file
+            # Link to the alert definition that was used for this evaluation
+            if alert_definition_id:
+                capture.alert_definition_id = alert_definition_id
 
             db.commit()
             db.refresh(capture)

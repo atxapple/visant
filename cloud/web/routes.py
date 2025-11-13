@@ -8,12 +8,14 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, List, Optional, Sequence, Set
 
-from fastapi import APIRouter, HTTPException, Query, Request, Header
+from fastapi import APIRouter, HTTPException, Query, Request, Header, Depends
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 import jwt
 import os
 
+from ..api.database import get_db
 from ..api.email_service import create_sendgrid_service
 from ..api.notification_settings import NotificationSettings, save_notification_settings
 from ..api.persistent_config import update_trigger_config, update_active_normal_description
@@ -98,6 +100,9 @@ MIN_TRIGGER_INTERVAL_SECONDS = 7.0
 class NormalDescriptionPayload(BaseModel):
     description: str = Field(
         default="", description="Updated normal environment description"
+    )
+    device_id: str = Field(
+        description="Device ID for which this definition applies"
     )
 
 
@@ -400,85 +405,90 @@ async def set_ui_preferences(
 
 @router.post("/ui/normal-description")
 async def update_normal_description(
-    payload: NormalDescriptionPayload, request: Request
+    payload: NormalDescriptionPayload,
+    request: Request,
+    db: Session = Depends(get_db)
 ) -> dict[str, Any]:
-    description = payload.description.strip()
-    request.app.state.normal_description = description
+    """Save alert definition for a specific device."""
+    from cloud.api.database import AlertDefinition, Device
 
-    classifier = getattr(request.app.state, "classifier", None)
+    description = payload.description.strip()
+    device_id = payload.device_id
+
+    # Verify device exists
+    device = db.query(Device).filter(Device.device_id == device_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail=f"Device {device_id} not found")
+
     logger.info(
-        "Updating normal description: classifier=%s description_length=%d",
-        classifier.__class__.__name__ if classifier else "None",
+        "Saving alert definition for device %s: description_length=%d",
+        device_id,
         len(description),
     )
-    _apply_normal_description(classifier, description)
 
-    # Debug: Verify the update was applied
-    if classifier and hasattr(classifier, "normal_description"):
-        logger.info(
-            "Classifier description after update: %s",
-            getattr(classifier, "normal_description", "NOT_SET")[:100],
-        )
-    elif classifier and hasattr(classifier, "primary"):
-        primary = getattr(classifier, "primary", None)
-        if primary and hasattr(primary, "normal_description"):
-            logger.info(
-                "Primary classifier description after update: %s",
-                getattr(primary, "normal_description", "NOT_SET")[:100],
-            )
+    # Get current max version for this device
+    max_version_row = db.query(AlertDefinition).filter(
+        AlertDefinition.device_id == device_id
+    ).order_by(AlertDefinition.version.desc()).first()
 
-    store_dir = getattr(request.app.state, "normal_description_store_dir", None)
-    store_dir_path = (
-        Path(store_dir) if store_dir else Path("config/normal_descriptions")
+    new_version = (max_version_row.version + 1) if max_version_row else 1
+
+    # Mark all existing definitions for this device as inactive
+    db.query(AlertDefinition).filter(
+        AlertDefinition.device_id == device_id
+    ).update({"is_active": False})
+
+    # Create new alert definition
+    # TODO: Get actual user email/name from authentication
+    created_by = "admin@visant.ai"  # Placeholder until auth is fully implemented
+
+    new_definition = AlertDefinition(
+        id=uuid.uuid4(),
+        device_id=device_id,
+        version=new_version,
+        description=description,
+        created_at=datetime.now(timezone.utc),
+        created_by=created_by,
+        is_active=True
     )
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    file_suffix = uuid.uuid4().hex[:8]
-    file_name = f"normal_{timestamp}_{file_suffix}.txt"
-    target_path = store_dir_path / file_name
-    try:
-        store_dir_path.mkdir(parents=True, exist_ok=True)
-        target_path.write_text(description, encoding="utf-8")
-    except OSError as exc:  # pragma: no cover - filesystem error surfaced to client
-        raise HTTPException(
-            status_code=500, detail=f"Failed to persist description: {exc}"
-        ) from exc
 
-    request.app.state.normal_description_path = target_path
-    request.app.state.normal_description_store_dir = store_dir_path
-    request.app.state.normal_description_file = file_name
-    service = getattr(request.app.state, "service", None)
-    if service is not None:
-        service.normal_description_file = file_name
+    db.add(new_definition)
+    db.commit()
+    db.refresh(new_definition)
 
-    # Persist active normal description filename to survive Railway deployments
-    server_config_path = getattr(request.app.state, "server_config_path", None)
-    if server_config_path:
-        try:
-            update_active_normal_description(server_config_path, file_name)
-        except OSError as exc:
-            logger.error(
-                "Failed to persist active normal description to %s: %s",
-                server_config_path,
-                exc,
-            )
-            # Don't fail the request - configuration is already updated in memory
+    # Update cache
+    definition_cache = getattr(request.app.state, 'device_definitions', {})
+    definition_cache[device_id] = (new_definition.id, description)
+    request.app.state.device_definitions = definition_cache
 
-    # Clear similarity cache when normal description changes
-    # This ensures fresh classifications with the new description instead of reusing
-    # cached results that were based on the old description
+    # Update classifier if this is the active/displayed device
+    classifier = getattr(request.app.state, "classifier", None)
+    if classifier:
+        _apply_normal_description(classifier, description)
+        logger.info("Updated classifier with new definition for device %s", device_id)
+
+    # Clear similarity cache for this device
     service = getattr(request.app.state, "service", None)
     if service is not None and hasattr(service, "similarity_cache"):
         similarity_cache = getattr(service, "similarity_cache", None)
-        if similarity_cache is not None and hasattr(similarity_cache, "clear"):
+        if similarity_cache is not None and hasattr(similarity_cache, "clear_device"):
             try:
-                similarity_cache.clear()
+                similarity_cache.clear_device(device_id)
                 logger.info(
-                    "Cleared similarity cache after normal description update to ensure fresh classifications"
+                    "Cleared similarity cache for device %s after definition update",
+                    device_id
                 )
             except Exception as exc:
-                logger.warning("Failed to clear similarity cache: %s", exc)
+                logger.warning("Failed to clear device similarity cache: %s", exc)
 
-    return {"normal_description": description, "normal_description_file": file_name}
+    return {
+        "definition_id": str(new_definition.id),
+        "device_id": device_id,
+        "version": new_version,
+        "description": description,
+        "created_at": new_definition.created_at.isoformat(),
+        "created_by": created_by
+    }
 
 
 @router.post("/ui/trigger")
@@ -789,12 +799,12 @@ async def fetch_capture_metadata(
             "reason": cap.reason,
             "trigger_label": cap.trigger_label,
             "evaluation_status": cap.evaluation_status,
-            "normal_description_file": None,  # Not used in database captures
+            "alert_definition_id": str(cap.alert_definition_id) if cap.alert_definition_id else None,
             "image_available": cap.image_stored,
             "image_url": image_url,
             "thumbnail_url": thumbnail_url,
             "download_url": download_url,
-            "agent_details": None,  # Not used in database captures
+            "agent_details": cap.agent_details if cap.agent_details is not None else None,
             "metadata": cap.capture_metadata if cap.capture_metadata is not None else {},
         }
     finally:
@@ -912,44 +922,29 @@ async def serve_capture_thumbnail(
         db.close()
 
 
-@router.get("/ui/normal-definitions/{file_name}")
-async def fetch_normal_definition(file_name: str, request: Request) -> dict[str, Any]:
-    safe_name = Path(file_name).name
-    if not safe_name or safe_name != file_name:
-        raise HTTPException(status_code=400, detail="Invalid definition identifier")
+@router.get("/ui/alert-definitions/{definition_id}")
+async def fetch_alert_definition(definition_id: str, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Fetch alert definition by ID from database."""
+    from cloud.api.database import AlertDefinition
 
-    store_dir = getattr(request.app.state, "normal_description_store_dir", None)
-    candidates: list[Path] = []
-    if store_dir:
-        candidates.append(Path(store_dir) / safe_name)
+    try:
+        definition_uuid = uuid.UUID(definition_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid definition ID format")
 
-    description_path = getattr(request.app.state, "normal_description_path", None)
-    if description_path:
-        description_path = Path(description_path)
-        if description_path.name == safe_name:
-            candidates.insert(0, description_path)
+    definition = db.query(AlertDefinition).filter(AlertDefinition.id == definition_uuid).first()
+    if not definition:
+        raise HTTPException(status_code=404, detail="Alert definition not found")
 
-    seen: set[Path] = set()
-    for candidate in candidates:
-        candidate = candidate.resolve()
-        if candidate in seen:
-            continue
-        seen.add(candidate)
-        try:
-            if candidate.exists() and candidate.is_file():
-                description = candidate.read_text(encoding="utf-8")
-                updated_at = datetime.fromtimestamp(
-                    candidate.stat().st_mtime, tz=timezone.utc
-                ).isoformat()
-                return {
-                    "file": safe_name,
-                    "description": description,
-                    "updated_at": updated_at,
-                }
-        except OSError:
-            continue
-
-    raise HTTPException(status_code=404, detail="Definition not found")
+    return {
+        "id": str(definition.id),
+        "device_id": definition.device_id,
+        "version": definition.version,
+        "description": definition.description,
+        "created_at": definition.created_at.isoformat(),
+        "created_by": definition.created_by,
+        "is_active": definition.is_active
+    }
 
 
 def _collect_recent_captures(
