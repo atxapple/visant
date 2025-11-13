@@ -255,6 +255,26 @@ if __name__ == "__main__":
     def health():
         return {"status": "ok", "version": "2.0.0"}
 
+    @main_app.get("/debug/similarity")
+    def debug_similarity():
+        """Debug endpoint to check similarity configuration."""
+        service = getattr(main_app.state, 'service', None)
+        if service is None:
+            return {
+                "error": "No service found in main_app.state",
+                "state_keys": list(vars(main_app.state).keys()) if hasattr(main_app, 'state') else []
+            }
+
+        return {
+            "service_exists": True,
+            "similarity_enabled": getattr(service, 'similarity_enabled', None),
+            "similarity_threshold": getattr(service, 'similarity_threshold', None),
+            "similarity_expiry_minutes": getattr(service, 'similarity_expiry_minutes', None),
+            "similarity_cache_exists": service.similarity_cache is not None if hasattr(service, 'similarity_cache') else False,
+            "cache_hits": getattr(service, 'similarity_cache_hits', None),
+            "cache_misses": getattr(service, 'similarity_cache_misses', None),
+        }
+
     @main_app.get("/debug/storage")
     def debug_storage():
         """Debug endpoint to check storage configuration and file counts."""
