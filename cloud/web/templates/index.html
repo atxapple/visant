@@ -1283,7 +1283,7 @@
                 captureDetailsGrid.innerHTML = '';
             }
             if (definitionSection) {
-                definitionSection.style.display = 'block';
+                definitionSection.style.display = 'none';  // Hide normal definition section, show only capture details
             }
             if (definitionStatus) {
                 definitionStatus.textContent = 'Loading capture details...';
@@ -1354,27 +1354,37 @@
                 captureDetailsGrid.appendChild(detail);
             };
 
-            addDetail('Record ID', capture.record_id);
-            addDetail('Device', capture.device_name || capture.device_id);
-            addDetail('Trigger', capture.trigger_label);
-            addDetail('Evaluation', capture.evaluation_status);
+            // Format timestamps to human-readable format
+            const formatTimestamp = (isoString) => {
+                if (!isoString) return '';
+                try {
+                    const date = new Date(isoString);
+                    return date.toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+                } catch (e) {
+                    return isoString;
+                }
+            };
+
+            // Show only requested fields
+            addDetail('Device ID', capture.device_id);
+            addDetail('Device Name', capture.device_name);
+            addDetail('Captured At', formatTimestamp(capture.captured_at));
+            addDetail('Ingested At', formatTimestamp(capture.ingested_at));
             addDetail('State', capture.state ? capture.state.toUpperCase() : undefined);
             if (typeof capture.score === 'number') {
-                addDetail('Confidence', capture.score.toFixed(2));
+                addDetail('Score', capture.score.toFixed(3));
             }
-            if (typeof capture.image_available === 'boolean') {
-                addDetail('Image Stored', capture.image_available ? 'Yes' : 'No');
-            }
+            addDetail('Trigger', capture.trigger_label);
             if (capture.reason) {
                 addDetail('Reason', capture.reason, { fullWidth: true });
-            }
-            const agentSummary = buildAgentSummary(capture.agent_details);
-            if (agentSummary) {
-                addDetail('Classifier Agents', agentSummary, { fullWidth: true, preformatted: true });
-            }
-            const metadataText = formatMetadata(capture.metadata);
-            if (metadataText) {
-                addDetail('Metadata', metadataText, { fullWidth: true, preformatted: true });
             }
         }
 
