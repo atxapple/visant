@@ -147,3 +147,57 @@ def get_user_from_token(access_token: str) -> Optional[Dict[str, Any]]:
     except Exception as e:
         print(f"ERROR: Failed to get user from token: {e}")
         return None
+
+
+def verify_user_password(email: str, password: str) -> bool:
+    """
+    Verify a user's current password.
+
+    Args:
+        email: User's email address
+        password: Password to verify
+
+    Returns:
+        True if password is correct, False otherwise
+    """
+    try:
+        # Try to sign in with the provided credentials
+        result = sign_in_with_password(email, password)
+        return result is not None
+    except ValueError:
+        # Invalid credentials
+        return False
+    except Exception as e:
+        print(f"ERROR: Failed to verify password: {e}")
+        return False
+
+
+def update_user_password(supabase_user_id: str, new_password: str) -> bool:
+    """
+    Update a user's password in Supabase Auth.
+
+    Args:
+        supabase_user_id: The Supabase user ID
+        new_password: New password (min 6 characters)
+
+    Returns:
+        True if successful, False otherwise
+    """
+    supabase = get_supabase_client(use_service_key=True)
+    if not supabase:
+        raise RuntimeError("Supabase client not configured")
+
+    try:
+        # Update user password using admin API
+        supabase.auth.admin.update_user_by_id(
+            supabase_user_id,
+            {"password": new_password}
+        )
+        return True
+
+    except AuthApiError as e:
+        print(f"ERROR: Failed to update password: {e}")
+        raise ValueError(f"Failed to update password: {e.message}")
+    except Exception as e:
+        print(f"ERROR: Unexpected error updating password: {e}")
+        raise

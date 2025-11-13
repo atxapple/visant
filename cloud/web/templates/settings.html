@@ -83,6 +83,108 @@
             padding: 3rem;
             color: #6b7280;
         }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.95rem;
+        }
+        .form-input {
+            padding: 0.6rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-family: inherit;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .form-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+        .edit-form {
+            display: none;
+            padding-top: 0.75rem;
+        }
+        .edit-form.active {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .btn-edit {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        .btn-edit:hover {
+            background: #e5e7eb;
+        }
+        .notification {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .notification.show {
+            display: flex;
+        }
+        .notification.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+        .notification.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+        .password-requirements {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        .password-strength {
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+        .password-strength-bar {
+            height: 100%;
+            transition: width 0.3s, background 0.3s;
+            width: 0;
+        }
+        .password-strength-bar.weak {
+            width: 33%;
+            background: #ef4444;
+        }
+        .password-strength-bar.medium {
+            width: 66%;
+            background: #f59e0b;
+        }
+        .password-strength-bar.strong {
+            width: 100%;
+            background: #10b981;
+        }
     </style>
 </head>
 <body>
@@ -94,18 +196,81 @@
     </header>
 
     <main>
+        <!-- Notification Area -->
+        <div id="notification" class="notification">
+            <span id="notificationMessage"></span>
+        </div>
+
+        <!-- Profile Information Card -->
         <div class="card">
-            <h2>User Information</h2>
-            <div class="info-row">
-                <span class="info-label">Email</span>
-                <span class="info-value" id="userEmail">Loading...</span>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Profile Information</h2>
+                <button class="btn-edit" onclick="toggleEditProfile()">Edit Profile</button>
             </div>
-            <div class="info-row">
-                <span class="info-label">Joined</span>
-                <span class="info-value" id="userJoined">Loading...</span>
+
+            <!-- Display Mode -->
+            <div id="profileDisplay">
+                <div class="info-row">
+                    <span class="info-label">Name</span>
+                    <span class="info-value" id="userName">Loading...</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email</span>
+                    <span class="info-value" id="userEmail">Loading...</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Role</span>
+                    <span class="info-value" id="userRole">Loading...</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Joined</span>
+                    <span class="info-value" id="userJoined">Loading...</span>
+                </div>
+            </div>
+
+            <!-- Edit Mode -->
+            <div id="profileEdit" class="edit-form">
+                <div class="form-group">
+                    <label class="form-label" for="editName">Name</label>
+                    <input type="text" id="editName" class="form-input" placeholder="Enter your name" />
+                </div>
+                <div class="form-actions">
+                    <button onclick="saveProfile()">Save Changes</button>
+                    <button class="btn-secondary" onclick="cancelEditProfile()">Cancel</button>
+                </div>
             </div>
         </div>
 
+        <!-- Change Password Card -->
+        <div class="card">
+            <h2>Change Password</h2>
+            <form id="passwordForm" onsubmit="return false;">
+                <div class="form-group">
+                    <label class="form-label" for="currentPassword">Current Password</label>
+                    <input type="password" id="currentPassword" class="form-input" placeholder="Enter current password" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="newPassword">New Password</label>
+                    <input type="password" id="newPassword" class="form-input" placeholder="Enter new password" oninput="checkPasswordStrength()" />
+                    <div class="password-strength">
+                        <div id="passwordStrengthBar" class="password-strength-bar"></div>
+                    </div>
+                    <div class="password-requirements">
+                        Minimum 8 characters, mix of uppercase, lowercase, and numbers recommended
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="confirmPassword">Confirm New Password</label>
+                    <input type="password" id="confirmPassword" class="form-input" placeholder="Confirm new password" />
+                </div>
+                <div class="form-actions">
+                    <button type="submit" onclick="changePassword()">Change Password</button>
+                    <button type="button" class="btn-secondary" onclick="resetPasswordForm()">Clear</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Organization Card -->
         <div class="card">
             <h2>Organization</h2>
             <div class="info-row">
@@ -118,16 +283,20 @@
             </div>
         </div>
 
+        <!-- Account Actions Card -->
         <div class="card">
             <h2>Account Actions</h2>
             <div style="display: flex; gap: 0.75rem;">
-                <button onclick="logout()">Logout</button>
+                <button class="btn-danger" onclick="logout()">Logout</button>
             </div>
         </div>
     </main>
 
     <script src="/static/js/auth.js"></script>
     <script>
+        let currentUserData = null;
+
+        // Load user information
         async function loadUserInfo() {
             try {
                 const response = await fetch('/v1/auth/me', {
@@ -137,28 +306,206 @@
                 });
 
                 if (response.ok) {
-                    const user = await response.json();
-                    document.getElementById('userEmail').textContent = user.email || 'N/A';
-                    document.getElementById('userJoined').textContent = user.created_at
-                        ? new Date(user.created_at).toLocaleDateString()
+                    currentUserData = await response.json();
+                    document.getElementById('userName').textContent = currentUserData.name || 'Not set';
+                    document.getElementById('userEmail').textContent = currentUserData.email || 'N/A';
+                    document.getElementById('userRole').textContent = currentUserData.role || 'member';
+                    document.getElementById('userJoined').textContent = currentUserData.created_at
+                        ? new Date(currentUserData.created_at).toLocaleDateString()
                         : 'N/A';
                     document.getElementById('orgName').textContent =
-                        (user.organization && user.organization.name) || 'Default Workspace';
+                        (currentUserData.organization && currentUserData.organization.name) || 'Default Workspace';
                 } else {
-                    showError();
+                    showLoadError();
                 }
             } catch (error) {
                 console.error('Error loading user info:', error);
-                showError();
+                showLoadError();
             }
         }
 
-        function showError() {
+        function showLoadError() {
+            document.getElementById('userName').textContent = 'Error loading';
             document.getElementById('userEmail').textContent = 'Error loading';
+            document.getElementById('userRole').textContent = 'Error loading';
             document.getElementById('userJoined').textContent = 'Error loading';
             document.getElementById('orgName').textContent = 'Error loading';
         }
 
+        // Profile editing functions
+        function toggleEditProfile() {
+            const displayDiv = document.getElementById('profileDisplay');
+            const editDiv = document.getElementById('profileEdit');
+            const editNameInput = document.getElementById('editName');
+
+            displayDiv.style.display = 'none';
+            editDiv.classList.add('active');
+
+            // Pre-fill with current name
+            editNameInput.value = currentUserData?.name || '';
+            editNameInput.focus();
+        }
+
+        function cancelEditProfile() {
+            const displayDiv = document.getElementById('profileDisplay');
+            const editDiv = document.getElementById('profileEdit');
+
+            displayDiv.style.display = 'block';
+            editDiv.classList.remove('active');
+        }
+
+        async function saveProfile() {
+            const nameInput = document.getElementById('editName');
+            const name = nameInput.value.trim();
+
+            if (!name) {
+                showNotification('Name cannot be empty', 'error');
+                return;
+            }
+
+            if (name.length > 255) {
+                showNotification('Name cannot exceed 255 characters', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/v1/auth/profile', {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${sessionStorage.getItem('visant_access_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Update displayed name
+                    currentUserData.name = data.name;
+                    document.getElementById('userName').textContent = data.name;
+
+                    // Update sessionStorage user data
+                    const storedUser = JSON.parse(sessionStorage.getItem('visant_user') || '{}');
+                    storedUser.name = data.name;
+                    sessionStorage.setItem('visant_user', JSON.stringify(storedUser));
+
+                    showNotification('Profile updated successfully', 'success');
+                    cancelEditProfile();
+                } else {
+                    showNotification(data.detail || 'Failed to update profile', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                showNotification('Failed to update profile. Please try again.', 'error');
+            }
+        }
+
+        // Password change functions
+        function checkPasswordStrength() {
+            const password = document.getElementById('newPassword').value;
+            const strengthBar = document.getElementById('passwordStrengthBar');
+
+            if (!password) {
+                strengthBar.className = 'password-strength-bar';
+                return;
+            }
+
+            let strength = 0;
+
+            // Length check
+            if (password.length >= 8) strength++;
+            if (password.length >= 12) strength++;
+
+            // Character variety checks
+            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^a-zA-Z0-9]/.test(password)) strength++;
+
+            // Update strength bar
+            strengthBar.className = 'password-strength-bar';
+            if (strength <= 2) {
+                strengthBar.classList.add('weak');
+            } else if (strength <= 4) {
+                strengthBar.classList.add('medium');
+            } else {
+                strengthBar.classList.add('strong');
+            }
+        }
+
+        async function changePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Validation
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showNotification('Please fill in all password fields', 'error');
+                return;
+            }
+
+            if (newPassword.length < 8) {
+                showNotification('New password must be at least 8 characters long', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showNotification('New passwords do not match', 'error');
+                return;
+            }
+
+            if (currentPassword === newPassword) {
+                showNotification('New password must be different from current password', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/v1/auth/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${sessionStorage.getItem('visant_access_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showNotification('Password changed successfully', 'success');
+                    resetPasswordForm();
+                } else {
+                    showNotification(data.detail || 'Failed to change password', 'error');
+                }
+            } catch (error) {
+                console.error('Error changing password:', error);
+                showNotification('Failed to change password. Please try again.', 'error');
+            }
+        }
+
+        function resetPasswordForm() {
+            document.getElementById('passwordForm').reset();
+            document.getElementById('passwordStrengthBar').className = 'password-strength-bar';
+        }
+
+        // Notification system
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            const messageSpan = document.getElementById('notificationMessage');
+
+            messageSpan.textContent = message;
+            notification.className = `notification show ${type}`;
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 5000);
+        }
+
+        // Logout function
         function logout() {
             if (confirm('Are you sure you want to logout?')) {
                 sessionStorage.clear();
