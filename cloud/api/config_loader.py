@@ -76,6 +76,16 @@ class SimilarityConfig:
     expiry_minutes: float = 60.0
     cache_path: str = "config/similarity_cache.json"
 
+    def __post_init__(self):
+        """Override with environment variables if set."""
+        import os
+        if os.getenv("SIMILARITY_ENABLED"):
+            self.enabled = os.getenv("SIMILARITY_ENABLED", "false").lower() in ("true", "1", "yes")
+        if os.getenv("SIMILARITY_THRESHOLD"):
+            self.threshold = int(os.getenv("SIMILARITY_THRESHOLD", str(self.threshold)))
+        if os.getenv("SIMILARITY_EXPIRY_MINUTES"):
+            self.expiry_minutes = float(os.getenv("SIMILARITY_EXPIRY_MINUTES", str(self.expiry_minutes)))
+
 
 @dataclass
 class StreakPruningConfig:
