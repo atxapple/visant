@@ -9,7 +9,7 @@ from sqlalchemy import func
 
 from cloud.api.database import get_db
 from cloud.api.database.models import ActivationCode, CodeRedemption, User
-from cloud.api.auth.dependencies import get_current_user
+from cloud.api.auth.dependencies import get_admin_user
 
 router = APIRouter(prefix="/v1/admin/activation-codes", tags=["Admin - Activation Codes"])
 
@@ -71,7 +71,7 @@ class ActivationCodeListResponse(BaseModel):
 @router.get("", response_model=ActivationCodeListResponse)
 def list_activation_codes(
     active_only: bool = Query(False, description="Filter to active codes only"),
-    user: User = Depends(get_current_user),
+    admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -124,7 +124,7 @@ def list_activation_codes(
 @router.post("", response_model=ActivationCodeResponse, status_code=status.HTTP_201_CREATED)
 def create_activation_code(
     request: ActivationCodeCreate,
-    user: User = Depends(get_current_user),
+    admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -207,7 +207,7 @@ def create_activation_code(
 @router.get("/{code}", response_model=ActivationCodeDetail)
 def get_activation_code(
     code: str,
-    user: User = Depends(get_current_user),
+    admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -280,7 +280,7 @@ def get_activation_code(
 def update_activation_code(
     code: str,
     request: ActivationCodeUpdate,
-    user: User = Depends(get_current_user),
+    admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -349,7 +349,7 @@ def update_activation_code(
 @router.delete("/{code}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_activation_code(
     code: str,
-    user: User = Depends(get_current_user),
+    admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """

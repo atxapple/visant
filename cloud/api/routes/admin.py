@@ -10,7 +10,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from cloud.api.database import get_db, User, Device, Capture, Organization
-from cloud.api.auth.dependencies import get_current_user
+from cloud.api.auth.dependencies import get_admin_user
 from cloud.api.storage.config import UPLOADS_DIR
 
 router = APIRouter(prefix="/v1/admin", tags=["Admin"])
@@ -80,7 +80,7 @@ class PruneResponse(BaseModel):
 def list_users(
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    user: User = Depends(get_current_user),
+    admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -108,7 +108,7 @@ def list_users(
 @router.delete("/users/{user_id}")
 def delete_user(
     user_id: str,
-    current_user: User = Depends(get_current_user),
+    admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -145,7 +145,7 @@ def list_devices(
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     status_filter: Optional[str] = Query(None, alias="status"),
-    user: User = Depends(get_current_user),
+    admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -180,7 +180,7 @@ def list_devices(
 @router.delete("/devices/{device_id}")
 def delete_device(
     device_id: str,
-    user: User = Depends(get_current_user),
+    admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -241,7 +241,7 @@ def list_captures(
     offset: int = Query(0, ge=0),
     state: Optional[str] = Query(None),
     org_id: Optional[str] = Query(None),
-    user: User = Depends(get_current_user),
+    admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -287,7 +287,7 @@ def list_captures(
 @router.delete("/captures/{record_id}")
 def delete_capture(
     record_id: str,
-    user: User = Depends(get_current_user),
+    admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -335,7 +335,7 @@ def delete_capture(
 @router.post("/captures/prune", response_model=PruneResponse)
 def prune_captures(
     request: PruneRequest,
-    user: User = Depends(get_current_user),
+    admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -398,7 +398,7 @@ def prune_captures(
 
 @router.get("/storage/stats", response_model=StorageStats)
 def get_storage_stats(
-    user: User = Depends(get_current_user),
+    admin: User = Depends(get_admin_user),
     db: Session = Depends(get_db)
 ):
     """

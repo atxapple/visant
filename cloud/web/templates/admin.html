@@ -448,13 +448,9 @@
         </div>
     </main>
 
+    <script src="/static/js/auth.js"></script>
     <script>
-        const auth = {
-            getAuthHeaders() {
-                const token = localStorage.getItem('accessToken');
-                return token ? { 'Authorization': `Bearer ${token}` } : {};
-            }
-        };
+        // Auth is now loaded from auth.js
 
         let currentTab = 'users';
 
@@ -717,6 +713,11 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            // Require authentication
+            if (!auth.requireAuth()) {
+                return; // Will redirect to login
+            }
+
             loadUsers();
             loadStorageStats();
         });

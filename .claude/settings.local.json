@@ -69,7 +69,8 @@
       "Bash(.venvScriptspython -c \"from cloud.api.routes import admin; print(''Admin routes module loaded successfully'')\")",
       "Bash(if [ -f .env ])",
       "Bash(then grep -E \"DATABASE_URL|RAILWAY\" .env)",
-      "Bash(else echo \"No .env file found\")"
+      "Bash(else echo \"No .env file found\")",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []
