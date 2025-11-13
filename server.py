@@ -69,9 +69,19 @@ if __name__ == "__main__":
     import os
 
     # Load configuration from config/cloud.json
-    config_path = Path("config/cloud.json")
+    # Use absolute path relative to project root to ensure it works on Railway
+    config_path = project_root / "config" / "cloud.json"
+
+    print(f"[config] Looking for config at: {config_path}")
+    print(f"[config] Config exists: {config_path.exists()}")
+    print(f"[config] Current working directory: {Path.cwd()}")
+
     try:
         cfg = load_config(config_path if config_path.exists() else None)
+        if config_path.exists():
+            print(f"[config] ✓ Loaded configuration from {config_path}")
+        else:
+            print(f"[config] ⚠ Config file not found, using defaults")
     except (TypeError, ValueError) as e:
         # Config file has incompatible format, use defaults with manual classifier config
         print(f"WARNING: Could not load config from {config_path}: {e}")
