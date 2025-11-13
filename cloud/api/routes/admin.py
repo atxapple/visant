@@ -237,16 +237,16 @@ def delete_device(
 
     for capture in captures:
         # Delete image files
-        if capture.image_path:
-            image_file = UPLOADS_DIR / capture.image_path
+        if capture.image_stored and capture.s3_image_key:
+            image_file = UPLOADS_DIR / capture.s3_image_key
             if image_file.exists():
                 freed_space += image_file.stat().st_size
                 image_file.unlink()
                 deleted_files += 1
 
         # Delete thumbnail files
-        if capture.thumbnail_path:
-            thumb_file = UPLOADS_DIR / capture.thumbnail_path
+        if capture.thumbnail_stored and capture.s3_thumbnail_key:
+            thumb_file = UPLOADS_DIR / capture.s3_thumbnail_key
             if thumb_file.exists():
                 freed_space += thumb_file.stat().st_size
                 thumb_file.unlink()
@@ -298,8 +298,8 @@ def list_captures(
     for capture, org_name in captures:
         # Calculate file size
         file_size_mb = None
-        if capture.image_path:
-            image_file = UPLOADS_DIR / capture.image_path
+        if capture.image_stored and capture.s3_image_key:
+            image_file = UPLOADS_DIR / capture.s3_image_key
             if image_file.exists():
                 file_size_mb = round(image_file.stat().st_size / (1024 * 1024), 3)
 
@@ -339,15 +339,15 @@ def delete_capture(
     freed_space = 0
 
     # Delete image file
-    if capture.image_path:
-        image_file = UPLOADS_DIR / capture.image_path
+    if capture.image_stored and capture.s3_image_key:
+        image_file = UPLOADS_DIR / capture.s3_image_key
         if image_file.exists():
             freed_space += image_file.stat().st_size
             image_file.unlink()
 
     # Delete thumbnail file
-    if capture.thumbnail_path:
-        thumb_file = UPLOADS_DIR / capture.thumbnail_path
+    if capture.thumbnail_stored and capture.s3_thumbnail_key:
+        thumb_file = UPLOADS_DIR / capture.s3_thumbnail_key
         if thumb_file.exists():
             freed_space += thumb_file.stat().st_size
             thumb_file.unlink()
@@ -405,15 +405,15 @@ def prune_captures(
 
     for capture in captures:
         # Delete image file
-        if capture.image_path:
-            image_file = UPLOADS_DIR / capture.image_path
+        if capture.image_stored and capture.s3_image_key:
+            image_file = UPLOADS_DIR / capture.s3_image_key
             if image_file.exists():
                 freed_space += image_file.stat().st_size
                 image_file.unlink()
 
         # Delete thumbnail file
-        if capture.thumbnail_path:
-            thumb_file = UPLOADS_DIR / capture.thumbnail_path
+        if capture.thumbnail_stored and capture.s3_thumbnail_key:
+            thumb_file = UPLOADS_DIR / capture.s3_thumbnail_key
             if thumb_file.exists():
                 freed_space += thumb_file.stat().st_size
                 thumb_file.unlink()
@@ -447,13 +447,13 @@ def get_storage_stats(
     all_captures = db.query(Capture).all()
 
     for capture in all_captures:
-        if capture.image_path:
-            image_file = UPLOADS_DIR / capture.image_path
+        if capture.image_stored and capture.s3_image_key:
+            image_file = UPLOADS_DIR / capture.s3_image_key
             if image_file.exists():
                 total_size += image_file.stat().st_size
 
-        if capture.thumbnail_path:
-            thumb_file = UPLOADS_DIR / capture.thumbnail_path
+        if capture.thumbnail_stored and capture.s3_thumbnail_key:
+            thumb_file = UPLOADS_DIR / capture.s3_thumbnail_key
             if thumb_file.exists():
                 total_size += thumb_file.stat().st_size
 
