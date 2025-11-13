@@ -9,7 +9,8 @@ from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from cloud.api.database import get_db, User, Device, Capture, Organization
+from cloud.api.database import get_db, User, Device, Capture, Organization, ShareLink
+from cloud.api.database.models import ActivationCode
 from cloud.api.auth.dependencies import get_admin_user
 from cloud.api.storage.config import UPLOADS_DIR
 
@@ -115,6 +116,7 @@ def delete_user(
     Delete a user.
 
     Cannot delete yourself.
+    Handles foreign key relationships by setting related records to NULL before deletion.
     """
     user = db.query(User).filter(User.id == user_id).first()
 
@@ -124,16 +126,47 @@ def delete_user(
             detail="User not found"
         )
 
-    if str(user.id) == str(current_user.id):
+    # Fixed: Use 'admin' instead of undefined 'current_user'
+    if str(user.id) == str(admin.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot delete yourself"
         )
 
-    db.delete(user)
-    db.commit()
+    try:
+        # Clean up foreign key relationships before deletion
+        # Set activated_by_user_id to NULL for devices this user activated
+        db.query(Device).filter(Device.activated_by_user_id == user_id).update(
+            {"activated_by_user_id": None},
+            synchronize_session=False
+        )
 
-    return {"message": f"User {user.email} deleted successfully"}
+        # Set created_by to NULL for share links this user created
+        db.query(ShareLink).filter(ShareLink.created_by == user_id).update(
+            {"created_by": None},
+            synchronize_session=False
+        )
+
+        # Set created_by_user_id to NULL for activation codes this user created
+        db.query(ActivationCode).filter(ActivationCode.created_by_user_id == user_id).update(
+            {"created_by_user_id": None},
+            synchronize_session=False
+        )
+
+        # CodeRedemption has CASCADE configured, so it will be deleted automatically
+
+        # Now safe to delete the user
+        db.delete(user)
+        db.commit()
+
+        return {"message": f"User {user.email} deleted successfully"}
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete user: {str(e)}"
+        )
 
 
 # ====================
