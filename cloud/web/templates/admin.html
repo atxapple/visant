@@ -382,7 +382,7 @@
                                 <th>State</th>
                                 <th>Eval Status</th>
                                 <th>Size (MB)</th>
-                                <th>Captured</th>
+                                <th>Captured <span id="timezone-display" style="font-weight: normal; font-size: 0.75rem; color: #6b7280;"></span></th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -416,7 +416,7 @@
                 <form id="prune-form" onsubmit="pruneCaptures(event)">
                     <div class="form-grid">
                         <div class="form-group">
-                            <label class="form-label">Before Date</label>
+                            <label class="form-label">Before Date <span id="prune-timezone-display" style="font-weight: normal; font-size: 0.75rem; color: #6b7280;"></span></label>
                             <input type="datetime-local" id="prune-before-date" class="form-input" />
                         </div>
 
@@ -610,7 +610,7 @@
                         <td><span class="badge badge-${capture.state === 'normal' ? 'active' : (capture.state === 'alert' ? 'inactive' : 'pending')}">${capture.state || '-'}</span></td>
                         <td><span class="badge badge-${capture.evaluation_status === 'completed' ? 'active' : 'pending'}">${capture.evaluation_status}</span></td>
                         <td>${capture.file_size_mb ? capture.file_size_mb.toFixed(2) : '-'}</td>
-                        <td>${new Date(capture.captured_at).toLocaleString()}</td>
+                        <td>${formatDateTimeWithTimezone(capture.captured_at)}</td>
                         <td>
                             <button class="btn-action btn-danger" style="padding: 0.25rem 0.75rem; font-size: 0.8125rem;" onclick="deleteCapture('${capture.record_id}')">Delete</button>
                         </td>
@@ -679,9 +679,22 @@
             }
 
             const payload = {};
-            if (beforeDate) payload.before_date = new Date(beforeDate).toISOString();
+            if (beforeDate) {
+                // datetime-local input is in user's local timezone
+                // Convert to UTC ISO string for backend (backend expects UTC)
+                // Example: User selects "2025-11-13T14:30" in EST → "2025-11-13T19:30:00.000Z" (UTC)
+                payload.before_date = new Date(beforeDate).toISOString();
+            }
             if (state) payload.state = state;
-            if (limit) payload.limit = parseInt(limit);
+            if (limit) {
+                const limitNum = parseInt(limit, 10);
+                if (!isNaN(limitNum) && limitNum > 0) {
+                    payload.limit = limitNum;
+                } else if (limit.trim() !== '') {
+                    alert('Invalid limit value. Please enter a positive number.');
+                    return;
+                }
+            }
 
             try {
                 const response = await fetch('/v1/admin/captures/prune', {
@@ -711,11 +724,56 @@
             }
         }
 
+        // Timezone utility functions
+        function getTimezoneString() {
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const offset = new Date().getTimezoneOffset();
+            const offsetHours = Math.abs(Math.floor(offset / 60));
+            const offsetMinutes = Math.abs(offset % 60);
+            const offsetSign = offset <= 0 ? '+' : '-';
+            return `${timezone} (UTC${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMinutes).padStart(2, '0')})`;
+        }
+
+        function getTimezoneOffsetString() {
+            const offset = new Date().getTimezoneOffset();
+            const offsetHours = Math.abs(Math.floor(offset / 60));
+            const offsetMinutes = Math.abs(offset % 60);
+            const offsetSign = offset <= 0 ? '+' : '-';
+            return `UTC${offsetSign}${String(offsetHours).padStart(2, '0')}:${String(offsetMinutes).padStart(2, '0')}`;
+        }
+
+        function formatDateTimeWithTimezone(dateString) {
+            const date = new Date(dateString);
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const formatted = date.toLocaleString('en-US', {
+                timeZone: timezone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            return formatted + ' ' + getTimezoneOffsetString();
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             // Require authentication
             if (!auth.requireAuth()) {
                 return; // Will redirect to login
+            }
+
+            // Display timezone info
+            const timezoneStr = getTimezoneString();
+            const timezoneDisplay = document.getElementById('timezone-display');
+            const pruneTimezoneDisplay = document.getElementById('prune-timezone-display');
+            if (timezoneDisplay) {
+                timezoneDisplay.textContent = `(${timezoneStr})`;
+            }
+            if (pruneTimezoneDisplay) {
+                pruneTimezoneDisplay.textContent = `(${timezoneStr})`;
             }
 
             loadUsers();

@@ -365,6 +365,33 @@ def delete_capture(
 # STORAGE PRUNING
 # ====================
 
+def _parse_prune_date(date_str: str) -> datetime:
+    """
+    Parse ISO 8601 date string and ensure timezone-aware datetime in UTC.
+    
+    Handles both timezone-aware and naive ISO strings.
+    Always returns UTC timezone-aware datetime for consistent database comparisons.
+    """
+    if not date_str or not date_str.strip():
+        raise ValueError("Empty date string")
+    
+    date_str = date_str.strip()
+    
+    # Try ISO 8601 format (with or without timezone)
+    try:
+        # Replace 'Z' with '+00:00' for fromisoformat compatibility
+        dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        # Ensure timezone-aware (assume UTC if naive)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        # Convert to UTC if not already
+        if dt.tzinfo != timezone.utc:
+            dt = dt.astimezone(timezone.utc)
+        return dt
+    except ValueError as e:
+        raise ValueError(f"Invalid date format: '{date_str}'. Expected ISO 8601 format (e.g., '2025-11-13T19:30:00Z').")
+
+
 @router.post("/captures/prune", response_model=PruneResponse)
 def prune_captures(
     request: PruneRequest,
@@ -377,7 +404,8 @@ def prune_captures(
     Admin-only endpoint. Use with caution!
 
     Filters:
-    - before_date: Delete captures before this date (ISO 8601)
+    - before_date: Delete captures before this date (ISO 8601, UTC)
+      Note: Frontend sends UTC ISO string from datetime-local input
     - state: Delete captures with specific state (normal, alert, uncertain)
     - org_id: Delete captures from specific organization
     - limit: Maximum number of captures to delete
@@ -385,8 +413,15 @@ def prune_captures(
     query = db.query(Capture)
 
     if request.before_date:
-        before_dt = datetime.fromisoformat(request.before_date.replace('Z', '+00:00'))
-        query = query.filter(Capture.captured_at < before_dt)
+        try:
+            before_dt = _parse_prune_date(request.before_date)
+            # Filter captures with captured_at < before_dt (both should be timezone-aware)
+            query = query.filter(Capture.captured_at < before_dt)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid before_date format: {str(e)}"
+            )
 
     if request.state:
         query = query.filter(Capture.state == request.state)
@@ -394,8 +429,13 @@ def prune_captures(
     if request.org_id:
         query = query.filter(Capture.org_id == request.org_id)
 
-    # Apply limit
+    # Apply limit (validate it's positive)
     if request.limit:
+        if request.limit <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="limit must be a positive integer"
+            )
         captures = query.order_by(Capture.captured_at.asc()).limit(request.limit).all()
     else:
         captures = query.all()
