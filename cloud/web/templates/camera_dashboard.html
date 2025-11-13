@@ -794,7 +794,111 @@
         .toast-close:hover {
             color: #4b5563;
         }
-    </style>
+    
+
+        /* === Capture Details Modal Styles === */
+        .definition-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.55);
+            z-index: 1000;
+        }
+        .definition-overlay.active {
+            display: flex;
+        }
+        .definition-panel {
+            width: min(700px, 90%);
+            max-height: 80vh;
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 25px 60px rgba(15, 23, 42, 0.18);
+            display: flex;
+            flex-direction: column;
+        }
+        .capture-details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .capture-detail {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 0.65rem 0.75rem;
+        }
+        .capture-detail-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+        }
+        .capture-detail-value {
+            font-weight: 600;
+            color: #0f172a;
+            word-break: break-word;
+        }
+        .capture-detail-full {
+            grid-column: 1 / -1;
+        }
+        .capture-detail pre {
+            margin: 0;
+            font-size: 0.82rem;
+            background: transparent;
+            padding: 0;
+            color: #0f172a;
+            white-space: pre-wrap;
+        }
+        .definition-section {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 0.75rem;
+        }
+        .definition-subtitle {
+            margin: 0 0 0.4rem 0;
+            font-size: 0.95rem;
+            color: #475467;
+        }
+        .definition-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem 0.75rem;
+        }
+        .definition-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        .definition-status {
+            min-height: 1.5rem;
+            padding: 0 1.5rem;
+            font-size: 0.9rem;
+            color: #dc2626;
+        }
+        .definition-body {
+            flex: 1 1 auto;
+            padding: 0 1.5rem 1.5rem;
+            overflow: auto;
+        }
+        .definition-body pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #1f2933;
+        }
+        .definition-meta {
+            padding: 0.75rem 1.5rem 1.5rem;
+            font-size: 0.85rem;
+            color: #475467;
+            border-top: 1px solid #e5e7eb;
+        }
+</style>
 </head>
 <body>
     <!-- Header -->
@@ -1007,7 +1111,11 @@
                 <p>No captures yet. Trigger your first capture to get started.</p>
             </div>
         </div>
-    </main>
+    
+    <!-- Capture Details Modal -->
+    
+
+</main>
 
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container"></div>
@@ -1541,6 +1649,8 @@
         }
 
         // Load captures for this device with filters
+        
+
         async function loadCaptures() {
             try {
                 // Build query parameters from filters
@@ -1775,8 +1885,8 @@
 
         // View capture details
         function viewCapture(captureId) {
-            // TODO: Implement capture detail modal/page
-            window.location.href = `/ui/capture/${captureId}`;
+            showCaptureDetails(captureId);
+        }`;
         }
 
         // Load version information
@@ -1811,6 +1921,752 @@
         // Load data on page load
         loadDeviceData();
         loadVersionInfo();
+    
+        // === Modal Functions (copied from index.html) ===
+        function closeDefinitionViewer() {
+            if (!definitionOverlay) {
+                return;
+            }
+            definitionOverlay.classList.remove('active');
+            definitionOverlay.setAttribute('aria-hidden', 'true');
+            if (definitionStatus) {
+                definitionStatus.textContent = '';
+            }
+            if (definitionMeta) {
+                definitionMeta.textContent = '';
+            }
+            if (definitionText) {
+                definitionText.textContent = '';
+            }
+            if (captureDetailsGrid) {
+                captureDetailsGrid.innerHTML = '';
+            }
+            if (definitionSection) {
+                definitionSection.style.display = 'block';
+            }
+        }
+
+        async function showCaptureDetails(recordId, fallbackCapture) {
+            if (!definitionOverlay) {
+                return;
+            }
+            definitionOverlay.classList.add('active');
+            definitionOverlay.setAttribute('aria-hidden', 'false');
+            if (definitionTitle) {
+                definitionTitle.textContent = recordId ? `Capture Details (${recordId})` : 'Capture Details';
+            }
+            if (definitionText) {
+                definitionText.textContent = '';
+            }
+            if (definitionMeta) {
+                definitionMeta.textContent = '';
+            }
+            if (captureDetailsGrid) {
+                captureDetailsGrid.innerHTML = '';
+            }
+            if (definitionSection) {
+                definitionSection.style.display = 'none';  // Hide normal definition section, show only capture details
+            }
+            if (definitionStatus) {
+                definitionStatus.textContent = 'Loading capture details...';
+            }
+
+            let capturePayload = fallbackCapture ? { ...fallbackCapture } : null;
+            let captureFetchError = '';
+            try {
+                const response = await fetch(`/ui/captures/${encodeURIComponent(recordId)}`);
+                if (!response.ok) {
+                    throw new Error('Failed to load capture details');
+                }
+                capturePayload = await response.json();
+            } catch (error) {
+                captureFetchError = error.message;
+            }
+
+            if (!capturePayload) {
+                if (definitionStatus) {
+                    definitionStatus.textContent = captureFetchError || 'Unable to load capture details.';
+                }
+                return;
+            }
+
+            renderCaptureDetails(capturePayload);
+
+            const statusMessages = [];
+            if (captureFetchError) {
+                statusMessages.push(`Showing cached data. ${captureFetchError}`);
+            }
+
+            const definitionError = await loadNormalDefinition(capturePayload);
+            if (definitionError) {
+                statusMessages.push(definitionError);
+            }
+
+            if (definitionStatus) {
+                definitionStatus.textContent = statusMessages.join(' ');
+            }
+
+            if (definitionClose) {
+                definitionClose.focus();
+            }
+        }
+
+        function renderCaptureDetails(capture) {
+            if (!captureDetailsGrid) {
+                return;
+            }
+            captureDetailsGrid.innerHTML = '';
+            const addDetail = (label, value, options = {}) => {
+                if (value === undefined || value === null || value === '') {
+                    return;
+                }
+                const detail = document.createElement('div');
+                detail.className = 'capture-detail';
+                if (options.fullWidth) {
+                    detail.classList.add('capture-detail-full');
+                }
+                const labelEl = document.createElement('div');
+                labelEl.className = 'capture-detail-label';
+                labelEl.textContent = label;
+                const valueEl = options.preformatted ? document.createElement('pre') : document.createElement('div');
+                valueEl.className = 'capture-detail-value';
+                valueEl.textContent = String(value);
+                detail.appendChild(labelEl);
+                detail.appendChild(valueEl);
+                captureDetailsGrid.appendChild(detail);
+            };
+
+            // Format timestamps to human-readable format
+            const formatTimestamp = (isoString) => {
+                if (!isoString) return '';
+                try {
+                    const date = new Date(isoString);
+                    return date.toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+                } catch (e) {
+                    return isoString;
+                }
+            };
+
+            // Show only requested fields
+            addDetail('Device ID', capture.device_id);
+            addDetail('Device Name', capture.device_name);
+            addDetail('Captured At', formatTimestamp(capture.captured_at));
+            addDetail('Ingested At', formatTimestamp(capture.ingested_at));
+            addDetail('State', capture.state ? capture.state.toUpperCase() : undefined);
+            if (typeof capture.score === 'number') {
+                addDetail('Score', capture.score.toFixed(3));
+            }
+            addDetail('Trigger', capture.trigger_label);
+            if (capture.reason) {
+                addDetail('Reason', capture.reason, { fullWidth: true });
+            }
+        }
+
+        function formatMetadata(metadata) {
+            if (!metadata || (typeof metadata === 'object' && Object.keys(metadata).length === 0)) {
+                return '';
+            }
+            if (typeof metadata === 'string') {
+                return metadata;
+            }
+            try {
+                return JSON.stringify(metadata, null, 2);
+            } catch (error) {
+                return String(metadata);
+            }
+        }
+
+        function buildAgentSummary(agentDetails) {
+            if (!agentDetails || typeof agentDetails !== 'object') {
+                return '';
+            }
+            const lines = [];
+            for (const [name, details] of Object.entries(agentDetails)) {
+                if (!details) {
+                    continue;
+                }
+                const label = name.replace(/^./, (char) => char.toUpperCase());
+                const state = details.state || 'unknown';
+                const score = typeof details.score === 'number' ? ` (${details.score.toFixed(2)})` : '';
+                const reason = details.reason ? ` — ${details.reason}` : '';
+                lines.push(`${label}: ${state}${score}${reason}`);
+            }
+            return lines.join('\n');
+        }
+
+        function updateCaptureMeta(capture, definitionPayload) {
+            if (!definitionMeta) {
+                return;
+            }
+            const metaPieces = [];
+            if (capture && capture.captured_at) {
+                const captureTime = new Date(capture.captured_at);
+                if (!Number.isNaN(captureTime.getTime())) {
+                    metaPieces.push(`Capture: ${captureTime.toLocaleString()}`);
+                } else {
+                    metaPieces.push(`Capture: ${capture.captured_at}`);
+                }
+            }
+            if (capture && capture.ingested_at) {
+                const ingestTime = new Date(capture.ingested_at);
+                if (!Number.isNaN(ingestTime.getTime())) {
+                    metaPieces.push(`Cloud ingest: ${ingestTime.toLocaleString()}`);
+                } else {
+                    metaPieces.push(`Cloud ingest: ${capture.ingested_at}`);
+                }
+            }
+            if (definitionPayload && definitionPayload.updated_at) {
+                const updatedTime = new Date(definitionPayload.updated_at);
+                if (!Number.isNaN(updatedTime.getTime())) {
+                    metaPieces.push(`Definition updated: ${updatedTime.toLocaleString()}`);
+                } else {
+                    metaPieces.push(`Definition updated: ${definitionPayload.updated_at}`);
+                }
+            }
+            if (definitionPayload && definitionPayload.file) {
+                metaPieces.push(`File: ${definitionPayload.file}`);
+            }
+            definitionMeta.textContent = metaPieces.join(' | ');
+        }
+
+        async function loadNormalDefinition(capture) {
+            if (!definitionText || !definitionSection) {
+                return '';
+            }
+            definitionSection.style.display = 'block';
+            if (!capture || !capture.normal_description_file) {
+                definitionText.textContent = 'No normal definition stored for this capture.';
+                updateCaptureMeta(capture, null);
+                return '';
+            }
+            try {
+                const response = await fetch(`/ui/normal-definitions/${encodeURIComponent(capture.normal_description_file)}`);
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const detail = payload && payload.detail ? payload.detail : 'Failed to load definition.';
+                    throw new Error(detail);
+                }
+                definitionText.textContent = payload.description || '(No definition recorded.)';
+                updateCaptureMeta(capture, payload);
+                return '';
+            } catch (error) {
+                definitionText.textContent = '';
+                updateCaptureMeta(capture, null);
+                return error.message;
+            }
+        }
+
+        if (definitionClose) {
+            definitionClose.addEventListener('click', () => closeDefinitionViewer());
+        }
+        if (definitionOverlay) {
+            definitionOverlay.addEventListener('click', (event) => {
+                if (event.target === definitionOverlay) {
+                    closeDefinitionViewer();
+                }
+            });
+        }
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && definitionOverlay && definitionOverlay.classList.contains('active')) {
+                closeDefinitionViewer();
+            }
+        });
+
+        async function loadState() {
+            try {
+                const response = await fetch('/ui/state');
+                if (!response.ok) throw new Error('Failed to load state');
+                const data = await response.json();
+                if (!isEditingDescription) {
+                    normalText.value = data.normal_description || '';
+                }
+                applyTriggerState(data.trigger);
+                if (notifyForm) {
+                    applyNotificationState(data.notifications || {}, { clearStatus: false });
+                }
+                const status = data.device_status || {};
+                const connected = Boolean(status.connected);
+                const ip = status.ip || 'n/a';
+                const lastSeen = status.last_seen ? new Date(status.last_seen) : null;
+                const lastSeenText = lastSeen && !Number.isNaN(lastSeen.valueOf()) ? lastSeen.toLocaleTimeString() : 'never';
+                const statusLabel = connected ? 'Connected' : 'Offline';
+                const dotClass = connected ? 'status-dot online' : 'status-dot offline';
+
+                // Version display with mismatch warning
+                const cloudVersion = data.version?.cloud || 'unknown';
+                const deviceVersion = data.version?.device || 'unknown';
+                const versionMismatch = cloudVersion !== 'unknown' && deviceVersion !== 'unknown' && cloudVersion !== deviceVersion;
+                const versionWarning = versionMismatch ? '⚠️ ' : '';
+                const versionStyle = versionMismatch ? 'color: #f59e0b;' : ''; // Orange for mismatch
+                const deviceVersionText = `${versionWarning}${data.device_id} (v${deviceVersion})`;
+
+                liveIndicator.innerHTML = `<span class="${dotClass}"></span>${statusLabel} | Cloud v${cloudVersion} | Device: <span style="${versionStyle}">${deviceVersionText}</span> | IP: ${ip} | Classifier: ${data.classifier} | Last seen ${lastSeenText} | UI synced ${(new Date()).toLocaleTimeString()}`;
+            } catch (error) {
+                normalStatus.textContent = error.message;
+            }
+        }
+
+        function formatStateLabel(value) {
+            if (!value) return '';
+            return value.charAt(0).toUpperCase() + value.slice(1);
+        }
+
+        function formatFilterDate(value) {
+            if (!value) return '';
+            const parsed = new Date(value);
+            if (Number.isNaN(parsed.getTime())) {
+                return value;
+            }
+            return parsed.toLocaleString();
+        }
+
+        function buildCaptureQuery() {
+            const params = new URLSearchParams();
+            const selectedStates = captureFilterStateInputs.filter((checkbox) => checkbox.checked).map((checkbox) => checkbox.value);
+            const allStatesSelected = selectedStates.length === captureFilterStateInputs.length;
+            let limitValue = Number.parseInt(captureLimitInput?.value || '', 10);
+            if (!Number.isFinite(limitValue)) {
+                limitValue = CAPTURE_LIMIT_DEFAULT;
+            }
+            limitValue = Math.max(0, Math.min(limitValue, CAPTURE_LIMIT_MAX));
+            if (captureLimitInput) {
+                captureLimitInput.value = String(limitValue);
+            }
+            const fromRaw = (captureFromInput?.value || '').trim();
+            const toRaw = (captureToInput?.value || '').trim();
+
+            let fromValue = '';
+            let toValue = '';
+            let skipFetch = false;
+            let skipReason = '';
+
+            if (fromRaw) {
+                const parsedFrom = new Date(fromRaw);
+                if (Number.isNaN(parsedFrom.valueOf())) {
+                    skipFetch = true;
+                    skipReason = invalidDateMessage;
+                } else {
+                    fromValue = parsedFrom.toISOString();
+                }
+            }
+
+            if (toRaw) {
+                const parsedTo = new Date(toRaw);
+                if (Number.isNaN(parsedTo.valueOf())) {
+                    skipFetch = true;
+                    skipReason = invalidDateMessage;
+                } else {
+                    toValue = parsedTo.toISOString();
+                }
+            }
+
+            const filters = {
+                params,
+                selectedStates,
+                allStatesSelected,
+                fromValue,
+                toValue,
+                fromDisplay: fromRaw,
+                toDisplay: toRaw,
+                limitValue,
+                skipFetch,
+                skipReason,
+                hasActiveFilter: !allStatesSelected || Boolean(fromValue || toValue),
+            };
+
+            if (filters.skipFetch) {
+                return filters;
+            }
+
+            if (!selectedStates.length) {
+                filters.skipFetch = true;
+                filters.skipReason = noStateSelectionMessage;
+                return filters;
+            }
+
+            if (limitValue === 0) {
+                filters.skipFetch = true;
+                filters.skipReason = zeroLimitMessage;
+                return filters;
+            }
+
+            if (!allStatesSelected) {
+                for (const state of selectedStates) {
+                    params.append('state', state);
+                }
+            }
+            if (fromValue) {
+                params.set('from', fromValue);
+            }
+            if (toValue) {
+                params.set('to', toValue);
+            }
+            params.set('limit', String(limitValue));
+            return filters;
+        }
+
+        function buildFilterSummary(filters) {
+            const parts = [];
+            parts.push(filters.allStatesSelected ? 'States: all' : `States: ${filters.selectedStates.map(formatStateLabel).join(', ')}`);
+            if (filters.fromValue) {
+                const displayFrom = filters.fromDisplay || filters.fromValue;
+                parts.push(`From ${formatFilterDate(displayFrom)}`);
+            }
+            if (filters.toValue) {
+                const displayTo = filters.toDisplay || filters.toValue;
+                parts.push(`To ${formatFilterDate(displayTo)}`);
+            }
+            if (filters.limitValue && filters.limitValue !== CAPTURE_LIMIT_DEFAULT) {
+                parts.push(`Limit ${filters.limitValue}`);
+            }
+            return parts.length ? parts.join(' | ') : 'Showing latest captures';
+        }
+
+        async function loadCaptures() {
+            const filters = buildCaptureQuery();
+            if (filters.skipFetch) {
+                captureContainer.innerHTML = '';
+                emptyCaptures.textContent = filters.skipReason;
+                emptyCaptures.style.display = 'block';
+                if (captureFilterStatus) {
+                    captureFilterStatus.textContent = filters.skipReason;
+                }
+                return;
+            }
+
+            const query = filters.params.toString();
+            const url = query ? `/ui/captures?${query}` : '/ui/captures';
+            if (captureFilterStatus) {
+                captureFilterStatus.textContent = 'Loading captures...';
+            }
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to load captures');
+                const items = await response.json();
+                captureContainer.innerHTML = '';
+                if (!items.length) {
+                    emptyCaptures.textContent = filters.hasActiveFilter ? filteredEmptyCapturesMessage : defaultEmptyCapturesMessage;
+                    emptyCaptures.style.display = 'block';
+                    if (captureFilterStatus) {
+                        captureFilterStatus.textContent = buildFilterSummary(filters);
+                    }
+                    return;
+                }
+                emptyCaptures.style.display = 'none';
+                emptyCaptures.textContent = defaultEmptyCapturesMessage;
+                if (captureFilterStatus) {
+                    captureFilterStatus.textContent = buildFilterSummary(filters);
+                }
+
+                for (const item of items) {
+                    const card = document.createElement('article');
+                    card.className = 'capture-card';
+                    const img = document.createElement('img');
+                    img.alt = `Capture ${item.record_id}`;
+                    // Use thumbnail for gallery display, fallback to full image if thumbnail unavailable
+                    const displayUrl = item.thumbnail_url || item.image_url;
+                    if (displayUrl) {
+                        const cacheSeparator = displayUrl.includes('?') ? '&' : '?';
+                        img.src = `${displayUrl}${cacheSeparator}_=${Date.now()}`;
+                    } else {
+                        img.alt = `Capture ${item.record_id} (image unavailable)`;
+                        img.classList.add('muted');
+                    }
+                    card.appendChild(img);
+                    const body = document.createElement('div');
+                    body.className = 'capture-body';
+                    const badgeContainer = document.createElement('div');
+                    badgeContainer.style.display = 'flex';
+                    badgeContainer.style.alignItems = 'center';
+                    badgeContainer.style.justifyContent = 'space-between';
+                    const badge = document.createElement('span');
+                    badge.className = `badge ${item.state}`;
+                    badge.textContent = item.state.toUpperCase();
+                    const actionsContainer = document.createElement('div');
+                    actionsContainer.className = 'capture-actions';
+                    badgeContainer.appendChild(badge);
+                    badgeContainer.appendChild(actionsContainer);
+                    const detailsButton = document.createElement('button');
+                    detailsButton.type = 'button';
+                    detailsButton.className = 'icon-control icon-button';
+                    detailsButton.title = 'View capture details';
+                    detailsButton.innerHTML = (
+                        '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+                        '<path d="M6 3h6l4 4v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />' +
+                        '<polyline points="12 3 12 7 16 7" />' +
+                        '<line x1="7" y1="10" x2="13" y2="10" />' +
+                        '<line x1="7" y1="13" x2="13" y2="13" />' +
+                        '<line x1="7" y1="16" x2="11" y2="16" />' +
+                        '</svg>'
+                    );
+                    detailsButton.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        showCaptureDetails(item.record_id, item);
+                    });
+                    actionsContainer.appendChild(detailsButton);
+                    if (item.download_url) {
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = item.download_url;
+                        downloadLink.setAttribute('download', '');
+                        downloadLink.title = 'Download image';
+                        downloadLink.className = 'icon-control icon-link';
+                        downloadLink.innerHTML = (
+                            '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+                            '<path d="M16 12v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3" />' +
+                            '<polyline points="6 9 10 13 14 9" />' +
+                            '<line x1="10" y1="3" x2="10" y2="13" />' +
+                            '</svg>'
+                        );
+                        actionsContainer.appendChild(downloadLink);
+                    }
+                    body.appendChild(badgeContainer);
+                    if (item.reason) {
+                        const reason = document.createElement('div');
+                        reason.textContent = item.reason;
+                        body.appendChild(reason);
+                    }
+                    const meta = document.createElement('div');
+                    meta.className = 'muted';
+                    const formatDate = (value) => {
+                        if (!value) {
+                            return null;
+                        }
+                        const dt = new Date(value);
+                        if (Number.isNaN(dt.getTime())) {
+                            return value;
+                        }
+                        return dt.toLocaleString();
+                    };
+                    const capturedDisplay = formatDate(item.captured_at) || 'unknown time';
+                    const ingestDisplay = formatDate(item.ingested_at);
+                    meta.textContent = capturedDisplay;
+                    if (ingestDisplay) {
+                        meta.title = `Device capture: ${capturedDisplay}\nCloud ingest: ${ingestDisplay}`;
+                    } else {
+                        meta.title = `Device capture: ${capturedDisplay}`;
+                    }
+                    body.appendChild(meta);
+                    card.appendChild(body);
+                    captureContainer.appendChild(card);
+                }
+            } catch (error) {
+                if (captureFilterStatus) {
+                    captureFilterStatus.textContent = error.message;
+                } else if (triggerStatus) {
+                    triggerStatus.textContent = error.message;
+                }
+            }
+        }
+
+        normalText.addEventListener('focusin', () => {
+            isEditingDescription = true;
+        });
+        normalText.addEventListener('focusout', () => {
+            isEditingDescription = false;
+        });
+
+        normalForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const description = normalText.value.trim();
+            normalStatus.textContent = 'Saving...';
+            try {
+                const response = await fetch('/ui/normal-description', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ description })
+                });
+                if (!response.ok) throw new Error('Failed to save description');
+                normalStatus.textContent = 'Description updated.';
+                setTimeout(loadState, 800);
+            } catch (error) {
+                normalStatus.textContent = error.message;
+            } finally {
+                isEditingDescription = false;
+            }
+        });
+
+        triggerForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (suppressNextSubmit) {
+                suppressNextSubmit = false;
+                return;
+            }
+            await updateTriggerConfig(buildTriggerPayload());
+        });
+
+        triggerEnabled.addEventListener('change', () => {
+            suppressNextSubmit = true;
+            updateTriggerConfig(buildTriggerPayload());
+        });
+
+        if (notifyForm) {
+            if (emailEnabled) {
+                emailEnabled.addEventListener('change', markNotificationDirty);
+            }
+            if (emailAddresses) {
+                emailAddresses.addEventListener('input', markNotificationDirty);
+            }
+            if (emailCooldown) {
+                emailCooldown.addEventListener('input', markNotificationDirty);
+            }
+        }
+
+        if (notifySubmit) {
+            notifySubmit.addEventListener('click', async () => {
+                const enabled = emailEnabled ? emailEnabled.checked : false;
+                const recipients = emailAddresses ? parseEmailList(emailAddresses.value) : [];
+                if (notifyStatus) {
+                    notifyStatus.textContent = 'Saving...';
+                }
+                if (enabled && recipients.length === 0) {
+                    if (notifyStatus) {
+                        notifyStatus.textContent = 'Add at least one email address.';
+                    }
+                    return;
+                }
+                try {
+                    const response = await fetch('/ui/notifications', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email_enabled: enabled,
+                            email_recipients: recipients,
+                            email_cooldown_minutes: Math.max(0, Number(emailCooldown ? emailCooldown.value : 10) || 10),
+                        }),
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        const detail = payload && payload.detail ? payload.detail : 'Failed to update notification actions';
+                        throw new Error(detail);
+                    }
+                    if (payload && payload.notifications) {
+                        applyNotificationState(payload.notifications, { clearStatus: false });
+                    } else {
+                        applyNotificationState({}, { clearStatus: false });
+                    }
+                    if (notifyStatus) {
+                        notifyStatus.textContent = 'Notification actions updated.';
+                    }
+                } catch (error) {
+                    if (notifyStatus) {
+                        notifyStatus.textContent = error.message;
+                    }
+                }
+            });
+        }
+
+
+        if (captureFilterForm) {
+            captureFilterForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                loadCaptures();
+                persistPreferences();
+            });
+        }
+
+        captureFilterStateInputs.forEach((checkbox) => {
+            checkbox.addEventListener('change', () => {
+                loadCaptures();
+                persistPreferences();
+            });
+        });
+
+        if (captureFromInput) {
+            captureFromInput.addEventListener('change', () => {
+                loadCaptures();
+                persistPreferences();
+            });
+        }
+        if (captureToInput) {
+            captureToInput.addEventListener('change', () => {
+                loadCaptures();
+                persistPreferences();
+            });
+        }
+        if (captureLimitInput) {
+            captureLimitInput.addEventListener('change', () => {
+                loadCaptures();
+                persistPreferences();
+            });
+        }
+        if (clearCaptureFiltersButton) {
+            clearCaptureFiltersButton.addEventListener('click', () => {
+                captureFilterStateInputs.forEach((checkbox) => {
+                    checkbox.checked = true;
+                });
+                if (captureFromInput) captureFromInput.value = '';
+                if (captureToInput) captureToInput.value = '';
+                if (captureLimitInput) captureLimitInput.value = String(CAPTURE_LIMIT_DEFAULT);
+                loadCaptures();
+                persistPreferences();
+            });
+        }
+
+        refreshButton.addEventListener('click', loadCaptures);
+        autoRefreshToggle.addEventListener('change', () => {
+            if (autoRefreshToggle.checked) {
+                loadCaptures();
+                loadState();
+            } else if (captureRefreshTimer) {
+                clearTimeout(captureRefreshTimer);
+                captureRefreshTimer = null;
+            }
+            scheduleStateRefresh();
+            scheduleCaptureRefresh();
+            persistPreferences();
+        });
+
+        // Use global auth instance from auth.js (already initialized)
+        // auth variable is available globally
+
+        // Load cloud version from new multi-tenant API
+        async function loadCloudVersion() {
+            try {
+                const response = await fetch('/v1/version/cloud');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('cloudVersion').textContent = `Cloud v${data.version}`;
+                }
+            } catch (error) {
+                console.error('Error loading cloud version:', error);
+            }
+        }
+
+        (async () => {
+            await loadPreferences();
+            loadUserInfo();
+            loadCloudVersion();
+            loadState();
+            loadCaptures();
+            scheduleStateRefresh();
+            scheduleCaptureRefresh();
+            // Always ensure WebSocket connection for real-time updates
+            ensureCaptureStream('all');
+        })();
     </script>
 </body>
+</html>
+
+        // === End Modal Functions ===
+
+    </script>
+</body>
+        // Modal DOM elements
+        const definitionOverlay = document.getElementById('definition-overlay');
+        const definitionTitle = document.getElementById('definition-title');
+        const definitionText = document.getElementById('definition-text');
+        const definitionMeta = document.getElementById('definition-meta');
+        const definitionStatus = document.getElementById('definition-status');
+        const definitionClose = document.getElementById('definition-close');
+        const captureDetailsGrid = document.getElementById('capture-details');
+        const definitionSection = document.getElementById('definition-section');
+
 </html>
