@@ -46,8 +46,8 @@
     },
     "similarity": {
       "enabled": true,
-      "threshold": 5,
-      "expiry_minutes": 15.0,
+      "threshold": 3,
+      "expiry_minutes": 3.0,
       "cache_path": "/mnt/data/config/similarity_cache.json"
     },
     "streak_pruning": {
