@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -533,6 +533,7 @@ def get_storage_stats(
 
 @router.get("/similarity/stats", response_model=SimilarityStats)
 def get_similarity_stats(
+    request: Request,
     admin: User = Depends(get_admin_user)
 ):
     """
@@ -541,14 +542,10 @@ def get_similarity_stats(
     Shows cache hit/miss rates, estimated cost savings, and performance metrics.
     Admin-only endpoint.
     """
-    from cloud.api.server import _current_app
+    # Get InferenceService from app state via request context
+    service = getattr(request.app.state, 'service', None)
 
-    # Get InferenceService from app state
-    service = None
-    if _current_app is not None:
-        service = getattr(_current_app.state, 'service', None)
-
-    if service is None or not service.similarity_enabled:
+    if service is None or not hasattr(service, 'similarity_enabled') or not service.similarity_enabled:
         # Similarity feature disabled or service not available
         return SimilarityStats(
             enabled=False,
