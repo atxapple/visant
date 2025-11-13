@@ -1570,14 +1570,15 @@
             const definition = document.getElementById('alertDefinition').value.trim();
 
             try {
-                const response = await fetch(`/v1/devices/${deviceId}/config`, {
-                    method: 'PUT',
+                const response = await fetch('/ui/normal-description', {
+                    method: 'POST',
                     headers: {
                         ...auth.getAuthHeaders(),
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        normal_description: definition
+                        device_id: deviceId,
+                        description: definition
                     })
                 });
 
