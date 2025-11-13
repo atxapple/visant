@@ -18,7 +18,7 @@ from ..ai import Classifier
 from ..ai.types import Classification
 from ..datalake.storage import FileSystemDatalake, CaptureRecord
 from .capture_index import RecentCaptureIndex
-from .email_service import AbnormalCaptureNotifier
+from .email_service import CaptureAlertNotifier
 from .similarity_cache import CachedEvaluation, SimilarityCache
 from .timing_debug import CaptureTimings
 
@@ -45,7 +45,7 @@ class InferenceService:
     classifier: Classifier
     datalake: FileSystemDatalake
     capture_index: RecentCaptureIndex | None = None
-    notifier: AbnormalCaptureNotifier | None = None
+    notifier: CaptureAlertNotifier | None = None
     normal_description_file: str | None = None
     alert_cooldown_minutes: float = 0.0
     dedupe_enabled: bool = False

@@ -19,7 +19,7 @@ from .schemas import (
     InferenceResponse,
     TriggerConfigModel,
 )
-from .email_service import AbnormalCaptureNotifier
+from .email_service import CaptureAlertNotifier
 from .service import InferenceService
 from .capture_index import RecentCaptureIndex
 from .notification_settings import NotificationSettings
@@ -180,7 +180,7 @@ def create_app(
     normal_description: str = "",
     normal_description_path: Path | None = None,
     device_id: str = "ui-device",
-    abnormal_notifier: AbnormalCaptureNotifier | None = None,
+    abnormal_notifier: CaptureAlertNotifier | None = None,
     notification_settings: NotificationSettings | None = None,
     notification_config_path: Path | None = None,
     email_base_config: dict[str, str | None] | None = None,
