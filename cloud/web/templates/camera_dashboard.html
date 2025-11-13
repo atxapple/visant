@@ -794,6 +794,109 @@
         .toast-close:hover {
             color: #4b5563;
         }
+
+        /* Modal styles */
+        .definition-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.55);
+            z-index: 1000;
+        }
+        .definition-overlay.active {
+            display: flex;
+        }
+        .definition-panel {
+            width: min(700px, 90%);
+            max-height: 80vh;
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 25px 60px rgba(15, 23, 42, 0.18);
+            display: flex;
+            flex-direction: column;
+        }
+        .capture-details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .capture-detail {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 0.65rem 0.75rem;
+        }
+        .capture-detail-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+        }
+        .capture-detail-value {
+            font-weight: 600;
+            color: #0f172a;
+            word-break: break-word;
+        }
+        .capture-detail-full {
+            grid-column: 1 / -1;
+        }
+        .capture-detail pre {
+            margin: 0;
+            font-size: 0.82rem;
+            background: transparent;
+            padding: 0;
+            color: #0f172a;
+            white-space: pre-wrap;
+        }
+        .definition-section {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 0.75rem;
+        }
+        .definition-subtitle {
+            margin: 0 0 0.4rem 0;
+            font-size: 0.95rem;
+            color: #475467;
+        }
+        .definition-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem 0.75rem;
+        }
+        .definition-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        .definition-status {
+            min-height: 1.5rem;
+            padding: 0 1.5rem;
+            font-size: 0.9rem;
+            color: #dc2626;
+        }
+        .definition-body {
+            flex: 1 1 auto;
+            padding: 0 1.5rem 1.5rem;
+            overflow: auto;
+        }
+        .definition-body pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #1f2933;
+        }
+        .definition-meta {
+            padding: 0.75rem 1.5rem 1.5rem;
+            font-size: 0.85rem;
+            color: #475467;
+            border-top: 1px solid #e5e7eb;
+        }
     </style>
 </head>
 <body>
@@ -1007,6 +1110,26 @@
                 <p>No captures yet. Trigger your first capture to get started.</p>
             </div>
         </div>
+
+    <!-- Capture Details Modal -->
+    <div id="definition-overlay" class="definition-overlay" role="dialog" aria-hidden="true">
+        <div class="definition-panel">
+            <div class="definition-header">
+                <h3 id="definition-title">Capture Details</h3>
+                <button id="definition-close" class="icon-button" aria-label="Close">✕</button>
+            </div>
+            <div id="definition-status" class="definition-status"></div>
+            <div class="definition-body">
+                <div id="capture-details" class="capture-details-grid"></div>
+                <div id="definition-section" class="definition-section">
+                    <h4 class="definition-subtitle">Normal Definition</h4>
+                    <pre id="definition-text"></pre>
+                </div>
+            </div>
+            <div id="definition-meta" class="definition-meta"></div>
+        </div>
+    </div>
+
     </main>
 
     <!-- Toast Container -->
@@ -1785,9 +1908,235 @@
 
         // View capture details
         function viewCapture(captureId) {
-            // Open in new tab for now (modal will be added later)
-            window.open(`/ui/captures/${captureId}`, '_blank');
+            showCaptureDetails(captureId);
         }
+
+        // Modal functions
+        function closeDefinitionViewer() {
+            if (!definitionOverlay) {
+                return;
+            }
+            definitionOverlay.classList.remove('active');
+            definitionOverlay.setAttribute('aria-hidden', 'true');
+            if (definitionStatus) {
+                definitionStatus.textContent = '';
+            }
+            if (definitionMeta) {
+                definitionMeta.textContent = '';
+            }
+            if (definitionText) {
+                definitionText.textContent = '';
+            }
+            if (captureDetailsGrid) {
+                captureDetailsGrid.innerHTML = '';
+            }
+            if (definitionSection) {
+                definitionSection.style.display = 'block';
+            }
+        }
+
+        async function showCaptureDetails(recordId, fallbackCapture) {
+            if (!definitionOverlay) {
+                return;
+            }
+            definitionOverlay.classList.add('active');
+            definitionOverlay.setAttribute('aria-hidden', 'false');
+            if (definitionTitle) {
+                definitionTitle.textContent = recordId ? `Capture Details (${recordId})` : 'Capture Details';
+            }
+            if (definitionText) {
+                definitionText.textContent = '';
+            }
+            if (definitionMeta) {
+                definitionMeta.textContent = '';
+            }
+            if (captureDetailsGrid) {
+                captureDetailsGrid.innerHTML = '';
+            }
+            if (definitionSection) {
+                definitionSection.style.display = 'none';  // Hide normal definition section, show only capture details
+            }
+            if (definitionStatus) {
+                definitionStatus.textContent = 'Loading capture details...';
+            }
+
+            let capturePayload = fallbackCapture ? { ...fallbackCapture } : null;
+            let captureFetchError = '';
+            try {
+                const response = await fetch(`/ui/captures/${encodeURIComponent(recordId)}`);
+                if (!response.ok) {
+                    throw new Error('Failed to load capture details');
+                }
+                capturePayload = await response.json();
+            } catch (error) {
+                captureFetchError = error.message;
+            }
+
+            if (!capturePayload) {
+                if (definitionStatus) {
+                    definitionStatus.textContent = captureFetchError || 'Unable to load capture details.';
+                }
+                return;
+            }
+
+            renderCaptureDetails(capturePayload);
+
+            const statusMessages = [];
+            if (captureFetchError) {
+                statusMessages.push(`Showing cached data. ${captureFetchError}`);
+            }
+
+            const definitionError = await loadNormalDefinition(capturePayload);
+            if (definitionError) {
+                statusMessages.push(definitionError);
+            }
+
+            if (definitionStatus) {
+                definitionStatus.textContent = statusMessages.join(' ');
+            }
+
+            if (definitionClose) {
+                definitionClose.focus();
+            }
+        }
+
+        function renderCaptureDetails(capture) {
+            if (!captureDetailsGrid) {
+                return;
+            }
+            captureDetailsGrid.innerHTML = '';
+            const addDetail = (label, value, options = {}) => {
+                if (value === undefined || value === null || value === '') {
+                    return;
+                }
+                const detail = document.createElement('div');
+                detail.className = 'capture-detail';
+                if (options.fullWidth) {
+                    detail.classList.add('capture-detail-full');
+                }
+                const labelEl = document.createElement('div');
+                labelEl.className = 'capture-detail-label';
+                labelEl.textContent = label;
+                const valueEl = options.preformatted ? document.createElement('pre') : document.createElement('div');
+                valueEl.className = 'capture-detail-value';
+                valueEl.textContent = String(value);
+                detail.appendChild(labelEl);
+                detail.appendChild(valueEl);
+                captureDetailsGrid.appendChild(detail);
+            };
+
+            // Format timestamps to human-readable format
+            const formatTimestamp = (isoString) => {
+                if (!isoString) return '';
+                try {
+                    const date = new Date(isoString);
+                    return date.toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+                } catch (e) {
+                    return isoString;
+                }
+            };
+
+            // Show only requested fields
+            addDetail('Device ID', capture.device_id);
+            addDetail('Device Name', capture.device_name);
+            addDetail('Captured At', formatTimestamp(capture.captured_at));
+            addDetail('Ingested At', formatTimestamp(capture.ingested_at));
+            addDetail('State', capture.state ? capture.state.toUpperCase() : undefined);
+            if (typeof capture.score === 'number') {
+                addDetail('Score', capture.score.toFixed(3));
+            }
+            addDetail('Trigger', capture.trigger_label);
+            if (capture.reason) {
+                addDetail('Reason', capture.reason, { fullWidth: true });
+            }
+        }
+
+        async function loadNormalDefinition(capture) {
+            if (!definitionText || !definitionSection) {
+                return '';
+            }
+            definitionSection.style.display = 'block';
+            if (!capture || !capture.normal_description_file) {
+                definitionText.textContent = 'No normal definition stored for this capture.';
+                updateCaptureMeta(capture, null);
+                return '';
+            }
+            try {
+                const response = await fetch(`/ui/normal-definitions/${encodeURIComponent(capture.normal_description_file)}`);
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const detail = payload && payload.detail ? payload.detail : 'Failed to load definition.';
+                    throw new Error(detail);
+                }
+                definitionText.textContent = payload.description || '(No definition recorded.)';
+                updateCaptureMeta(capture, payload);
+                return '';
+            } catch (error) {
+                definitionText.textContent = '';
+                updateCaptureMeta(capture, null);
+                return error.message;
+            }
+        }
+
+        function updateCaptureMeta(capture, definitionPayload) {
+            if (!definitionMeta) {
+                return;
+            }
+            const metaPieces = [];
+            if (capture && capture.captured_at) {
+                const captureTime = new Date(capture.captured_at);
+                if (!Number.isNaN(captureTime.getTime())) {
+                    metaPieces.push(`Capture: ${captureTime.toLocaleString()}`);
+                } else {
+                    metaPieces.push(`Capture: ${capture.captured_at}`);
+                }
+            }
+            if (capture && capture.ingested_at) {
+                const ingestTime = new Date(capture.ingested_at);
+                if (!Number.isNaN(ingestTime.getTime())) {
+                    metaPieces.push(`Cloud ingest: ${ingestTime.toLocaleString()}`);
+                } else {
+                    metaPieces.push(`Cloud ingest: ${capture.ingested_at}`);
+                }
+            }
+            if (definitionPayload && definitionPayload.updated_at) {
+                const updatedTime = new Date(definitionPayload.updated_at);
+                if (!Number.isNaN(updatedTime.getTime())) {
+                    metaPieces.push(`Definition updated: ${updatedTime.toLocaleString()}`);
+                } else {
+                    metaPieces.push(`Definition updated: ${definitionPayload.updated_at}`);
+                }
+            }
+            if (definitionPayload && definitionPayload.file) {
+                metaPieces.push(`File: ${definitionPayload.file}`);
+            }
+            definitionMeta.textContent = metaPieces.join(' | ');
+        }
+
+        // Modal event listeners
+        if (definitionClose) {
+            definitionClose.addEventListener('click', () => closeDefinitionViewer());
+        }
+        if (definitionOverlay) {
+            definitionOverlay.addEventListener('click', (event) => {
+                if (event.target === definitionOverlay) {
+                    closeDefinitionViewer();
+                }
+            });
+        }
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && definitionOverlay && definitionOverlay.classList.contains('active')) {
+                closeDefinitionViewer();
+            }
+        });
 
         // Load version information
         async function loadVersionInfo() {
