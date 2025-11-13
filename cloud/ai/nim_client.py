@@ -94,7 +94,7 @@ class NIMImageClassifier(Classifier):
             f"{description}\n\n"
             "Label the supplied image as one of: normal, alert, or uncertain.\n"
             "Return a JSON object with fields 'state' (lowercase label), 'confidence' "
-            "(float 0..1), and 'reason' (short explanation or null)."
+            "(float 0..1), and 'reason' (short explanation for your classification decision)."
         )
 
     def _extract_message_content(self, data: dict[str, Any]) -> str:

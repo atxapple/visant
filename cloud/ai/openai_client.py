@@ -94,7 +94,7 @@ class OpenAIImageClassifier(Classifier):
             f"{description}\n\n"
             "Label the supplied image as one of: Normal, Alert, or Uncertain.\n"
             "Return a JSON object with fields 'state' (lowercase label), 'confidence' (float between 0 and 1), "
-            "and 'reason' (short explanation for alert results; use null for other states)."
+            "and 'reason' (short explanation for your classification decision)."
         )
 
     def _extract_message_content(self, data: dict[str, Any]) -> str:

@@ -81,8 +81,14 @@ class ConsensusClassifier(Classifier):
                 # Equal confidence: prefer Agent1 (primary)
                 reason_text = primary.reason
         else:
-            # Normal state: don't show reason
-            reason_text = None
+            # Normal state: show highest confidence agent's reason
+            if primary.score > secondary.score:
+                reason_text = primary.reason
+            elif secondary.score > primary.score:
+                reason_text = secondary.reason
+            else:
+                # Equal confidence: prefer Agent1 (primary)
+                reason_text = primary.reason
 
         # Prepare agent details for storage
         agent_details = {
