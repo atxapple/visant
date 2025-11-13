@@ -146,16 +146,30 @@ Core features that significantly improve user experience.
 
 These require UI development in addition to backend work.
 
+#### Completed: Public Sharing System _(formerly Phase 4 #13)_
+**Status**: ✅ Shipped (routers + UI live in production)  
+**Impact**: MEDIUM (drives viral growth + easy sharing)
+
+Key outcomes:
+- Added `shares.py` and `public.py` routers to the main FastAPI app and navigation.
+- Validated share creation, QR codes, and anonymous `/s/{token}` galleries.
+- Share management tab now available alongside Devices/Settings.
+
+No further engineering work scheduled unless analytics or rate limiting becomes necessary.
+
+---
+
+
 #### 3. Notification Configuration UI
-**Status**: Backend exists, missing UI
+**Status**: Global UI shipped (per-device + testing tools pending)
 **Complexity**: MEDIUM
 **Impact**: HIGH (user requested feature)
 
 **Tasks**:
-- [ ] Create notification settings page/modal
-- [ ] Email recipient management (add/remove)
+- [x] Create notification settings page/modal
+- [x] Email recipient management (add/remove)
 - [ ] Per-device notification config
-- [ ] Alert cooldown settings UI
+- [x] Alert cooldown settings UI
 - [ ] Test SendGrid integration
 - [ ] Add email preview/test function
 
@@ -166,7 +180,6 @@ These require UI development in addition to backend work.
 
 **Expected Time**: 12-16 hours
 
----
 
 #### 4. Normal Description Management UI
 **Status**: Backend partially exists
@@ -216,17 +229,18 @@ These require UI development in addition to backend work.
 
 ---
 
+
 #### 6. Device Presence Tracking UI
-**Status**: Backend partial (last_heartbeat exists)
+**Status**: Live status banner implemented (heartbeat config TBD)
 **Complexity**: LOW
 **Impact**: MEDIUM
 
 **Tasks**:
-- [ ] Display last seen timestamp on device cards
-- [ ] Show online/offline status indicators
-- [ ] Last IP address display
+- [x] Display last seen timestamp on device cards
+- [x] Show online/offline status indicators
+- [x] Last IP address display
 - [ ] Heartbeat interval configuration
-- [ ] Device version display
+- [x] Device version display
 
 **Files to Modify**:
 - `cloud/web/templates/devices.html`: Add status indicators
@@ -282,15 +296,15 @@ Nice-to-have features that improve operations and debugging.
 ---
 
 #### 9. UI Preferences Management
-**Status**: Code exists, partially functional
+**Status**: Filters + persistence live; presets still pending
 **Complexity**: LOW
 **Impact**: LOW
 
 **Tasks**:
-- [ ] Capture state filters (normal/abnormal/error)
-- [ ] Capture limit per page
+- [x] Capture state filters (normal/abnormal/error)
+- [x] Capture limit per page
 - [ ] Filter presets (last hour, last day, etc.)
-- [ ] Persistent preferences (save to user profile)
+- [x] Persistent preferences (save to user profile)
 
 **Files to Modify**:
 - `cloud/web/templates/index.html`: Add filter controls
@@ -320,34 +334,17 @@ Nice-to-have features that improve operations and debugging.
 
 Lower priority features that support growth and user engagement, deferred to focus on core functionality first.
 
-#### 13. Public Sharing System
-**Status**: Routes exist but not included in main app
-**Complexity**: LOW (just wire up existing routers)
-**Impact**: MEDIUM (viral growth potential)
-
-**Tasks**:
-- [ ] Include `shares.py` and `public.py` routers in `server.py`
-- [ ] Test share link creation flow
-- [ ] Verify public gallery `/s/{token}` works without auth
-- [ ] Test QR code generation
-- [ ] Add share management to UI navigation
-
-**Files to Modify**:
-- `server.py`: Add router includes for shares and public routes
-
-**Expected Time**: 2-3 hours
-
----
+> _Public Sharing System (#13) is already live; the next growth lever is polishing the manual trigger workflow._
 
 #### 14. Multi-Tenant Manual Trigger
-**Status**: CommandHub exists with trigger functionality
+**Status**: Endpoint + UI button live (history/feedback pending)
 **Complexity**: MEDIUM
 **Impact**: MEDIUM (user convenience feature)
 
 **Tasks**:
-- [ ] Verify `/v1/devices/{device_id}/trigger` endpoint works
-- [ ] Add manual trigger button to device dashboard
-- [ ] Test trigger delivery to connected devices
+- [x] Verify `/v1/devices/{device_id}/trigger` endpoint works
+- [x] Add manual trigger button to device dashboard
+- [x] Test trigger delivery to connected devices
 - [ ] Add trigger history/feedback to UI
 
 **Files to Modify**:
@@ -355,6 +352,7 @@ Lower priority features that support growth and user engagement, deferred to foc
 - `cloud/api/routes/device_commands.py`: Manual trigger endpoint (already exists)
 
 **Expected Time**: 4-6 hours
+
 
 ---
 
@@ -971,14 +969,14 @@ alembic upgrade head
 
 ### Production Checklist
 
-- [ ] All environment variables configured
-- [ ] PostgreSQL database provisioned
-- [ ] Volume mounted at /mnt/data
-- [ ] Alembic migrations completed
-- [ ] CORS origins configured
-- [ ] SSL/TLS enabled (Railway auto-provides)
-- [ ] Backup strategy configured
-- [ ] Monitoring/alerts set up
+- [x] All environment variables configured
+- [x] PostgreSQL database provisioned
+- [x] Volume mounted at /mnt/data
+- [x] Alembic migrations completed
+- [x] CORS origins configured
+- [x] SSL/TLS enabled (Railway auto-provides)
+- [x] Backup strategy configured
+- [x] Monitoring/alerts set up
 
 ---
 

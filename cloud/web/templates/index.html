@@ -750,20 +750,17 @@
         <section class="panels">
             <article class="card">
                 <h2>Abnormal Condition</h2>
-                <p class="muted" style="margin-top:-0.25rem;">Classification reference description. Example: If someone is smiling, it is abnormal. Otherwise normal.</p>
                 <form id="normal-form">
-                    <label for="normal-text">Describe the abnormal/normal capture</label>
-                    <textarea id="normal-text" name="normal-text" placeholder="Example: If someone is smiling, it is abnormal. Otherwise normal."></textarea>
+                    <label for="normal-text">
+                        Describe the alert/normal capture. Example: If someone is smiling, it is alert. Otherwise normal.
+                    </label>
+                    <textarea id="normal-text" name="normal-text" placeholder="Example: If someone is smiling, it is alert. Otherwise normal."></textarea>
                     <button type="submit">Save Description</button>
                 </form>
                 <div id="normal-status" class="status"></div>
             </article>
             <article class="card">
                 <h2>Trigger Sources</h2>
-                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
-                    <button id="trigger-now" type="button">Trigger Now</button>
-                    <div id="manual-status" class="status"></div>
-                </div>
                 <form id="trigger-form" style="display:flex;flex-direction:column;gap:0.75rem;">
                     <div style="display:flex;flex-direction:column;gap:0.4rem;">
                         <label class="muted" style="font-weight:600;">Recurring Trigger</label>
@@ -889,7 +886,6 @@
         const emptyCaptures = document.getElementById('empty-captures');
         const refreshButton = document.getElementById('refresh-captures');
         const autoRefreshToggle = document.getElementById('auto-refresh-toggle');
-        const triggerNowButton = document.getElementById('trigger-now');
         const definitionOverlay = document.getElementById('definition-overlay');
         const definitionTitle = document.getElementById('definition-title');
         const definitionText = document.getElementById('definition-text');
@@ -898,7 +894,6 @@
         const definitionClose = document.getElementById('definition-close');
         const captureDetailsGrid = document.getElementById('capture-details');
         const definitionSection = document.getElementById('definition-section');
-        const manualStatus = document.getElementById('manual-status');
         const captureFilterForm = document.getElementById('capture-filter-form');
         const captureFilterStatus = document.getElementById('capture-filter-status');
         const captureFilterStateInputs = Array.from(document.querySelectorAll('input[name="capture-state"]'));
@@ -1819,22 +1814,6 @@
         triggerEnabled.addEventListener('change', () => {
             suppressNextSubmit = true;
             updateTriggerConfig(buildTriggerPayload());
-        });
-
-        triggerNowButton.addEventListener('click', async () => {
-            manualStatus.textContent = 'Triggering capture...';
-            try {
-                const response = await fetch('/v1/manual-trigger', { method: 'POST' });
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.detail || 'Failed to trigger device');
-                }
-                const data = await response.json();
-                manualStatus.textContent = `Manual trigger queued (#${data.manual_trigger_counter})`;
-                loadCaptures();
-            } catch (error) {
-                manualStatus.textContent = error.message;
-            }
         });
 
         if (notifyForm) {
