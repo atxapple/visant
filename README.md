@@ -135,15 +135,50 @@ Device → GET /v1/devices/{id}/commands (SSE stream)
 Device executes command and uploads result
 ```
 
+### Alert Definition Tracking
+
+**Per-Device AI Definitions with Version History:**
+
+Each device can have its own customizable alert definition that guides the AI classifiers. The system maintains:
+
+- **Database-backed storage** - No file system dependencies
+- **Version history** - Track changes over time with timestamps and authors
+- **In-memory caching** - Fast lookups during AI evaluation
+- **Capture linking** - Each capture is linked to the definition used for evaluation
+
+**How it works:**
+
+1. Navigate to device camera page → Settings
+2. Enter alert definition in "Describe the alert/normal capture" field
+3. Click "Save Description" → Saved to `alert_definitions` table with new version
+4. All future captures use this definition for AI evaluation
+5. View definition details in capture modal (shows version, created_at, created_by)
+
+**Database Schema:**
+```sql
+alert_definitions:
+  - id (UUID, primary key)
+  - device_id (string, FK to devices)
+  - version (int, increments per device)
+  - description (text)
+  - created_at (timestamp)
+  - created_by (string, user email)
+  - is_active (boolean, only one active per device)
+
+captures:
+  - alert_definition_id (UUID, FK to alert_definitions)
+  - Links each capture to the definition used for evaluation
+```
+
 ### Background AI Evaluation
 
-Non-blocking upload flow:
+Non-blocking upload flow with definition tracking:
 
 1. Device uploads image → Immediate 200 OK response
-2. Server saves image with `evaluation_status="pending"`
+2. Server saves image with `evaluation_status="pending"` and links to active `alert_definition_id`
 3. BackgroundTask queues AI evaluation
-4. AI evaluation runs asynchronously (3-5 seconds)
-5. Results saved to database with state (normal/abnormal/uncertain)
+4. AI evaluation runs asynchronously using the linked definition (3-5 seconds)
+5. Results saved to database with state (normal/abnormal/uncertain) and definition reference
 
 ### Database Schema Overview
 
@@ -151,7 +186,8 @@ Non-blocking upload flow:
 organizations (tenant root)
   ├─ users (Supabase Auth integration)
   ├─ devices (camera hardware)
-  │   └─ captures (images + AI evaluation results)
+  │   ├─ alert_definitions (per-device AI definitions with version history)
+  │   └─ captures (images + AI evaluation results, linked to definitions)
   ├─ activation_codes (promotional system)
   ├─ share_links (public sharing)
   └─ scheduled_triggers (cloud-managed scheduling)
@@ -487,7 +523,6 @@ Planned: Redis for API response caching
 - Public sharing UI exists but not fully wired
 - Manual trigger button missing in multi-tenant UI
 - Notification configuration page not implemented
-- Normal description management UI incomplete
 
 See `docs/PROJECT_PLAN.md` for detailed roadmap.
 
@@ -571,5 +606,14 @@ See `version.py` for version tracking and `git log` for detailed history.
 
 ---
 
-**Last Updated**: 2025-11-12
+**Last Updated**: 2025-11-13
 **Maintainers**: [Add maintainer info]
+
+## Recent Changes
+
+### v0.2.2 (2025-11-13)
+- ✅ **Alert Definition Tracking System** - Complete database-backed system with version history
+- ✅ Removed file-based `normal_description_file` from device API
+- ✅ In-memory caching for fast definition lookups
+- ✅ Capture-to-definition linking for audit trail
+- ✅ Modal displays definition metadata (version, created_at, created_by)
