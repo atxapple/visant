@@ -491,6 +491,16 @@ Planned: Redis for API response caching
 
 See `docs/PROJECT_PLAN.md` for detailed roadmap.
 
+## Testing Roadmap
+
+The comprehensive project-level testing plan now lives in `docs/PROJECT_PLAN.md` (see “Comprehensive Test Strategy”). Highlights:
+
+- **Phase 0 Foundations**: pytest config, fixtures for uploads/DB/external stubs, and CI wiring with coverage gates.
+- **Phases 1‑3**: unit + API/integration coverage for ingestion, InferenceService, auth/device/share flows, plus CommandHub/TriggerScheduler/SSE+WS streams.
+- **Phases 4‑5**: device-loop simulations, OkApiHttpClient smoke tests, Alembic migration guards, and multi-tenant regression/load suites.
+
+Follow those phases sequentially to restore confidence before enabling public beta.
+
 ## Git Workflow
 
 ### Branch Strategy

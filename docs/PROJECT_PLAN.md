@@ -649,6 +649,61 @@ slowapi>=0.1.9
 qrcode[pil]>=7.4.0
 ```
 
+### Comprehensive Test Strategy (Nov 2025)
+
+#### Current State
+- Capture ingestion, storage, and thumbnail serving remain largely untested even though they gate every device flow (`cloud/api/routes/captures.py`, `cloud/datalake/storage.py`).
+- InferenceService behaviors (dedupe, cooldowns, similarity reuse, notifications) are only lightly covered by legacy tests and could regress silently (`cloud/api/service.py` and `tests/test_similarity_reuse.py`).
+- Real-time infrastructure�CommandHub, TriggerScheduler, SSE/WebSocket streams�has no automated coverage despite powering the new push architecture (`cloud/api/routes/device_commands.py`, `cloud/api/routes/capture_events.py`, `cloud/api/workers/*`).
+- Device-side loops, OkApiHttpClient payloads, and admin/public routes rely on manual QA, leaving multi-tenant isolation and share links vulnerable (`device/main.py`, `cloud/api/routes/devices.py`, `cloud/api/routes/shares.py`, `cloud/api/routes/public.py`).
+
+#### Objectives
+- Establish pytest as the single runner with fixtures for temporary uploads, SQLite databases, and stubbed external services (Supabase, SendGrid, OpenAI/Gemini/NIM, S3).
+- Prove the capture → inference → notification pipeline end to end, including tenant isolation and filesystem/S3 toggles.
+- Lock down every external surface (REST, SSE, WebSocket, public gallery) for authentication, quota, and data-shaping bugs.
+- Validate device scheduling loops, similarity cache reuse, background workers, and Alembic migrations under concurrent load.
+- Track coverage budgets per package (ai, api, web, device) and fail CI when thresholds regress.
+
+#### Phase Breakdown
+
+1. **Phase 0 – Test Infrastructure**
+   - Add pytest configuration (ini or pyproject) with coverage reporting, split markers, and default env vars for Supabase/OpenAI stubs.
+   - Build reusable fixtures: tmp uploads dir bound to `cloud/api/storage/config.UPLOADS_DIR`, in-memory SQLite `SessionLocal`, seeded org/device factory helpers, and fake clients for Supabase, SendGrid, OpenAI/Gemini/NIM, and S3.
+   - Provide helpers to spin up the FastAPI app via `cloud/api/server.create_app` with dependency overrides so HTTP, SSE, and WebSocket tests share state.
+   - Wire CI (GitHub Actions or Railway pipeline) to run lint + pytest + coverage; publish XML/JUnit artifacts and enforce thresholds.
+
+2. **Phase 1 – Core Unit Coverage**
+   - Exercise data sanitizers and helpers (`cloud/api/notification_settings.py`, `cloud/api/similarity_cache.py`, `cloud/api/storage/filesystem.py`, `cloud/datalake/storage.py`) with malformed input, expired cache entries, and IO failures.
+   - Cover OpenAI/Gemini/NIM classifier payload builders, threshold handling, and error surfaces to keep prompts consistent across refactors.
+   - Expand InferenceService tests to include dedupe/streak pruning/cooldown logic, notifier gating, and normal description propagation.
+   - Add targeted tests for GUID type conversions, capture metadata helpers, QR-code utilities, and capture index normalization.
+
+3. **Phase 2 – API & Service Integration**
+   - Use FastAPI TestClient + SQLite fixtures to cover capture lifecycle (upload, status polling, thumbnail download, org isolation) and to validate error codes.
+   - Test device onboarding: manufacturing, validation, activation, config updates, capture history filters, and schedule retrieval with multi-tenant enforcement.
+   - Validate auth/signup/login/me/logout flows with Supabase stubs plus admin-only guards; ensure organization lookups and JWT middleware behave.
+   - Cover share/admin/public endpoints end to end (share link creation, QR generation, public gallery views, admin pruning/stats, activation-code workflows).
+   - Assert UI routes still surface up-to-date state and preference persistence without snapshot brittleness.
+
+4. **Phase 3 – Background & Streaming**
+   - Unit-test CommandHub subscribe/publish/unsubscribe semantics under concurrent tasks and verify keep-alive behavior in `device_commands` SSE stream.
+   - Add async tests for capture-event SSE/WebSocket streams with mocked hubs to assert tenant filtering, reconnect logic, and keep-alive pings.
+   - Cover TriggerScheduler timing decisions (including manual triggers and ScheduledTrigger status updates) using frozen clocks and fake DB rows.
+   - Validate CloudAIEvaluator state transitions, normal-description propagation, capture hub publish, and failure handling.
+   - Provide regression tests for datalake pruning and disk cleanup triggered via admin endpoints.
+
+5. **Phase 4 – Device / Edge Flows**
+   - Build harness-level tests that feed Loopback IO through `device/harness.TriggerCaptureActuationHarness` to ensure triggers, API client retries, and actuator states align.
+   - Simulate `device/main.py` scheduling with fake CommandHub/SSE responses to verify manual trigger counters, min-interval clamping, and config refresh logic.
+   - Integration-test `cloud/api/client.OkApiHttpClient` against the FastAPI test server to confirm payload formats, version handshake, and timing metadata.
+   - Add smoke tests for device CLI argument parsing (resolution/backend parsing, warmup) and failure messaging using dependency injection (no real hardware).
+
+6. **Phase 5 – Regression & Tooling**
+   - Create Alembic migration tests that run `alembic upgrade head` on fresh databases and assert ORM invariants.
+   - Add multi-tenant security regressions ensuring cross-org access to captures, devices, shares, and version endpoints is forbidden.
+   - Introduce load/soak style tests (pytest markers) for high-volume capture ingestion plus similarity cache eviction to catch performance regressions early.
+   - Track coverage dashboards per package and map to CODEOWNERS/PR templates; document how to run focused suites (`tests/unit`, `tests/api`, `tests/device`, `tests/e2e`) with Makefile/nox shortcuts.
+
 ### Environment Variables
 
 **Required** (Railway):
