@@ -62,10 +62,12 @@ class CloudAIEvaluator:
             from cloud.api.database import Device
             device = db.query(Device).filter(Device.device_id == capture.device_id).first()
 
-            # Extract normal_description from device config
+            # Extract normal_description and normal_description_file from device config
             normal_description = ""
+            normal_description_file = None
             if device and device.config:
                 normal_description = device.config.get("normal_description", "")
+                normal_description_file = device.config.get("normal_description_file")
 
             # Update classifier's normal_description before evaluation
             classifier = self.inference_service.classifier
@@ -157,6 +159,9 @@ class CloudAIEvaluator:
             capture.reason = classification.reason
             capture.evaluation_status = "completed"
             capture.evaluated_at = datetime.now(timezone.utc)
+            # Link to the alert definition file that was used for this evaluation
+            if normal_description_file:
+                capture.normal_description_file = normal_description_file
 
             db.commit()
             db.refresh(capture)

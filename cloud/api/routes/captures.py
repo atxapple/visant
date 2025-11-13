@@ -152,6 +152,11 @@ async def upload_capture(
     record_id = f"{device.device_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
 
     # Create capture record with pending evaluation
+    # Get the current alert definition file from device config
+    normal_description_file = None
+    if device.config:
+        normal_description_file = device.config.get("normal_description_file")
+
     capture = Capture(
         record_id=record_id,
         org_id=device.org_id,  # Automatically set from device's org
@@ -160,6 +165,8 @@ async def upload_capture(
         ingested_at=datetime.now(timezone.utc),
         trigger_label=request.trigger_label,
         capture_metadata=request.metadata or {},
+        # Link to alert definition that was active when capture was created
+        normal_description_file=normal_description_file,
         # Cloud AI fields - initially null/pending
         evaluation_status="pending",
         state=None,  # Will be set by Cloud AI

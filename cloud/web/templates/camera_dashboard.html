@@ -1122,7 +1122,7 @@
             <div class="definition-body">
                 <div id="capture-details" class="capture-details-grid"></div>
                 <div id="definition-section" class="definition-section">
-                    <h4 class="definition-subtitle">Normal Definition</h4>
+                    <h4 class="definition-subtitle">Alert Definition</h4>
                     <pre id="definition-text"></pre>
                 </div>
             </div>
@@ -1954,7 +1954,7 @@
                 captureDetailsGrid.innerHTML = '';
             }
             if (definitionSection) {
-                definitionSection.style.display = 'none';  // Hide normal definition section, show only capture details
+                definitionSection.style.display = 'block';  // Show alert definition section
             }
             if (definitionStatus) {
                 definitionStatus.textContent = 'Loading capture details...';
