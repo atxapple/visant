@@ -268,14 +268,37 @@ if __name__ == "__main__":
     @main_app.get("/debug/similarity")
     def debug_similarity():
         """Debug endpoint to check similarity configuration."""
+        import os
         service = getattr(main_app.state, 'service', None)
+
+        # Check config file
+        config_file_path = project_root / "config" / "cloud.json"
+        config_info = {
+            "config_path": str(config_file_path),
+            "config_exists": config_file_path.exists(),
+            "project_root": str(project_root),
+            "cwd": str(Path.cwd()),
+        }
+
+        # Try to read config file if it exists
+        if config_file_path.exists():
+            try:
+                with open(config_file_path) as f:
+                    import json
+                    config_data = json.load(f)
+                    config_info["config_similarity"] = config_data.get("features", {}).get("similarity", {})
+            except Exception as e:
+                config_info["config_read_error"] = str(e)
+
         if service is None:
             return {
+                **config_info,
                 "error": "No service found in main_app.state",
                 "state_keys": list(vars(main_app.state).keys()) if hasattr(main_app, 'state') else []
             }
 
         return {
+            **config_info,
             "service_exists": True,
             "similarity_enabled": getattr(service, 'similarity_enabled', None),
             "similarity_threshold": getattr(service, 'similarity_threshold', None),
