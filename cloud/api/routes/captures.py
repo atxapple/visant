@@ -153,9 +153,9 @@ async def upload_capture(
 
     # Create capture record with pending evaluation
     # Get the current alert definition from cache
-    from cloud.api.server import app_state
+    from cloud.api.server import get_alert_definition_cache
 
-    definition_cache = getattr(app_state, 'device_definitions', {})
+    definition_cache = get_alert_definition_cache()
     alert_definition_id = None
     if device.device_id in definition_cache:
         alert_definition_id, _ = definition_cache[device.device_id]

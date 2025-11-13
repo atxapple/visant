@@ -725,5 +725,11 @@ def get_capture_hub():
         raise RuntimeError("CaptureHub not initialized. Call set_capture_hub() first.")
     return _multi_tenant_capture_hub
 
+def get_alert_definition_cache() -> dict:
+    """Get the alert definition cache from the current app state."""
+    if _current_app is None:
+        raise RuntimeError("App not initialized. Call set_current_app() first.")
+    return getattr(_current_app.state, 'device_definitions', {})
 
-__all__ = ["create_app", "get_command_hub", "get_trigger_scheduler", "set_current_app", "get_capture_hub", "set_capture_hub"]
+
+__all__ = ["create_app", "get_command_hub", "get_trigger_scheduler", "set_current_app", "get_capture_hub", "set_capture_hub", "get_alert_definition_cache"]

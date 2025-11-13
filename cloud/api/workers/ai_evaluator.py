@@ -59,10 +59,10 @@ class CloudAIEvaluator:
             logger.info(f"Starting AI evaluation for capture: {record_id}")
 
             # Get alert definition from cache
-            from cloud.api.server import app_state
+            from cloud.api.server import get_alert_definition_cache
 
             # Get definition from cache (device_definitions: {device_id: (definition_id, description_text)})
-            definition_cache = getattr(app_state, 'device_definitions', {})
+            definition_cache = get_alert_definition_cache()
             normal_description = ""
             alert_definition_id = None
 
