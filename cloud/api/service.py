@@ -46,7 +46,6 @@ class InferenceService:
     datalake: FileSystemDatalake
     capture_index: RecentCaptureIndex | None = None
     notifier: CaptureAlertNotifier | None = None
-    normal_description_file: str | None = None
     alert_cooldown_minutes: float = 0.0
     dedupe_enabled: bool = False
     dedupe_threshold: int = 3
@@ -217,7 +216,6 @@ class InferenceService:
                 thumbnail_bytes=thumbnail_bytes,  # Always store thumbnail if available
                 metadata=metadata,
                 classification=classification_payload,
-                normal_description_file=self.normal_description_file,
                 store_image=streak_store_image,
                 captured_at=device_captured_at,
                 ingested_at=ingested_at,

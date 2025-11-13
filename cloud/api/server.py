@@ -281,7 +281,6 @@ def create_app(
 
     app.state.classifier = selected_classifier
     app.state.service = service
-    service.normal_description_file = current_description_file
     service.update_alert_cooldown(settings.email.abnormal_cooldown_minutes)
     service.update_dedupe_settings(dedupe_enabled, dedupe_threshold, dedupe_keep_every)
     service.update_streak_settings(
@@ -313,7 +312,6 @@ def create_app(
     app.state.normal_description = normal_description
     app.state.normal_description_path = normal_description_path
     app.state.normal_description_store_dir = description_store_dir
-    app.state.normal_description_file = current_description_file
     app.state.trigger_config = trigger_config
     app.state.server_config_path = server_config_path
     app.state.manual_trigger_counter = 0
@@ -393,7 +391,6 @@ def create_app(
                 interval_seconds=config.interval_seconds,
             ),
             normal_description=normal,
-            normal_description_file=getattr(app.state, "normal_description_file", None),
             manual_trigger_counter=app.state.manual_trigger_counter,
         )
 
