@@ -641,7 +641,7 @@ async def list_captures(
 
     Now queries the database Capture table instead of filesystem.
     """
-    from cloud.api.database import get_db, Capture, Organization
+    from cloud.api.database import get_db, Capture, Organization, Device
     from cloud.api.auth.dependencies import get_current_user
     from sqlalchemy.orm import Session
     from fastapi import Depends
@@ -692,6 +692,13 @@ async def list_captures(
         # Convert database captures to API response format
         captures: List[dict[str, Any]] = []
         for cap in db_captures:
+            # Get device friendly name
+            device_name = None
+            if cap.device_id:
+                device = db.query(Device).filter(Device.device_id == cap.device_id).first()
+                if device:
+                    device_name = device.friendly_name
+
             # Build image URL if image is stored
             image_url = None
             download_url = None
@@ -706,6 +713,7 @@ async def list_captures(
             captures.append({
                 "record_id": cap.record_id,
                 "device_id": cap.device_id,
+                "device_name": device_name,
                 "captured_at": cap.captured_at.isoformat() if cap.captured_at else None,
                 "ingested_at": cap.ingested_at.isoformat() if cap.ingested_at else None,
                 "state": cap.state,
@@ -719,7 +727,7 @@ async def list_captures(
                 "thumbnail_url": thumbnail_url,
                 "download_url": download_url,
                 "agent_details": None,  # Not used in database captures
-                "metadata": cap.metadata if cap.metadata is not None else {},
+                "metadata": cap.capture_metadata if cap.capture_metadata is not None else {},
             })
 
         return captures
@@ -738,7 +746,7 @@ async def fetch_capture_metadata(
 
     Now queries the database Capture table instead of filesystem.
     """
-    from cloud.api.database import get_db, Capture
+    from cloud.api.database import get_db, Capture, Device
 
     # Get capture from database
     # For now, return any capture (multi-tenant filtering will be added later)
@@ -753,6 +761,13 @@ async def fetch_capture_metadata(
         if not cap:
             raise HTTPException(status_code=404, detail="Capture not found")
 
+        # Get device friendly name
+        device_name = None
+        if cap.device_id:
+            device = db.query(Device).filter(Device.device_id == cap.device_id).first()
+            if device:
+                device_name = device.friendly_name
+
         # Build image URL if image is stored
         image_url = None
         download_url = None
@@ -766,6 +781,7 @@ async def fetch_capture_metadata(
         return {
             "record_id": cap.record_id,
             "device_id": cap.device_id,
+            "device_name": device_name,
             "captured_at": cap.captured_at.isoformat() if cap.captured_at else None,
             "ingested_at": cap.ingested_at.isoformat() if cap.ingested_at else None,
             "state": cap.state,
@@ -779,7 +795,7 @@ async def fetch_capture_metadata(
             "thumbnail_url": thumbnail_url,
             "download_url": download_url,
             "agent_details": None,  # Not used in database captures
-            "metadata": cap.metadata if cap.metadata is not None else {},
+            "metadata": cap.capture_metadata if cap.capture_metadata is not None else {},
         }
     finally:
         db.close()
