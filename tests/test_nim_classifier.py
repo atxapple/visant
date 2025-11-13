@@ -21,7 +21,7 @@ class NIMImageClassifierTests(unittest.TestCase):
                     "message": {
                         "content": json.dumps(
                             {
-                                "state": "abnormal",
+                                "state": "alert",
                                 "confidence": 0.87,
                                 "reason": "The LED is off.",
                             }
@@ -40,7 +40,7 @@ class NIMImageClassifierTests(unittest.TestCase):
         with patch("cloud.ai.nim_client.requests", fake_requests):
             result = classifier.classify(image_bytes)
 
-        self.assertEqual(result.state, "abnormal")
+        self.assertEqual(result.state, "alert")
         self.assertAlmostEqual(result.score, 0.87)
         self.assertEqual(result.reason, "The LED is off.")
 

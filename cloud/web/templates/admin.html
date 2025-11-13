@@ -425,7 +425,7 @@
                             <select id="prune-state" class="form-select">
                                 <option value="">All States</option>
                                 <option value="normal">Normal</option>
-                                <option value="abnormal">Abnormal</option>
+                                <option value="alert">Alert</option>
                                 <option value="uncertain">Uncertain</option>
                             </select>
                         </div>
@@ -607,7 +607,7 @@
                         <td>${capture.record_id.substring(0, 8)}...</td>
                         <td>${capture.device_id}</td>
                         <td>${capture.org_name}</td>
-                        <td><span class="badge badge-${capture.state === 'normal' ? 'active' : (capture.state === 'abnormal' ? 'inactive' : 'pending')}">${capture.state || '-'}</span></td>
+                        <td><span class="badge badge-${capture.state === 'normal' ? 'active' : (capture.state === 'alert' ? 'inactive' : 'pending')}">${capture.state || '-'}</span></td>
                         <td><span class="badge badge-${capture.evaluation_status === 'completed' ? 'active' : 'pending'}">${capture.evaluation_status}</span></td>
                         <td>${capture.file_size_mb ? capture.file_size_mb.toFixed(2) : '-'}</td>
                         <td>${new Date(capture.captured_at).toLocaleString()}</td>

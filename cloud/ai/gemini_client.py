@@ -113,9 +113,9 @@ class GeminiImageClassifier(Classifier):
             "You are an inspection classifier for machine captures. "
             "Use the following description of a normal capture as context:\n"
             f"{description}\n\n"
-            "Label the supplied image as one of: Normal, Abnormal, or Uncertain.\n"
+            "Label the supplied image as one of: Normal, Alert, or Uncertain.\n"
             "Return a JSON object with fields 'state' (lowercase label), 'confidence' (float between 0 and 1), "
-            "and 'reason' (short explanation for abnormal results; use null for other states)."
+            "and 'reason' (short explanation for alert results; use null for other states)."
         )
 
     def _extract_message_content(self, data: dict[str, Any]) -> str:
@@ -160,9 +160,9 @@ class GeminiImageClassifier(Classifier):
                 "Gemini classification downgraded to uncertain: %s", low_confidence_note
             )
 
-        if state == "abnormal" and reason is None:
-            reason = "Model marked capture as abnormal but did not provide details."
-            logger.debug("Gemini abnormal without reason; inserting default text")
+        if state == "alert" and reason is None:
+            reason = "Model marked capture as alert but did not provide details."
+            logger.debug("Gemini alert without reason; inserting default text")
 
         if low_confidence_note:
             reason = (
@@ -175,10 +175,10 @@ class GeminiImageClassifier(Classifier):
         label = value.strip().lower()
         if label == "unexpected":
             return "uncertain"
-        if label in {"normal", "abnormal", "uncertain"}:
+        if label in {"normal", "alert", "uncertain"}:
             return label
         if "abnormal" in label or "alert" in label:
-            return "abnormal"
+            return "alert"
         if any(
             term in label
             for term in ("unexpected", "unknown", "uncertain", "uncertainty")

@@ -92,7 +92,7 @@ class NIMImageClassifier(Classifier):
         return (
             "Use the following description of a normal capture as context:\n"
             f"{description}\n\n"
-            "Label the supplied image as one of: normal, abnormal, or uncertain.\n"
+            "Label the supplied image as one of: normal, alert, or uncertain.\n"
             "Return a JSON object with fields 'state' (lowercase label), 'confidence' "
             "(float 0..1), and 'reason' (short explanation or null)."
         )
@@ -134,8 +134,8 @@ class NIMImageClassifier(Classifier):
                 f"{LOW_CONFIDENCE_THRESHOLD:.2f}."
             )
 
-        if state == "abnormal" and reason is None:
-            reason = "Model marked capture as abnormal but did not provide details."
+        if state == "alert" and reason is None:
+            reason = "Model marked capture as alert but did not provide details."
 
         if low_confidence_note:
             reason = f"{reason} | {low_confidence_note}" if reason else low_confidence_note
@@ -144,10 +144,10 @@ class NIMImageClassifier(Classifier):
 
     def _normalize_state(self, value: str) -> str:
         label = value.strip().lower()
-        if label in {"normal", "abnormal", "uncertain"}:
+        if label in {"normal", "alert", "uncertain"}:
             return label
         if "abnormal" in label or "alert" in label:
-            return "abnormal"
+            return "alert"
         if any(term in label for term in ("uncertain", "unknown", "unexpected")):
             return "uncertain"
         return "normal"

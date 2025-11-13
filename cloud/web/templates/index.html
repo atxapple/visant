@@ -288,7 +288,7 @@
             font-weight: 600;
         }
         .badge.normal { background: #dcfce7; color: #166534; }
-        .badge.abnormal { background: #fee2e2; color: #991b1b; }
+        .badge.alert { background: #fee2e2; color: #991b1b; }
         .badge.uncertain { background: #fef3c7; color: #92400e; }
         .muted {
             color: #6b7280;
@@ -703,11 +703,11 @@
     <main>
         <section class="panels">
             <article class="card">
-                <h2>Abnormal Condition</h2>
-                <p class="muted" style="margin-top:-0.25rem;">Classification reference description. Example: If someone is smiling, it is abnormal. Otherwise normal.</p>
+                <h2>Alert Condition</h2>
+                <p class="muted" style="margin-top:-0.25rem;">Classification reference description. Example: If someone is smiling, it is alert. Otherwise normal.</p>
                 <form id="normal-form">
-                    <label for="normal-text">Describe the abnormal/normal capture</label>
-                    <textarea id="normal-text" name="normal-text" placeholder="Example: If someone is smiling, it is abnormal. Otherwise normal."></textarea>
+                    <label for="normal-text">Describe the alert/normal capture</label>
+                    <textarea id="normal-text" name="normal-text" placeholder="Example: If someone is smiling, it is alert. Otherwise normal."></textarea>
                     <button type="submit">Save Description</button>
                 </form>
                 <div id="normal-status" class="status"></div>
@@ -748,7 +748,7 @@
                             <label class="muted" for="email-cooldown">Cooldown (minutes)</label>
                             <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
                                 <input id="email-cooldown" type="number" min="0" step="1" value="10" style="width:120px;" />
-                                <span class="muted" style="font-size:0.85rem;">Wait this many minutes before another abnormal alert. Use 0 to email every abnormal event.</span>
+                                <span class="muted" style="font-size:0.85rem;">Wait this many minutes before another alert alert. Use 0 to email every alert event.</span>
                             </div>
                         </div>
                     </fieldset>
@@ -774,7 +774,7 @@
                 <fieldset class="capture-state-options">
                     <legend class="muted">States</legend>
                     <label><input type="checkbox" name="capture-state" value="normal" checked /> Normal</label>
-                    <label><input type="checkbox" name="capture-state" value="abnormal" checked /> Abnormal</label>
+                    <label><input type="checkbox" name="capture-state" value="alert" checked /> Alert</label>
                     <label><input type="checkbox" name="capture-state" value="uncertain" checked /> Uncertain</label>
                 </fieldset>
                 <div class="capture-filter-row">

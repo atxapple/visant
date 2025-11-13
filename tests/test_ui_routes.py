@@ -141,7 +141,7 @@ class UiRoutesTests(unittest.TestCase):
             image_bytes=sample_image.read_bytes(),
             metadata={"trigger_label": "ui-test"},
             classification={
-                "state": "abnormal",
+                "state": "alert",
                 "score": 0.9,
                 "reason": "Integration test",
             },
@@ -257,7 +257,7 @@ class UiRoutesTests(unittest.TestCase):
             update_payload = {
                 "auto_refresh": False,
                 "capture_filters": {
-                    "states": ["abnormal", "invalid"],
+                    "states": ["alert", "invalid"],
                     "from_dt": "2025-01-01T00:00:00Z",
                     "to_dt": None,
                     "limit": 5,
@@ -270,7 +270,7 @@ class UiRoutesTests(unittest.TestCase):
             parsed = UIPreferences(**response_payload)
             self.assertFalse(parsed.auto_refresh)
             self.assertEqual(parsed.capture_filters.limit, 5)
-            self.assertEqual(parsed.capture_filters.states, ["abnormal"])
+            self.assertEqual(parsed.capture_filters.states, ["alert"])
 
             stored_on_disk = UIPreferences(**json.loads(prefs_path.read_text()))
             self.assertFalse(stored_on_disk.auto_refresh)

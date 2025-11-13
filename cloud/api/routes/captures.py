@@ -256,7 +256,7 @@ async def upload_capture(
 @router.get("", response_model=CaptureListResponse)
 def list_captures(
     device_id: Optional[str] = Query(None, description="Filter by device"),
-    state: Optional[str] = Query(None, description="Filter by state (normal, abnormal, uncertain)"),
+    state: Optional[str] = Query(None, description="Filter by state (normal, alert, uncertain)"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     org: Organization = Depends(get_current_org),
@@ -277,10 +277,10 @@ def list_captures(
         query = query.filter(Capture.device_id == device_id)
 
     if state:
-        if state not in ["normal", "abnormal", "uncertain"]:
+        if state not in ["normal", "alert", "uncertain"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid state. Must be: normal, abnormal, or uncertain"
+                detail="Invalid state. Must be: normal, alert, or uncertain"
             )
         query = query.filter(Capture.state == state)
 

@@ -49,7 +49,7 @@ def _build_payload() -> dict[str, object]:
 
 def test_notifier_invoked_for_abnormal(tmp_path) -> None:
     classifier = _StubClassifier(
-        Classification(state="abnormal", score=0.95, reason="anomaly")
+        Classification(state="alert", score=0.95, reason="anomaly")
     )
     datalake = FileSystemDatalake(root=tmp_path)
     notifier = _SpyNotifier()
@@ -59,7 +59,7 @@ def test_notifier_invoked_for_abnormal(tmp_path) -> None:
 
     result = service.process_capture(_build_payload())
 
-    assert result["state"] == "abnormal"
+    assert result["state"] == "alert"
     assert result["created"] is True
     assert result["captured_at"] is not None
     assert len(notifier.records) == 1
@@ -132,7 +132,7 @@ def test_sendgrid_email_includes_image_and_definition(tmp_path) -> None:
         captured_at=now,
         ingested_at=now,
         metadata={"device_id": "device-123"},
-        classification={"state": "abnormal", "score": 0.98, "reason": "anomaly"},
+        classification={"state": "alert", "score": 0.98, "reason": "anomaly"},
         normal_description_file=description_file.name,
     )
 
@@ -196,7 +196,7 @@ def test_sendgrid_email_includes_image_and_definition(tmp_path) -> None:
 
 def test_alert_cooldown_blocks_until_reset(tmp_path) -> None:
     classifier = _StubClassifier(
-        Classification(state="abnormal", score=0.95, reason="alert")
+        Classification(state="alert", score=0.95, reason="alert")
     )
     datalake = FileSystemDatalake(root=tmp_path)
     notifier = _SpyNotifier()
@@ -216,7 +216,7 @@ def test_alert_cooldown_blocks_until_reset(tmp_path) -> None:
     assert len(notifier.records) == 1
 
     classifier._classification = Classification(
-        state="abnormal", score=0.88, reason="again"
+        state="alert", score=0.88, reason="again"
     )
     service.process_capture(_build_payload())
     assert len(notifier.records) == 2
@@ -258,7 +258,7 @@ def test_dedupe_resets_on_state_change(tmp_path) -> None:
     assert third["created"] is False
 
     classifier._classification = Classification(
-        state="abnormal", score=0.9, reason="alert"
+        state="alert", score=0.9, reason="alert"
     )
     fourth = service.process_capture(_build_payload())
     assert fourth["record_id"] != third["record_id"]
@@ -309,14 +309,14 @@ def test_streak_reset_on_state_change(tmp_path) -> None:
     service.process_capture(_build_payload())
 
     classifier._classification = Classification(
-        state="abnormal", score=0.5, reason="alert"
+        state="alert", score=0.5, reason="alert"
     )
     result = service.process_capture(_build_payload())
     assert result["created"] is True
 
     metadata_file = next(tmp_path.glob(f"**/{result['record_id']}.json"))
     payload = json.loads(metadata_file.read_text(encoding="utf-8"))
-    assert payload["classification"]["state"] == "abnormal"
+    assert payload["classification"]["state"] == "alert"
     assert payload.get("image_stored") is True
     image_name = payload.get("image_filename")
     if image_name:

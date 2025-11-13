@@ -41,7 +41,7 @@ class OpenAIImageClassifierTests(unittest.TestCase):
         with patch("cloud.ai.openai_client.requests", fake_requests):
             result = classifier.classify(image_bytes)
 
-        self.assertEqual(result.state, "abnormal")
+        self.assertEqual(result.state, "alert")
         self.assertAlmostEqual(result.score, 0.82)
         self.assertEqual(result.reason, "Indicator light is dark.")
         fake_requests.post.assert_called_once()

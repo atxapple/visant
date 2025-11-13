@@ -59,7 +59,7 @@ class ConsensusClassifier(Classifier):
         score = (primary.score + secondary.score) / 2.0
 
         reason_text: str | None
-        if state == "abnormal":
+        if state == "alert":
             # Show only the highest confidence agent's reason (without label)
             if primary.score > secondary.score:
                 reason_text = primary.reason
@@ -70,7 +70,7 @@ class ConsensusClassifier(Classifier):
                 reason_text = primary.reason
 
             if not reason_text:
-                reason_text = "Both classifiers flagged the capture as abnormal."
+                reason_text = "Both classifiers flagged the capture as alert."
         elif state == "uncertain":
             # Show only the highest confidence agent's reason (without label)
             if primary.score > secondary.score:
@@ -126,16 +126,16 @@ class ConsensusClassifier(Classifier):
             },
         }
 
-        # Prioritize reasoning from abnormal/uncertain agents over normal agents
+        # Prioritize reasoning from alert/uncertain agents over normal agents
         primary_state = primary.state.strip().lower()
         secondary_state = secondary.state.strip().lower()
 
         selected_reason = None
 
-        # If one agent is abnormal/uncertain and has reasoning, prefer that
-        if primary_state in ("abnormal", "uncertain") and primary.reason:
+        # If one agent is alert/uncertain and has reasoning, prefer that
+        if primary_state in ("alert", "uncertain") and primary.reason:
             selected_reason = primary.reason
-        elif secondary_state in ("abnormal", "uncertain") and secondary.reason:
+        elif secondary_state in ("alert", "uncertain") and secondary.reason:
             selected_reason = secondary.reason
         # Otherwise, fall back to highest confidence agent
         elif primary.score >= secondary.score:

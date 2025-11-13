@@ -891,7 +891,7 @@ def get_device_captures(
     device_id: str,
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    state: Optional[str] = Query(None, description="Filter by state (normal, abnormal, uncertain)"),
+    state: Optional[str] = Query(None, description="Filter by state (normal, alert, uncertain)"),
     from_date: Optional[str] = Query(None, alias="from", description="Start date (ISO 8601 or datetime-local format)"),
     to_date: Optional[str] = Query(None, alias="to", description="End date (ISO 8601 or datetime-local format)"),
     org: Organization = Depends(get_current_org),
@@ -925,10 +925,10 @@ def get_device_captures(
 
     # Apply state filter if provided
     if state:
-        if state not in ["normal", "abnormal", "uncertain"]:
+        if state not in ["normal", "alert", "uncertain"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid state. Must be: normal, abnormal, or uncertain"
+                detail="Invalid state. Must be: normal, alert, or uncertain"
             )
         query = query.filter(Capture.state == state)
 
@@ -984,7 +984,7 @@ def get_device_captures(
             "score": c.score,
             "reason": c.reason,
             "evaluation_status": c.evaluation_status,
-            "is_abnormal": c.state == "abnormal",
+            "is_abnormal": c.state == "alert",
             "image_url": f"/ui/captures/{c.record_id}/image" if c.image_stored else None,
             "thumbnail_url": f"/ui/captures/{c.record_id}/thumbnail" if c.image_stored else None,
             "trigger_label": c.trigger_label

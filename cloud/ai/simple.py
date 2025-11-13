@@ -19,9 +19,9 @@ class SimpleThresholdModel:
         stats = ImageStat.Stat(image)
         avg_luma = stats.mean[0] / 255.0
         score = float(max(0.0, min(1.0, avg_luma)))
-        state = "abnormal" if score >= self.threshold else "normal"
+        state = "alert" if score >= self.threshold else "normal"
         reason = None
-        if state == "abnormal":
+        if state == "alert":
             reason = f"Average luma {score:.2f} exceeds threshold {self.threshold:.2f}."
         return Classification(state=state, score=score, reason=reason)
 

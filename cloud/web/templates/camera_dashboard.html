@@ -634,7 +634,7 @@
         .capture-status.normal {
             color: #10b981;
         }
-        .capture-status.abnormal {
+        .capture-status.alert {
             color: #ef4444;
             font-weight: 600;
         }
@@ -848,24 +848,24 @@
                 <span class="settings-device-id"><span style="color: #9ca3af; font-weight: 500;">Camera ID:</span> <span id="settingsDeviceId">-</span></span>
             </h2>
             <div class="settings-grid">
-                <!-- Column 1: Abnormal Condition -->
+                <!-- Column 1: Alert Condition -->
                 <div class="settings-column">
-                    <h3 class="column-title">Abnormal Condition</h3>
-                    <p class="column-subtitle">Classification reference description. Example: If someone is smiling, it is abnormal. Otherwise normal.</p>
+                    <h3 class="column-title">Alert Condition</h3>
+                    <p class="column-subtitle">Classification reference description. Example: If someone is smiling, it is alert. Otherwise normal.</p>
 
                     <div class="form-group">
-                        <label class="form-label">Describe the abnormal/normal capture</label>
+                        <label class="form-label">Describe the alert/normal capture</label>
                         <textarea
-                            id="abnormalDefinition"
+                            id="alertDefinition"
                             class="form-textarea"
-                            placeholder="Describe what should be considered abnormal. For example: 'Detect if a person appears in the frame' or 'Alert if the door is open'"
+                            placeholder="Describe what should be considered alert. For example: 'Detect if a person appears in the frame' or 'Alert if the door is open'"
                         ></textarea>
                         <div class="form-help">
                             This definition helps the AI understand what to look for when analyzing captures.
                         </div>
                     </div>
 
-                    <button class="btn-primary" onclick="saveAbnormalDefinition()">
+                    <button class="btn-primary" onclick="saveAlertDefinition()">
                         Save Description
                     </button>
                 </div>
@@ -944,7 +944,7 @@
                             value="10"
                         />
                         <div class="form-help">
-                            Wait this many minutes before another abnormal alert. Use 0 to email every abnormal event.
+                            Wait this many minutes before another alert alert. Use 0 to email every alert event.
                         </div>
                     </div>
 
@@ -970,8 +970,8 @@
                                 <span>Normal</span>
                             </label>
                             <label class="filter-checkbox">
-                                <input type="checkbox" id="filterAbnormal" checked onchange="applyFilters()">
-                                <span>Abnormal</span>
+                                <input type="checkbox" id="filterAlert" checked onchange="applyFilters()">
+                                <span>Alert</span>
                             </label>
                             <label class="filter-checkbox">
                                 <input type="checkbox" id="filterUncertain" checked onchange="applyFilters()">
@@ -1408,9 +1408,9 @@
                 const data = await response.json();
                 const config = data.config || {};
 
-                // Load abnormal definition
+                // Load alert definition
                 if (config.normal_description) {
-                    document.getElementById('abnormalDefinition').value = config.normal_description;
+                    document.getElementById('alertDefinition').value = config.normal_description;
                 }
 
                 // Load recurring trigger settings
@@ -1432,9 +1432,9 @@
             }
         }
 
-        // Save abnormal definition
-        async function saveAbnormalDefinition() {
-            const definition = document.getElementById('abnormalDefinition').value.trim();
+        // Save alert definition
+        async function saveAlertDefinition() {
+            const definition = document.getElementById('alertDefinition').value.trim();
 
             try {
                 const response = await fetch(`/v1/devices/${deviceId}/config`, {
@@ -1453,7 +1453,7 @@
                     throw new Error(error.detail || 'Failed to save definition');
                 }
 
-                showToast('Abnormal definition saved successfully!', 'success');
+                showToast('Alert definition saved successfully!', 'success');
             } catch (error) {
                 console.error('Error saving definition:', error);
                 showToast(error.message || 'Failed to save definition. Please try again.', 'error');
@@ -1549,13 +1549,13 @@
 
                 // Add state filter parameters
                 const filterNormal = document.getElementById('filterNormal').checked;
-                const filterAbnormal = document.getElementById('filterAbnormal').checked;
+                const filterAlert = document.getElementById('filterAlert').checked;
                 const filterUncertain = document.getElementById('filterUncertain').checked;
 
                 // Build state parameter - only add specific states if not all are selected
                 const states = [];
                 if (filterNormal) states.push('normal');
-                if (filterAbnormal) states.push('abnormal');
+                if (filterAlert) states.push('alert');
                 if (filterUncertain) states.push('uncertain');
 
                 // Only filter by state if not all states are selected
@@ -1663,9 +1663,9 @@
                 if (capture.evaluation_status === 'pending' || capture.evaluation_status === 'processing') {
                     statusClass = 'pending';
                     statusText = '⏳ Evaluating...';
-                } else if (capture.state === 'abnormal') {
-                    statusClass = 'abnormal';
-                    statusText = '⚠️ Abnormal';
+                } else if (capture.state === 'alert') {
+                    statusClass = 'alert';
+                    statusText = '⚠️ Alert';
                 } else if (capture.state === 'uncertain') {
                     statusClass = 'uncertain';
                     statusText = '❓ Uncertain';
@@ -1733,7 +1733,7 @@
         function clearFilters() {
             // Reset checkboxes
             document.getElementById('filterNormal').checked = true;
-            document.getElementById('filterAbnormal').checked = true;
+            document.getElementById('filterAlert').checked = true;
             document.getElementById('filterUncertain').checked = true;
 
             // Clear date inputs

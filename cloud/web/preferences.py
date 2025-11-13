@@ -6,7 +6,7 @@ from typing import List
 
 from pydantic import BaseModel, Field, validator
 
-DEFAULT_CAPTURE_STATES: List[str] = ["normal", "abnormal", "uncertain"]
+DEFAULT_CAPTURE_STATES: List[str] = ["normal", "alert", "uncertain"]
 CAPTURE_LIMIT_DEFAULT = 12
 CAPTURE_LIMIT_MAX = 100
 

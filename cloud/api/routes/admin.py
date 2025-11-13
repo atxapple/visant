@@ -63,7 +63,7 @@ class StorageStats(BaseModel):
 
 class PruneRequest(BaseModel):
     before_date: Optional[str] = None  # ISO 8601 date string
-    state: Optional[str] = None  # normal, abnormal, uncertain
+    state: Optional[str] = None  # normal, alert, uncertain
     org_id: Optional[str] = None
     limit: Optional[int] = None  # Max number to delete
 
@@ -378,7 +378,7 @@ def prune_captures(
 
     Filters:
     - before_date: Delete captures before this date (ISO 8601)
-    - state: Delete captures with specific state (normal, abnormal, uncertain)
+    - state: Delete captures with specific state (normal, alert, uncertain)
     - org_id: Delete captures from specific organization
     - limit: Maximum number of captures to delete
     """

@@ -40,10 +40,10 @@ class ConsensusClassifierTests(unittest.TestCase):
 
     def test_combines_reasons_when_both_abnormal(self) -> None:
         primary = _StaticClassifier(
-            state="abnormal", score=0.4, reason="issue detected"
+            state="alert", score=0.4, reason="issue detected"
         )
         secondary = _StaticClassifier(
-            state="abnormal", score=0.6, reason="defect spotted"
+            state="alert", score=0.6, reason="defect spotted"
         )
         classifier = ConsensusClassifier(primary=primary, secondary=secondary)
 
@@ -73,7 +73,7 @@ class ConsensusClassifierTests(unittest.TestCase):
 
     def test_marks_uncertain_on_disagreement(self) -> None:
         primary = _StaticClassifier(state="normal", score=0.3)
-        secondary = _StaticClassifier(state="abnormal", score=0.9, reason="anomaly")
+        secondary = _StaticClassifier(state="alert", score=0.9, reason="anomaly")
         classifier = ConsensusClassifier(primary=primary, secondary=secondary)
 
         result = classifier.classify(b"dummy")

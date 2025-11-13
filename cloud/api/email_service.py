@@ -27,9 +27,9 @@ from ..datalake.storage import CaptureRecord
 logger = logging.getLogger(__name__)
 
 
-class AbnormalCaptureNotifier(Protocol):
-    def notify_abnormal(self, record: CaptureRecord) -> None:
-        """Dispatch an alert for an abnormal capture."""
+class CaptureAlertNotifier(Protocol):
+    def send_alert(self, record: CaptureRecord) -> None:
+        """Dispatch an alert for a capture alert."""
 
 
 @dataclass(frozen=True)
@@ -37,12 +37,12 @@ class SendGridEmailConfig:
     api_key: str
     sender: str
     recipients: Sequence[str]
-    subject: str = "OK Monitor: Abnormal capture detected"
+    subject: str = "Visant Alert: Unusual Activity Detected"
     environment_label: str | None = None
     ui_base_url: str | None = None
 
 
-class SendGridEmailService(AbnormalCaptureNotifier):
+class SendGridEmailService(CaptureAlertNotifier):
     def __init__(
         self,
         config: SendGridEmailConfig,
@@ -53,7 +53,7 @@ class SendGridEmailService(AbnormalCaptureNotifier):
         self._client = client or SendGridAPIClient(api_key=config.api_key)
         self._description_root = description_root
 
-    def notify_abnormal(self, record: CaptureRecord) -> None:
+    def send_alert(self, record: CaptureRecord) -> None:
         message = self._build_message(record)
         try:
             self._client.send(message)
@@ -177,7 +177,7 @@ class SendGridEmailService(AbnormalCaptureNotifier):
             description_html = "<em>No normal description available.</em>"
         if image_cid:
             image_block = (
-                f"<img src='cid:{image_cid}' alt='Abnormal capture image' "
+                f"<img src='cid:{image_cid}' alt='Alert capture image' "
                 "style='max-width:100%;height:auto;border-radius:8px;' />"
             )
         elif record.image_stored and record.image_path.exists():
@@ -195,7 +195,7 @@ class SendGridEmailService(AbnormalCaptureNotifier):
             "<html>"
             "  <body>"
             f"    <h2>{escape(subject)}</h2>"
-            f"    <p>An abnormal capture was detected at <strong>{escape(record.captured_at.isoformat())}</strong> (UTC).</p>"
+            f"    <p>An alert was detected at <strong>{escape(record.captured_at.isoformat())}</strong> (UTC).</p>"
             "    <ul>"
             f"      <li><strong>Record ID:</strong> {escape(record.record_id)}</li>"
             f"      <li><strong>State:</strong> {escape(str(state))}</li>"
@@ -278,7 +278,7 @@ class SendGridEmailService(AbnormalCaptureNotifier):
 
 
 __all__ = [
-    "AbnormalCaptureNotifier",
+    "CaptureAlertNotifier",
     "SendGridEmailConfig",
     "SendGridEmailService",
     "create_sendgrid_service",

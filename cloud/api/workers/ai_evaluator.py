@@ -136,9 +136,9 @@ class CloudAIEvaluator:
                 logger.warning(f"Failed to publish capture event for {record_id}: {publish_error}")
                 # Don't fail the evaluation if event publishing fails
 
-            # TODO: Trigger notifications if abnormal
-            # if classification.state == "abnormal":
-            #     notify_abnormal_detection(capture)
+            # TODO: Trigger notifications if alert
+            # if classification.state == "alert":
+            #     notify_alert_detection(capture)
 
             return {
                 "record_id": record_id,
