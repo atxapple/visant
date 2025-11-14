@@ -501,10 +501,8 @@
 
         // Logout function
         function logout() {
-            if (confirm('Are you sure you want to logout?')) {
-                sessionStorage.clear();
-                window.location.href = '/login';
-            }
+            sessionStorage.clear();
+            window.location.href = '/login';
         }
 
         // Require authentication - redirect to login if not logged in
