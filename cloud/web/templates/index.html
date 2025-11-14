@@ -757,7 +757,6 @@
                     <textarea id="normal-text" name="normal-text" placeholder="Example: If someone is smiling, it is alert. Otherwise normal."></textarea>
                     <button type="submit">Save Description</button>
                 </form>
-                <div id="normal-status" class="status"></div>
             </article>
             <article class="card">
                 <h2>Trigger Sources</h2>
@@ -767,7 +766,7 @@
                         <label style="display:flex;align-items:center;gap:0.35rem;">
                             <input id="trigger-enabled" type="checkbox" /> Enable recurring trigger
                         </label>
-                        <label for="interval-input" class="muted">Interval (seconds)</label>
+                        <label for="interval-input" class="muted">Interval (seconds) <span style="color:#94a3b8;font-size:0.85rem;">Min 7s</span></label>
                         <input id="interval-input" name="interval" type="number" min="7" step="1" value="10" />
                     </div>
                     <label style="display:flex;align-items:center;gap:0.35rem;">
@@ -779,7 +778,7 @@
             </article>
             <article class="card">
                 <h2>Notification & Actions</h2>
-                <form id="notify-form" style="display:flex;flex-direction:column;gap:0.9rem;">
+                <form id="notify-form" style="display:flex;flex-direction:column;gap:0.65rem;">
                     <label style="display:flex;align-items:center;gap:0.35rem;">
                         <input id="email-enabled" type="checkbox" checked /> Enable email notifications
                     </label>
