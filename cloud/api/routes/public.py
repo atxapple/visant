@@ -68,7 +68,8 @@ async def public_gallery_html(
         )
 
     # Check if expired
-    if share_link.expires_at < datetime.now(timezone.utc):
+    # Note: Database stores UTC times as timezone-naive, so use utcnow() for comparison
+    if share_link.expires_at < datetime.utcnow():
         return HTMLResponse(
             content=f"""
             <html>
@@ -99,7 +100,7 @@ async def public_gallery_html(
 
     # Increment view count
     share_link.view_count += 1
-    share_link.last_viewed_at = datetime.now(timezone.utc)
+    share_link.last_viewed_at = datetime.utcnow()
     db.commit()
 
     # Get device and organization info
@@ -271,7 +272,7 @@ def public_gallery_api(
 
     # Increment view count
     share_link.view_count += 1
-    share_link.last_viewed_at = datetime.now(timezone.utc)
+    share_link.last_viewed_at = datetime.utcnow()
     db.commit()
 
     # Get device and organization info

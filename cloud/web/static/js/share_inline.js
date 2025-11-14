@@ -22,9 +22,10 @@ const ShareInline = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${auth.getAccessToken()}`
+                    'Authorization': `Bearer ${auth.getToken()}`
                 },
                 body: JSON.stringify({
+                    device_id: deviceId,
                     share_type: 'device',
                     expires_in_days: 7  // Default 7-day expiration
                 })
@@ -54,7 +55,7 @@ const ShareInline = {
             const response = await fetch(`/v1/share-links?device_id=${deviceId}`, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${auth.getAccessToken()}`
+                    'Authorization': `Bearer ${auth.getToken()}`
                 }
             });
 
@@ -82,7 +83,7 @@ const ShareInline = {
             const response = await fetch(`/v1/share-links/${token}`, {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${auth.getAccessToken()}`
+                    'Authorization': `Bearer ${auth.getToken()}`
                 }
             });
 
