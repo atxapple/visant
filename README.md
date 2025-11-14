@@ -85,7 +85,7 @@ visant/
 │   │
 │   ├── web/                     # Web dashboard
 │   │   ├── routes.py            # HTML page routes
-│   │   ├── templates/           # Jinja2 HTML templates (11 pages)
+│   │   ├── templates/           # Jinja2 HTML templates (12 pages)
 │   │   └── static/              # CSS, JS, images
 │   │
 │   └── datalake/                # File storage operations
@@ -204,7 +204,9 @@ DATABASE_URL=postgresql://user:pass@host:5432/dbname
 # Supabase Authentication
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your-anon-key
+SUPABASE_SERVICE_KEY=your-service-key  # For admin operations
 SUPABASE_JWT_SECRET=your-jwt-secret
+PASSWORD_RESET_REDIRECT_URL=https://app.visant.ai/reset-password  # Optional, defaults to production URL
 
 # AI Services
 OPENAI_API_KEY=sk-...
@@ -411,9 +413,20 @@ All API endpoints (except auth routes) require JWT token in Authorization header
 Authorization: Bearer <jwt_token>
 ```
 
-Get token from:
+**Auth Endpoints:**
 - `POST /v1/auth/signup` - Create account
 - `POST /v1/auth/login` - Login existing user
+- `POST /v1/auth/forgot-password` - Request password reset email
+- `POST /v1/auth/reset-password` - Reset password with token from email
+- `POST /v1/auth/change-password` - Change password (authenticated)
+- `PATCH /v1/auth/profile` - Update user profile
+- `GET /v1/auth/me` - Get current user info
+
+**Web Pages:**
+- `/login` - Login page
+- `/signup` - Signup page
+- `/forgot-password` - Dedicated forgot password page
+- `/reset-password` - Password reset page (accessed via email link)
 
 ### Key Endpoints
 
@@ -610,6 +623,12 @@ See `version.py` for version tracking and `git log` for detailed history.
 **Maintainers**: [Add maintainer info]
 
 ## Recent Changes
+
+### v0.2.3 (2025-11-13)
+- ✅ **Dedicated Forgot Password Page** - Separate `/forgot-password` page with email input
+- ✅ **Password Reset URL Fix** - Production URL (app.visant.ai) configured for reset emails
+- ✅ **Improved UX** - Cleaner auth flow with separate pages for each step
+- ⚠️ **Supabase Config Required** - Update Site URL to `https://app.visant.ai` in Supabase dashboard
 
 ### v0.2.2 (2025-11-13)
 - ✅ **Alert Definition Tracking System** - Complete database-backed system with version history
