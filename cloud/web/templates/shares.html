@@ -284,6 +284,12 @@
             });
         }
 
+        // Require authentication - redirect to login if not logged in
+        if (!auth.requireAuth()) {
+            // Will redirect to /login automatically
+            throw new Error('Not authenticated');
+        }
+
         // Initialize on load
         (async () => {
             await loadDevices();

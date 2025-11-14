@@ -503,8 +503,14 @@
         function logout() {
             if (confirm('Are you sure you want to logout?')) {
                 sessionStorage.clear();
-                window.location.href = '/ui/login';
+                window.location.href = '/login';
             }
+        }
+
+        // Require authentication - redirect to login if not logged in
+        if (!auth.requireAuth()) {
+            // Will redirect to /login automatically
+            throw new Error('Not authenticated');
         }
 
         // Load user info on page load

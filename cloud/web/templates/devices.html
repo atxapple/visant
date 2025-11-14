@@ -247,6 +247,12 @@
             window.location.href = '/ui/shares';
         }
 
+        // Require authentication - redirect to login if not logged in
+        if (!auth.requireAuth()) {
+            // Will redirect to /login automatically
+            throw new Error('Not authenticated');
+        }
+
         // Load devices on page load
         loadDevices();
     </script>
