@@ -966,9 +966,6 @@
                             class="form-textarea"
                             placeholder="Describe what should be considered alert. For example: 'Detect if a person appears in the frame' or 'Alert if the door is open'"
                         ></textarea>
-                        <div class="form-help">
-                            This definition helps the AI understand what to look for when analyzing captures.
-                        </div>
                     </div>
 
                     <button class="btn-primary" onclick="saveAlertDefinition()">
@@ -979,10 +976,7 @@
                 <!-- Column 2: Trigger Sources -->
                 <div class="settings-column">
                     <h3 class="column-title">Trigger Sources</h3>
-                    <p class="column-subtitle">&nbsp;</p>
-
                     <h4 style="font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 1rem 0;">Recurring Trigger</h4>
-
                     <div class="form-group">
                         <div class="form-checkbox">
                             <input type="checkbox" id="recurringEnabled" onchange="updateTriggerStatus()" />
@@ -1016,8 +1010,6 @@
                 <!-- Column 3: Notification & Actions -->
                 <div class="settings-column">
                     <h3 class="column-title">Notification & Actions</h3>
-                    <p class="column-subtitle">&nbsp;</p>
-
                     <div class="form-group">
                         <div class="form-checkbox">
                             <input type="checkbox" id="notificationEnabled" />
@@ -1036,7 +1028,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Cooldown (minutes)</label>
+                        <label class="form-label">Cooldown (minutes): Wait this many minutes before another alert. Use 0 to email every alert event.</label>
                         <input
                             type="number"
                             id="cooldownMinutes"
@@ -1046,7 +1038,7 @@
                             value="10"
                         />
                         <div class="form-help">
-                            Wait this many minutes before another alert alert. Use 0 to email every alert event.
+                            
                         </div>
                     </div>
 

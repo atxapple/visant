@@ -78,7 +78,8 @@
       "Bash(railway logs:*)",
       "Bash(railway run:*)",
       "Bash(railway up:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(railway variables:*)"
     ],
     "deny": [],
     "ask": []
