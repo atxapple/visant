@@ -149,6 +149,33 @@ def get_user_from_token(access_token: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def send_password_reset(email: str) -> None:
+    """
+    Trigger Supabase password reset email for the given address.
+
+    Args:
+        email: Account email to reset
+    """
+    if os.getenv("SUPABASE_DISABLE_EMAIL", "").lower() in {"1", "true", "yes"}:
+        print(f"[dev] Skipping Supabase reset email for {email} (disabled)")
+        return
+
+    supabase = get_supabase_client()
+    if not supabase:
+        raise RuntimeError("Supabase client not configured")
+
+    try:
+        redirect_to = os.getenv("PASSWORD_RESET_REDIRECT_URL")
+        options = {"redirect_to": redirect_to} if redirect_to else None
+        supabase.auth.reset_password_for_email(email, options=options)
+    except AuthApiError as e:
+        print(f"ERROR: Password reset error: {e}")
+        raise ValueError(e.message or "Failed to send password reset email")
+    except Exception as e:
+        print(f"ERROR: Unexpected password reset error: {e}")
+        raise RuntimeError("Failed to send password reset email") from e
+
+
 def verify_user_password(email: str, password: str) -> bool:
     """
     Verify a user's current password.
