@@ -701,8 +701,8 @@
                     <div class="camera-info">
                         <h3 class="camera-name">${device.friendly_name || device.device_id}</h3>
                         <div class="camera-status">
-                            <span class="status-indicator ${device.status === 'active' ? 'online' : 'offline'}"></span>
-                            <span>${device.status === 'active' ? 'Online' : 'Offline'}</span>
+                            <span class="status-indicator ${device.is_online ? 'online' : 'offline'}"></span>
+                            <span>${device.is_online ? 'Online' : 'Offline'}</span>
                         </div>
                     </div>
                 `;

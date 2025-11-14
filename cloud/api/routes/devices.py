@@ -56,6 +56,10 @@ def _parse_datetime_filter(date_str: str) -> datetime:
         )
 
 
+# Device status constants
+DEVICE_ONLINE_TTL_SECONDS = 60.0  # Device considered online if seen within last 60 seconds
+
+
 # Request/Response Models
 class DeviceResponse(BaseModel):
     device_id: str
@@ -65,6 +69,7 @@ class DeviceResponse(BaseModel):
     last_seen_at: Optional[datetime]
     device_version: Optional[str]
     latest_capture_url: Optional[str]
+    is_online: bool
     organization: dict
 
 
@@ -574,6 +579,8 @@ def list_devices(
 
     # Get latest capture for each device
     device_list = []
+    now = datetime.now(timezone.utc)
+
     for d in devices:
         # Query latest capture for this device (with thumbnail)
         latest_capture = db.query(Capture).filter(
@@ -586,6 +593,18 @@ def list_devices(
         if latest_capture and latest_capture.s3_thumbnail_key:
             latest_capture_url = f"/ui/captures/{latest_capture.record_id}/thumbnail"
 
+        # Calculate is_online based on last_seen_at
+        is_online = False
+        if d.last_seen_at:
+            # Ensure last_seen_at is timezone-aware
+            last_seen = d.last_seen_at
+            if last_seen.tzinfo is None:
+                last_seen = last_seen.replace(tzinfo=timezone.utc)
+
+            # Device is online if seen within TTL seconds
+            time_since_last_seen = now - last_seen
+            is_online = time_since_last_seen.total_seconds() <= DEVICE_ONLINE_TTL_SECONDS
+
         device_list.append({
             "device_id": d.device_id,
             "friendly_name": d.friendly_name,
@@ -594,6 +613,7 @@ def list_devices(
             "last_seen_at": d.last_seen_at,
             "device_version": d.device_version,
             "latest_capture_url": latest_capture_url,
+            "is_online": is_online,
             "organization": {
                 "id": str(org.id),
                 "name": org.name,
