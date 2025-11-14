@@ -72,7 +72,13 @@
       "Bash(else echo \"No .env file found\")",
       "Bash(git pull:*)",
       "Bash(git fetch:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "WebFetch(domain:app.visant.ai)",
+      "Bash(railway status:*)",
+      "Bash(railway logs:*)",
+      "Bash(railway run:*)",
+      "Bash(railway up:*)",
+      "Bash(git tag:*)"
     ],
     "deny": [],
     "ask": []

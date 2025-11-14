@@ -110,7 +110,7 @@
     <header>
         <h1>My Cameras</h1>
         <div style="display: flex; gap: 0.5rem;">
-            <button onclick="window.location.href='/ui/'">Back to Dashboard</button>
+            <button onclick="window.location.href='/ui/cameras'">Back to Dashboard</button>
             <button onclick="openAddDeviceWizard()">Add Camera</button>
         </div>
     </header>
@@ -191,7 +191,7 @@
             if (typeof deviceWizard !== 'undefined' && deviceWizard.openModal) {
                 deviceWizard.openModal();
             } else {
-                window.location.href = '/ui/';
+                window.location.href = '/ui/cameras';
             }
         }
 

@@ -811,6 +811,19 @@ def get_device(
     if latest_capture and latest_capture.s3_image_key:
         latest_capture_url = f"/ui/captures/{latest_capture.record_id}/image"
 
+    # Calculate is_online based on last_seen_at
+    now = datetime.now(timezone.utc)
+    is_online = False
+    if device.last_seen_at:
+        # Ensure last_seen_at is timezone-aware
+        last_seen = device.last_seen_at
+        if last_seen.tzinfo is None:
+            last_seen = last_seen.replace(tzinfo=timezone.utc)
+
+        # Device is online if seen within TTL seconds
+        time_since_last_seen = now - last_seen
+        is_online = time_since_last_seen.total_seconds() <= DEVICE_ONLINE_TTL_SECONDS
+
     return {
         "device_id": device.device_id,
         "friendly_name": device.friendly_name,
@@ -819,6 +832,7 @@ def get_device(
         "last_seen_at": device.last_seen_at,
         "device_version": device.device_version,
         "latest_capture_url": latest_capture_url,
+        "is_online": is_online,
         "organization": {
             "name": org.name,
         }
@@ -879,6 +893,19 @@ def update_device(
     if latest_capture and latest_capture.s3_image_key:
         latest_capture_url = f"/ui/captures/{latest_capture.record_id}/image"
 
+    # Calculate is_online based on last_seen_at
+    now = datetime.now(timezone.utc)
+    is_online = False
+    if device.last_seen_at:
+        # Ensure last_seen_at is timezone-aware
+        last_seen = device.last_seen_at
+        if last_seen.tzinfo is None:
+            last_seen = last_seen.replace(tzinfo=timezone.utc)
+
+        # Device is online if seen within TTL seconds
+        time_since_last_seen = now - last_seen
+        is_online = time_since_last_seen.total_seconds() <= DEVICE_ONLINE_TTL_SECONDS
+
     return {
         "device_id": device.device_id,
         "friendly_name": device.friendly_name,
@@ -887,6 +914,7 @@ def update_device(
         "last_seen_at": device.last_seen_at,
         "device_version": device.device_version,
         "latest_capture_url": latest_capture_url,
+        "is_online": is_online,
         "organization": {
             "name": org.name,
         }

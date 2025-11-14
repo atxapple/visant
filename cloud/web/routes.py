@@ -41,7 +41,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["ui"])
 
-INDEX_HTML = Path(__file__).parent / "templates" / "index.html"
 LOGIN_HTML = Path(__file__).parent / "templates" / "login.html"
 SIGNUP_HTML = Path(__file__).parent / "templates" / "signup.html"
 CAMERAS_HTML = Path(__file__).parent / "templates" / "cameras.html"
@@ -263,15 +262,13 @@ async def camera_dashboard_page(device_id: str) -> HTMLResponse:
     return HTMLResponse(CAMERA_DASHBOARD_HTML.read_text(encoding="utf-8"))
 
 
-@router.get("/ui", response_class=HTMLResponse)
-async def ui_root() -> HTMLResponse:
+@router.get("/ui", response_class=RedirectResponse)
+async def ui_root() -> RedirectResponse:
     """
-    Dashboard - protected by JWT authentication if SUPABASE_JWT_SECRET is set.
-    For now, authentication is optional to maintain backward compatibility.
+    Redirect to cameras page - the old single-device dashboard (/ui) has been replaced
+    by the modern multi-device architecture (/ui/cameras).
     """
-    if not INDEX_HTML.exists():
-        raise HTTPException(status_code=500, detail="UI template missing")
-    return HTMLResponse(INDEX_HTML.read_text(encoding="utf-8"))
+    return RedirectResponse(url="/ui/cameras", status_code=301)
 
 
 @router.get("/static/js/{file_name}")
