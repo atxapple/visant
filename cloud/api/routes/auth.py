@@ -12,7 +12,8 @@ from cloud.api.auth.supabase_client import (
     create_supabase_user,
     sign_in_with_password,
     verify_user_password,
-    update_user_password
+    update_user_password,
+    send_password_reset,
 )
 from cloud.api.auth.dependencies import get_current_user
 
@@ -62,6 +63,17 @@ class UserMeResponse(BaseModel):
     organization: dict
     created_at: datetime
     last_login_at: Optional[datetime]
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "email": "user@example.com"
+            }
+        }
 
 
 @router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
@@ -239,6 +251,26 @@ def logout(current_user: User = Depends(get_current_user)):
     # TODO: Invalidate refresh token in Supabase
     # For now, client-side logout (discard tokens) is sufficient
     return None
+
+
+@router.post("/forgot-password")
+def forgot_password(request: ForgotPasswordRequest):
+    """
+    Trigger password reset email via Supabase.
+    """
+    try:
+        send_password_reset(request.email)
+        return {"message": "If that email exists, we'll send reset instructions shortly."}
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to send password reset email",
+        )
 
 
 class UpdateProfileRequest(BaseModel):
