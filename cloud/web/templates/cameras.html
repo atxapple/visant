@@ -74,6 +74,10 @@
             align-items: center;
             gap: 0.5rem;
         }
+        #userName:hover {
+            color: #2563eb;
+            text-decoration: underline;
+        }
 
         /* Main Content */
         main {
@@ -412,7 +416,7 @@
             <button class="btn-add" onclick="addCamera()">+ Add Camera</button>
             <div class="user-menu">
                 <span id="cloudVersion" style="margin-right: 1rem; color: #6b7280; font-size: 0.875rem;"></span>
-                <span id="userName" style="margin-right: 1rem; color: #374151; font-weight: 500;"></span>
+                <a id="userName" href="/ui/profile/settings" style="margin-right: 1rem; color: #374151; font-weight: 500; text-decoration: none; transition: color 0.2s;"></a>
                 <button class="btn-logout" onclick="handleLogout()">Logout</button>
             </div>
         </div>
