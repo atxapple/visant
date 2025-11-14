@@ -165,8 +165,9 @@ def send_password_reset(email: str) -> None:
         raise RuntimeError("Supabase client not configured")
 
     try:
-        redirect_to = os.getenv("PASSWORD_RESET_REDIRECT_URL")
-        options = {"redirect_to": redirect_to} if redirect_to else None
+        # Default to localhost:8000 for development, can be overridden via env var
+        redirect_to = os.getenv("PASSWORD_RESET_REDIRECT_URL", "http://localhost:8000/reset-password")
+        options = {"redirect_to": redirect_to}
         supabase.auth.reset_password_for_email(email, options=options)
     except AuthApiError as e:
         print(f"ERROR: Password reset error: {e}")

@@ -273,6 +273,78 @@ def forgot_password(request: ForgotPasswordRequest):
         )
 
 
+class ResetPasswordRequest(BaseModel):
+    new_password: str
+    access_token: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "new_password": "new_secure_password_123",
+                "access_token": "eyJhbGci..."
+            }
+        }
+
+
+@router.post("/reset-password")
+def reset_password(
+    request: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Reset password using the access token from the password reset email.
+
+    This endpoint is called when a user clicks the reset link in their email
+    and submits a new password.
+    """
+    # Validate new password
+    if len(request.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 6 characters long"
+        )
+
+    try:
+        # Get user info from the access token
+        from cloud.api.auth.supabase_client import get_user_from_token
+
+        user_info = get_user_from_token(request.access_token)
+        if not user_info:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired reset token"
+            )
+
+        # Find user in our database
+        user = db.query(User).filter(
+            User.supabase_user_id == user_info["id"]
+        ).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        # Update password in Supabase
+        update_user_password(str(user.supabase_user_id), request.new_password)
+
+        return {"message": "Password reset successfully"}
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to reset password: {str(e)}"
+        )
+
+
 class UpdateProfileRequest(BaseModel):
     name: str
 
