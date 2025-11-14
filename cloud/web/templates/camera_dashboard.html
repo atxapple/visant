@@ -981,10 +981,6 @@
                     <h3 class="column-title">Trigger Sources</h3>
                     <p class="column-subtitle">&nbsp;</p>
 
-                    <div class="form-group">
-                        <button class="btn-trigger" onclick="triggerCapture()">📸 Trigger Now</button>
-                    </div>
-
                     <h4 style="font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 1rem 0;">Recurring Trigger</h4>
 
                     <div class="form-group">
@@ -1882,32 +1878,6 @@
 
             // Reload captures
             loadCaptures();
-        }
-
-        // Trigger capture
-        async function triggerCapture() {
-            try {
-                const response = await fetch(`/v1/devices/${deviceId}/trigger`, {
-                    method: 'POST',
-                    headers: auth.getAuthHeaders()
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    // Show detailed error message from server
-                    const errorMessage = data.detail || 'Failed to trigger capture';
-                    throw new Error(errorMessage);
-                }
-
-                // Show success message
-                showToast('Capture triggered successfully! The camera will take a photo shortly.', 'success');
-
-                // WebSocket will automatically reload captures when the new capture is ready
-            } catch (error) {
-                console.error('Error triggering capture:', error);
-                showToast(error.message || 'Failed to trigger capture. Please try again.', 'error');
-            }
         }
 
         // View capture details
