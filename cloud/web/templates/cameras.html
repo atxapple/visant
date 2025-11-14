@@ -404,6 +404,16 @@
         .toast-close:hover {
             color: #4b5563;
         }
+        .page-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .page-title-row h1 {
+            margin: 0;
+        }
     </style>
 </head>
 <body>
@@ -413,7 +423,6 @@
             <a href="/ui/cameras" class="logo">Visant</a>
         </div>
         <div class="header-right">
-            <button class="btn-add" onclick="addCamera()">+ Add Camera</button>
             <div class="user-menu">
                 <span id="cloudVersion" style="margin-right: 1rem; color: #6b7280; font-size: 0.875rem;"></span>
                 <a id="userName" href="/ui/profile/settings" style="margin-right: 1rem; color: #374151; font-weight: 500; text-decoration: none; transition: color 0.2s;"></a>
@@ -424,7 +433,10 @@
 
     <!-- Main Content -->
     <main>
-        <h1>My Cameras</h1>
+        <div class="page-title-row">
+            <h1>My Cameras</h1>
+            <button class="btn-add" onclick="addCamera()">+ Add Camera</button>
+        </div>
 
         <div id="cameraGrid" class="camera-grid">
             <!-- Camera cards will be inserted here -->
