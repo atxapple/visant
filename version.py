@@ -11,4 +11,4 @@ Version numbering follows semantic versioning (semver.org):
 The version in this file must match the git tag for releases.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
