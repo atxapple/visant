@@ -140,13 +140,6 @@
             text-decoration: none;
         }
 
-        .forgot-status {
-            font-size: 13px;
-            color: #4b5563;
-            margin-top: 8px;
-            min-height: 18px;
-        }
-
         .divider {
             text-align: center;
             margin: 24px 0;
@@ -235,14 +228,13 @@
                 />
             </div>
             <div style="display:flex;justify-content:flex-end;margin:-8px 0 16px;">
-                <button type="button" id="forgotPasswordLink" class="link-button">Forgot password?</button>
+                <a href="/forgot-password" class="link-button">Forgot password?</a>
             </div>
 
             <button type="submit" id="loginBtn" class="btn-login">
                 Log In
             </button>
         </form>
-        <div id="forgotStatus" class="forgot-status"></div>
 
         <div class="divider">or</div>
 
@@ -256,8 +248,6 @@
         const loginForm = document.getElementById('loginForm');
         const loginBtn = document.getElementById('loginBtn');
         const errorMessage = document.getElementById('errorMessage');
-        const forgotPasswordLink = document.getElementById('forgotPasswordLink');
-        const forgotStatus = document.getElementById('forgotStatus');
 
         // Redirect if already authenticated
         if (auth.isAuthenticated()) {
@@ -294,39 +284,6 @@
                 loginBtn.disabled = false;
                 loginBtn.classList.remove('loading');
                 loginBtn.textContent = 'Log In';
-            }
-        });
-
-        forgotPasswordLink.addEventListener('click', async () => {
-            const emailInput = document.getElementById('email');
-            const email = emailInput.value.trim();
-            forgotStatus.style.color = '#4b5563';
-
-            if (!email) {
-                forgotStatus.textContent = 'Enter your email above before requesting a reset.';
-                emailInput.focus();
-                return;
-            }
-
-            forgotPasswordLink.disabled = true;
-            forgotStatus.textContent = 'Sending reset instructions...';
-
-            try {
-                const response = await fetch('/v1/auth/forgot-password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email })
-                });
-                const payload = await response.json().catch(() => ({}));
-                if (!response.ok) {
-                    throw new Error(payload.detail || 'Unable to send reset email.');
-                }
-                forgotStatus.textContent = payload.message || 'Check your inbox for password reset instructions.';
-            } catch (error) {
-                forgotStatus.style.color = '#b91c1c';
-                forgotStatus.textContent = error.message;
-            } finally {
-                forgotPasswordLink.disabled = false;
             }
         });
     </script>

@@ -43,6 +43,7 @@ router = APIRouter(tags=["ui"])
 
 LOGIN_HTML = Path(__file__).parent / "templates" / "login.html"
 SIGNUP_HTML = Path(__file__).parent / "templates" / "signup.html"
+FORGOT_PASSWORD_HTML = Path(__file__).parent / "templates" / "forgot-password.html"
 RESET_PASSWORD_HTML = Path(__file__).parent / "templates" / "reset-password.html"
 CAMERAS_HTML = Path(__file__).parent / "templates" / "cameras.html"
 CAMERA_DASHBOARD_HTML = Path(__file__).parent / "templates" / "camera_dashboard.html"
@@ -197,6 +198,14 @@ async def signup_page() -> HTMLResponse:
     if not SIGNUP_HTML.exists():
         raise HTTPException(status_code=500, detail="Signup template missing")
     return HTMLResponse(SIGNUP_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page() -> HTMLResponse:
+    """Forgot password page - enter email to receive reset instructions."""
+    if not FORGOT_PASSWORD_HTML.exists():
+        raise HTTPException(status_code=500, detail="Forgot password template missing")
+    return HTMLResponse(FORGOT_PASSWORD_HTML.read_text(encoding="utf-8"))
 
 
 @router.get("/reset-password", response_class=HTMLResponse)

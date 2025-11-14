@@ -165,8 +165,8 @@ def send_password_reset(email: str) -> None:
         raise RuntimeError("Supabase client not configured")
 
     try:
-        # Default to localhost:8000 for development, can be overridden via env var
-        redirect_to = os.getenv("PASSWORD_RESET_REDIRECT_URL", "http://localhost:8000/reset-password")
+        # Default to production URL, can be overridden via env var for development
+        redirect_to = os.getenv("PASSWORD_RESET_REDIRECT_URL", "https://app.visant.ai/reset-password")
         options = {"redirect_to": redirect_to}
         supabase.auth.reset_password_for_email(email, options=options)
     except AuthApiError as e:
