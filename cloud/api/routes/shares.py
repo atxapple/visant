@@ -25,13 +25,17 @@ class ShareLinkCreateRequest(BaseModel):
     expires_in_days: int = 7  # Default: 7 days
     password: Optional[str] = None
     max_views: Optional[int] = None
+    link_name: Optional[str] = None  # Custom name for the share link
+    allow_edit_prompt: bool = False  # Allow prompt editing on public share
 
     class Config:
         json_schema_extra = {
             "example": {
                 "device_id": "camera-01",
                 "share_type": "device",
-                "expires_in_days": 7
+                "expires_in_days": 7,
+                "link_name": "Front Door Camera - Week 1",
+                "allow_edit_prompt": False
             }
         }
 
@@ -45,6 +49,8 @@ class ShareLinkResponse(BaseModel):
     expires_at: datetime
     view_count: int
     max_views: Optional[int]
+    link_name: Optional[str]
+    allow_edit_prompt: bool
 
 
 class ShareLinkListResponse(BaseModel):
@@ -144,7 +150,9 @@ def create_share_link(
         created_at=datetime.utcnow(),
         expires_at=expires_at,
         max_views=request.max_views,
-        view_count=0
+        view_count=0,
+        link_name=request.link_name,
+        allow_edit_prompt=request.allow_edit_prompt
     )
 
     # TODO: Hash password if provided
@@ -167,7 +175,9 @@ def create_share_link(
         "created_at": share_link.created_at,
         "expires_at": share_link.expires_at,
         "view_count": share_link.view_count,
-        "max_views": share_link.max_views
+        "max_views": share_link.max_views,
+        "link_name": share_link.link_name,
+        "allow_edit_prompt": share_link.allow_edit_prompt
     }
 
 
@@ -200,7 +210,9 @@ def list_share_links(
                 "created_at": sl.created_at,
                 "expires_at": sl.expires_at,
                 "view_count": sl.view_count,
-                "max_views": sl.max_views
+                "max_views": sl.max_views,
+                "link_name": sl.link_name,
+                "allow_edit_prompt": sl.allow_edit_prompt
             }
             for sl in share_links
         ],

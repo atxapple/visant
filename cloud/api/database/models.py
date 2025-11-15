@@ -228,6 +228,10 @@ class ShareLink(Base):
     password_hash = Column(String(255), nullable=True)
     max_views = Column(Integer, nullable=True)
 
+    # Permissions and metadata
+    link_name = Column(String(255), nullable=True)  # Custom name for the share link
+    allow_edit_prompt = Column(Boolean, default=False, nullable=False)  # Allow prompt editing on public share
+
     # Analytics
     view_count = Column(Integer, default=0)
     last_viewed_at = Column(DateTime, nullable=True)

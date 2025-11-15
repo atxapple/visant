@@ -906,6 +906,24 @@
 <body>
     <!-- Header -->
     <header>
+        {% if is_public_share %}
+        <div class="header-left">
+            <a href="https://visant.ai" class="logo" target="_blank">Visant</a>
+            <div class="breadcrumb">
+                <span style="color: #6b7280;">📷 {{ device_name }}</span>
+                <span style="color: #9ca3af;">•</span>
+                <span style="color: #9ca3af; font-size: 0.85rem;">Shared via {{ organization_name }}</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <span style="margin-right: 1rem; color: #6b7280; font-size: 0.875rem;">
+                ⏰ Expires: {{ share_expires_at }}
+            </span>
+            <a href="https://visant.ai/signup" class="btn-logout" target="_blank" style="background: #2563eb; color: white; border-color: #2563eb;">
+                🚀 Get Visant
+            </a>
+        </div>
+        {% else %}
         <div class="header-left">
             <a href="/ui/cameras" class="logo">Visant</a>
             <div class="breadcrumb">
@@ -917,6 +935,7 @@
             <a id="userName" href="/ui/profile/settings" style="margin-right: 1rem; color: #374151; font-weight: 500; text-decoration: none; transition: color 0.2s;"></a>
             <button class="btn-logout" onclick="handleLogout()">Logout</button>
         </div>
+        {% endif %}
     </header>
 
     <!-- Main Content -->
@@ -949,10 +968,13 @@
         </div>
 
         <!-- Settings Panel (Collapsible) -->
+        {% if not is_public_share or (is_public_share and allow_edit_prompt) %}
         <div id="settingsPanel">
             <h2 class="settings-header">
-                <span>CAMERA SETTINGS</span>
+                <span>{% if is_public_share %}ALERT CONDITION{% else %}CAMERA SETTINGS{% endif %}</span>
+                {% if not is_public_share %}
                 <span class="settings-device-id"><span style="color: #9ca3af; font-weight: 500;">Camera ID:</span> <span id="settingsDeviceId">-</span></span>
+                {% endif %}
             </h2>
             <div class="settings-grid">
                 <!-- Column 1: Alert Condition -->
@@ -973,6 +995,7 @@
                     </button>
                 </div>
 
+                {% if not is_public_share %}
                 <!-- Column 2: Trigger Sources -->
                 <div class="settings-column">
                     <h3 class="column-title">Trigger Sources</h3>
@@ -1046,8 +1069,10 @@
                         Update Actions
                     </button>
                 </div>
+                {% endif %}
             </div>
         </div>
+        {% endif %}
 
         <!-- Recent Captures Section (Full Width) -->
         <div class="section">
@@ -1128,20 +1153,31 @@
 
     <script src="/static/js/auth.js"></script>
     <script>
-        // Require authentication
-        if (!auth.requireAuth()) {
+        // Mode detection: public share vs authenticated user
+        const isPublicShare = {{ 'true' if is_public_share else 'false' }};
+
+        // Require authentication (only for non-public pages)
+        if (!isPublicShare && !auth.requireAuth()) {
             // Will redirect to login
         }
+        const shareToken = "{{ share_token if is_public_share else '' }}";
+        const allowEditPrompt = {{ 'true' if (is_public_share and allow_edit_prompt) else 'false' }};
 
-        // Load user info
-        const user = auth.getUser();
-        if (user) {
-            document.getElementById('userName').textContent = user.name || user.email || 'User';
+        // Load user info (only for authenticated mode)
+        if (!isPublicShare) {
+            const user = auth.getUser();
+            if (user) {
+                document.getElementById('userName').textContent = user.name || user.email || 'User';
+            }
         }
 
-        // Get device ID from URL path
+        // Get device ID from URL path or context
+        {% if is_public_share %}
+        const deviceId = "{{ device_id }}";
+        {% else %}
         const pathParts = window.location.pathname.split('/');
         const deviceId = pathParts[pathParts.length - 1];
+        {% endif %}
         // Modal DOM elements
         const definitionOverlay = document.getElementById('definition-overlay');
         const definitionTitle = document.getElementById('definition-title');
@@ -1561,16 +1597,19 @@
             const definition = document.getElementById('alertDefinition').value.trim();
 
             try {
-                const response = await fetch('/ui/normal-description', {
+                // Use different endpoint based on mode
+                const url = isPublicShare ? `/s/${shareToken}/update-prompt` : '/ui/normal-description';
+                const headers = isPublicShare
+                    ? { 'Content-Type': 'application/json' }
+                    : { ...auth.getAuthHeaders(), 'Content-Type': 'application/json' };
+                const body = isPublicShare
+                    ? JSON.stringify({ description: definition })
+                    : JSON.stringify({ device_id: deviceId, description: definition });
+
+                const response = await fetch(url, {
                     method: 'POST',
-                    headers: {
-                        ...auth.getAuthHeaders(),
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        device_id: deviceId,
-                        description: definition
-                    })
+                    headers: headers,
+                    body: body
                 });
 
                 if (!response.ok) {
@@ -1670,7 +1709,11 @@
             try {
                 // Build query parameters from filters
                 const maxResults = document.getElementById('filterMaxResults').value || 20;
-                let url = `/v1/devices/${deviceId}/captures?limit=${maxResults}`;
+
+                // Use different API endpoint based on mode
+                let url = isPublicShare
+                    ? `/api/s/${shareToken}?limit=${maxResults}`
+                    : `/v1/devices/${deviceId}/captures?limit=${maxResults}`;
 
                 // Add state filter parameters
                 const filterNormal = document.getElementById('filterNormal').checked;
@@ -1713,14 +1756,16 @@
                 }
 
                 const response = await fetch(url, {
-                    headers: auth.getAuthHeaders()
+                    headers: isPublicShare ? {} : auth.getAuthHeaders()
                 });
 
                 if (!response.ok) {
                     throw new Error('Failed to load captures');
                 }
 
-                allCaptures = await response.json();
+                // Handle different response formats
+                const data = await response.json();
+                allCaptures = isPublicShare ? data.captures : data;
 
                 // Apply client-side state filtering if multiple (but not all) states are selected
                 let filteredCaptures = allCaptures;

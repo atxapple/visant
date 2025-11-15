@@ -820,22 +820,13 @@
                         </div>
                     </a>
                     <div class="share-container">
-                        <button class="share-btn" onclick="ShareInline.handleShareClick('${device.device_id}', this.parentElement); event.stopPropagation();">
+                        <button class="share-btn" onclick="ShareInline.openModal('${device.device_id}'); event.stopPropagation();">
                             🔗 Share
                         </button>
-                        <div class="share-link-display">
-                            <a href="" target="_blank" class="share-url"></a>
-                            <div class="share-metadata"></div>
-                        </div>
-                        <button class="share-remove-btn">Remove Link</button>
                     </div>
                 `;
 
                 grid.appendChild(card);
-
-                // Load share status for this camera
-                const shareContainer = card.querySelector('.share-container');
-                ShareInline.loadShareStatus(device.device_id, shareContainer);
             });
         }
 
@@ -856,5 +847,374 @@
         loadCameras();
         loadCloudVersion();
     </script>
+
+    <!-- Share Management Modal -->
+    <div id="shareModal" class="share-modal" style="display: none;">
+        <div class="share-modal-content">
+            <div class="share-modal-header">
+                <h2>Manage Share Links</h2>
+                <button class="share-modal-close" onclick="ShareInline.closeModal()">&times;</button>
+            </div>
+
+            <div class="share-modal-body">
+                <!-- Existing Share Links Section -->
+                <div id="existingSharesSection" class="existing-shares-section">
+                    <h3>Existing Share Links</h3>
+                    <div id="existingSharesList" class="existing-shares-list">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+
+                <!-- Create New Share Link Section -->
+                <div class="create-share-section">
+                    <h3>Create New Share Link</h3>
+                    <form id="createShareForm" class="create-share-form">
+                        <!-- Link Name -->
+                        <div class="form-group">
+                            <label for="shareLink Name">Link Name</label>
+                            <input type="text" id="shareLinkName" name="linkName" class="form-control" placeholder="e.g., Front Door - Week 1">
+                            <small class="form-help">Optional custom name for this share link</small>
+                        </div>
+
+                        <!-- Share Type -->
+                        <div class="form-group">
+                            <label>Share Type</label>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="shareType" value="device" checked>
+                                    <span>Entire device feed</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Permissions -->
+                        <div class="form-group">
+                            <label>Permissions</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="allowEditPrompt" name="allowEditPrompt">
+                                    <span>Allow viewers to edit prompt</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Expiration Settings -->
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="enableExpiration" name="enableExpiration" checked>
+                                <span>Enable expiration</span>
+                            </label>
+                        </div>
+
+                        <div id="expirationOptions" class="expiration-options">
+                            <div class="preset-buttons">
+                                <button type="button" class="preset-btn" data-days="1">1 Day</button>
+                                <button type="button" class="preset-btn active" data-days="7">1 Week</button>
+                                <button type="button" class="preset-btn" data-days="30">1 Month</button>
+                                <button type="button" class="preset-btn" data-days="90">3 Months</button>
+                                <button type="button" class="preset-btn" data-days="custom">Custom</button>
+                            </div>
+                            <div id="customDatePicker" class="custom-date-picker" style="display: none;">
+                                <input type="datetime-local" id="customExpirationDate" class="form-control">
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn-primary generate-btn">Generate Share Link</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Share Modal Styles */
+        .share-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .share-modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .share-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .share-modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #1e293b;
+        }
+
+        .share-modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #64748b;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .share-modal-close:hover {
+            background: #f1f5f9;
+        }
+
+        .share-modal-body {
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .existing-shares-section {
+            margin-bottom: 32px;
+        }
+
+        .existing-shares-section h3,
+        .create-share-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #334155;
+            margin: 0 0 16px 0;
+        }
+
+        .existing-shares-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .share-link-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .share-link-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .share-link-name {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 14px;
+        }
+
+        .share-link-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge-edit-allowed {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-edit-not-allowed {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .share-link-url {
+            font-size: 13px;
+            color: #3b82f6;
+            word-break: break-all;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .share-link-meta {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 12px;
+        }
+
+        .share-link-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .share-link-actions button {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-copy {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-copy:hover {
+            background: #2563eb;
+        }
+
+        .btn-remove {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-remove:hover {
+            background: #dc2626;
+        }
+
+        .create-share-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #334155;
+            margin-bottom: 8px;
+        }
+
+        .form-control {
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .form-help {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .radio-group,
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .radio-label,
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
+        .radio-label input,
+        .checkbox-label input {
+            cursor: pointer;
+        }
+
+        .expiration-options {
+            margin-top: 12px;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .preset-btn {
+            padding: 8px 16px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .preset-btn:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+
+        .preset-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .custom-date-picker {
+            margin-top: 12px;
+        }
+
+        .generate-btn {
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .generate-btn:hover {
+            background: #2563eb;
+        }
+
+        .generate-btn:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+        }
+
+        .no-shares-message {
+            text-align: center;
+            padding: 24px;
+            color: #64748b;
+            font-size: 14px;
+        }
+    </style>
 </body>
 </html>

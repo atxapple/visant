@@ -346,6 +346,288 @@ const ShareInline = {
         } catch (error) {
             console.error('Error loading share status:', error);
         }
+    },
+
+    /**
+     * Open share management modal
+     * @param {string} deviceId - Device ID
+     */
+    async openModal(deviceId) {
+        this.currentDeviceId = deviceId;
+        const modal = document.getElementById('shareModal');
+        modal.style.display = 'flex';
+
+        // Load existing shares
+        await this.loadExistingShares(deviceId);
+
+        // Setup event listeners if not already done
+        if (!this.modalInitialized) {
+            this.setupModalEventListeners();
+            this.modalInitialized = true;
+        }
+
+        // Reset form
+        this.resetForm();
+
+        // Set default link name to current date/time
+        const now = new Date();
+        const defaultName = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+        document.getElementById('shareLinkName').value = defaultName;
+    },
+
+    /**
+     * Close share management modal
+     */
+    closeModal() {
+        const modal = document.getElementById('shareModal');
+        modal.style.display = 'none';
+        this.currentDeviceId = null;
+    },
+
+    /**
+     * Load existing share links for device
+     * @param {string} deviceId - Device ID
+     */
+    async loadExistingShares(deviceId) {
+        try {
+            const response = await fetch(`/v1/share-links?device_id=${deviceId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${auth.getToken()}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to load share links');
+            }
+
+            const data = await response.json();
+            const shares = data.share_links || [];
+
+            this.displayExistingShares(shares);
+
+        } catch (error) {
+            console.error('Error loading existing shares:', error);
+            this.showToast('Failed to load existing shares', 'error');
+        }
+    },
+
+    /**
+     * Display existing share links
+     * @param {Array} shares - Array of share link objects
+     */
+    displayExistingShares(shares) {
+        const container = document.getElementById('existingSharesList');
+
+        if (shares.length === 0) {
+            container.innerHTML = '<div class="no-shares-message">No share links created yet</div>';
+            return;
+        }
+
+        container.innerHTML = shares.map(share => {
+            const linkName = share.link_name || this.formatDate(share.created_at);
+            const editBadge = share.allow_edit_prompt
+                ? '<span class="share-link-badge badge-edit-allowed">Edit Allowed</span>'
+                : '<span class="share-link-badge badge-edit-not-allowed">Edit Not Allowed</span>';
+
+            const expiresText = this.formatDate(share.expires_at);
+            const viewsText = `${share.view_count || 0} views`;
+            const createdText = `Created ${this.formatRelativeTime(share.created_at)}`;
+
+            return `
+                <div class="share-link-item">
+                    <div class="share-link-header">
+                        <div class="share-link-name">${linkName}</div>
+                        ${editBadge}
+                    </div>
+                    <a href="${share.share_url}" target="_blank" class="share-link-url">${share.share_url}</a>
+                    <div class="share-link-meta">
+                        ${createdText} • ${expiresText} • ${viewsText}
+                    </div>
+                    <div class="share-link-actions">
+                        <button class="btn-copy" onclick="ShareInline.copyShareLink('${share.share_url}')">Copy Link</button>
+                        <button class="btn-remove" onclick="ShareInline.removeShare('${share.token}')">Remove</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    /**
+     * Setup modal event listeners
+     */
+    setupModalEventListeners() {
+        // Close modal on background click
+        document.getElementById('shareModal').addEventListener('click', (e) => {
+            if (e.target.id === 'shareModal') {
+                this.closeModal();
+            }
+        });
+
+        // Expiration toggle
+        document.getElementById('enableExpiration').addEventListener('change', (e) => {
+            document.getElementById('expirationOptions').style.display =
+                e.target.checked ? 'block' : 'none';
+        });
+
+        // Preset buttons
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                // Remove active from all
+                document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+                // Add active to clicked
+                btn.classList.add('active');
+
+                // Show/hide custom date picker
+                const isCustom = btn.dataset.days === 'custom';
+                document.getElementById('customDatePicker').style.display =
+                    isCustom ? 'block' : 'none';
+            });
+        });
+
+        // Form submission
+        document.getElementById('createShareForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleCreateShare();
+        });
+    },
+
+    /**
+     * Handle create share form submission
+     */
+    async handleCreateShare() {
+        try {
+            const form = document.getElementById('createShareForm');
+            const submitBtn = form.querySelector('.generate-btn');
+
+            // Disable button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating...';
+
+            // Get form values
+            const linkName = document.getElementById('shareLinkName').value.trim() || null;
+            const allowEditPrompt = document.getElementById('allowEditPrompt').checked;
+            const enableExpiration = document.getElementById('enableExpiration').checked;
+
+            // Calculate expiration
+            let expiresInDays = 365; // Default to 1 year if no expiration
+            if (enableExpiration) {
+                const activePreset = document.querySelector('.preset-btn.active');
+                if (activePreset.dataset.days === 'custom') {
+                    const customDate = document.getElementById('customExpirationDate').value;
+                    if (!customDate) {
+                        this.showToast('Please select a custom expiration date', 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Generate Share Link';
+                        return;
+                    }
+                    const expiresAt = new Date(customDate);
+                    const now = new Date();
+                    expiresInDays = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
+                } else {
+                    expiresInDays = parseInt(activePreset.dataset.days);
+                }
+            }
+
+            // Create share link
+            const response = await fetch(`/v1/devices/${this.currentDeviceId}/share`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${auth.getToken()}`
+                },
+                body: JSON.stringify({
+                    device_id: this.currentDeviceId,
+                    share_type: 'device',
+                    expires_in_days: expiresInDays,
+                    link_name: linkName,
+                    allow_edit_prompt: allowEditPrompt
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.detail || 'Failed to create share link');
+            }
+
+            const data = await response.json();
+
+            // Copy to clipboard
+            await this.copyToClipboard(data.share_url);
+
+            // Show success
+            this.showToast('Share link created and copied to clipboard!', 'success');
+
+            // Reload existing shares
+            await this.loadExistingShares(this.currentDeviceId);
+
+            // Reset form
+            this.resetForm();
+
+        } catch (error) {
+            console.error('Error creating share:', error);
+            this.showToast(error.message || 'Failed to create share link', 'error');
+        } finally {
+            const submitBtn = document.getElementById('createShareForm').querySelector('.generate-btn');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Generate Share Link';
+        }
+    },
+
+    /**
+     * Reset the create share form
+     */
+    resetForm() {
+        const form = document.getElementById('createShareForm');
+        form.reset();
+
+        // Reset to defaults
+        document.getElementById('enableExpiration').checked = true;
+        document.getElementById('expirationOptions').style.display = 'block';
+        document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.preset-btn[data-days="7"]').classList.add('active');
+        document.getElementById('customDatePicker').style.display = 'none';
+
+        // Set default link name
+        const now = new Date();
+        const defaultName = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+        document.getElementById('shareLinkName').value = defaultName;
+    },
+
+    /**
+     * Copy share link to clipboard
+     * @param {string} url - Share URL
+     */
+    async copyShareLink(url) {
+        try {
+            await this.copyToClipboard(url);
+            this.showToast('Link copied to clipboard!', 'success');
+        } catch (error) {
+            this.showToast('Failed to copy link', 'error');
+        }
+    },
+
+    /**
+     * Remove a share link
+     * @param {string} token - Share token
+     */
+    async removeShare(token) {
+        if (!confirm('Remove this share link? The link will stop working immediately.')) {
+            return;
+        }
+
+        try {
+            await this.revokeShareLink(token);
+            this.showToast('Share link removed', 'success');
+
+            // Reload existing shares
+            await this.loadExistingShares(this.currentDeviceId);
+
+        } catch (error) {
+            console.error('Error removing share:', error);
+            this.showToast(error.message || 'Failed to remove share link', 'error');
+        }
     }
 };
 
