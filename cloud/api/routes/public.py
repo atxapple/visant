@@ -91,26 +91,72 @@ async def public_gallery_html(
     # Read the HTML template
     html_content = CAMERA_DASHBOARD_HTML.read_text(encoding="utf-8")
 
-    # Replace Jinja2 template variables with actual values
-    replacements = {
-        "{{ 'true' if is_public_share else 'false' }}": "true",
-        "{% if is_public_share %}": "<!-- PUBLIC_SHARE_START -->",
-        "{% else %}": "<!-- PUBLIC_SHARE_ELSE -->",
-        "{% endif %}": "<!-- PUBLIC_SHARE_END -->",
-        "{{ device_name }}": device.friendly_name if device else "Unknown Device",
-        "{{ organization_name }}": org.name if org else "Unknown Organization",
-        "{{ share_expires_at }}": share_link.expires_at.strftime('%Y-%m-%d %H:%M UTC'),
-        "{{ share_token if is_public_share else '' }}": token,
-        "{{ 'true' if (is_public_share and allow_edit_prompt) else 'false' }}": "true" if share_link.allow_edit_prompt else "false",
-        '{% if not is_public_share or (is_public_share and allow_edit_prompt) %}': "<!-- SETTINGS_START -->" if share_link.allow_edit_prompt else "<!-- SETTINGS_SKIP ",
-        "{% if is_public_share %}ALERT CONDITION{% else %}CAMERA SETTINGS{% endif %}": "ALERT CONDITION" if share_link.allow_edit_prompt else "",
-        "{% if not is_public_share %}": "<!-- AUTH_ONLY_START ",
-        '{{ device_id }}': share_link.device_id,
-        "{{ 'true' if is_public_share else 'false' }}": "true",
-    }
+    import re
 
-    for placeholder, value in replacements.items():
-        html_content = html_content.replace(placeholder, value)
+    # First: Replace specific template variables BEFORE removing conditionals
+    # Settings header conditional
+    if share_link.allow_edit_prompt:
+        html_content = html_content.replace(
+            '{% if is_public_share %}ALERT CONDITION{% else %}CAMERA SETTINGS{% endif %}',
+            'ALERT CONDITION'
+        )
+    else:
+        # If no edit prompt allowed, hide the entire settings panel
+        html_content = re.sub(
+            r'{%\s*if\s+not\s+is_public_share\s+or\s+\(is_public_share\s+and\s+allow_edit_prompt\)\s*%}.*?{%\s*endif\s*%}',
+            '',
+            html_content,
+            flags=re.DOTALL
+        )
+
+    # Replace other template variables
+    html_content = html_content.replace("{{ 'true' if is_public_share else 'false' }}", "true")
+    html_content = html_content.replace("{{ share_token if is_public_share else '' }}", token)
+    html_content = html_content.replace("{{ 'true' if (is_public_share and allow_edit_prompt) else 'false' }}", "true" if share_link.allow_edit_prompt else "false")
+    html_content = html_content.replace('{{ device_id }}', share_link.device_id)
+    html_content = html_content.replace("{{ device_name }}", device.friendly_name if device else "Unknown Device")
+    html_content = html_content.replace("{{ organization_name }}", org.name if org else "Unknown Organization")
+    html_content = html_content.replace("{{ share_expires_at }}", share_link.expires_at.strftime('%Y-%m-%d %H:%M UTC'))
+
+    # Second: Handle conditional blocks - for public share, keep public sections, remove authenticated sections
+    # Remove authenticated header (between {% else %} and {% endif %} in header section)
+    html_content = re.sub(
+        r'(<header>.*?{%\s*if\s+is_public_share\s*%})',
+        r'\1',
+        html_content,
+        flags=re.DOTALL
+    )
+    html_content = re.sub(
+        r'({%\s*else\s*%}.*?{%\s*endif\s*%}\s*</header>)',
+        '</header>',
+        html_content,
+        flags=re.DOTALL
+    )
+
+    # Remove settings panel condition wrapper if edit prompt is allowed
+    if share_link.allow_edit_prompt:
+        html_content = html_content.replace('{% if not is_public_share or (is_public_share and allow_edit_prompt) %}', '')
+
+    # Keep public share device ID in JavaScript (remove authenticated version)
+    html_content = re.sub(
+        r'{%\s*if\s+is_public_share\s*%}\s*(const deviceId = ".*?";)\s*{%\s*else\s*%}.*?{%\s*endif\s*%}',
+        r'\1',
+        html_content,
+        flags=re.DOTALL
+    )
+
+    # Remove all {% if not is_public_share %} blocks and their content up to {% endif %}
+    html_content = re.sub(
+        r'{%\s*if\s+not\s+is_public_share\s*%}.*?{%\s*endif\s*%}',
+        '',
+        html_content,
+        flags=re.DOTALL
+    )
+
+    # Clean up any remaining template tags
+    html_content = html_content.replace('{% if is_public_share %}', '')
+    html_content = html_content.replace('{% else %}', '')
+    html_content = html_content.replace('{% endif %}', '')
 
     return HTMLResponse(content=html_content)
 
