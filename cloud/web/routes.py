@@ -281,19 +281,22 @@ async def camera_dashboard_page(device_id: str) -> HTMLResponse:
     # Read template and replace variables for authenticated view
     html_content = CAMERA_DASHBOARD_HTML.read_text(encoding="utf-8")
 
-    # Replace template variables for authenticated (non-public) view
-    # For authenticated users: hide public share content, show authenticated content
-    replacements = {
-        "{{ 'true' if is_public_share else 'false' }}": "false",
-        "{{ share_token if is_public_share else '' }}": "",
-        "{{ 'true' if (is_public_share and allow_edit_prompt) else 'false' }}": "false",
-        "{% if is_public_share %}ALERT CONDITION{% else %}CAMERA SETTINGS{% endif %}": "CAMERA SETTINGS",
-        '{{ device_id }}': device_id,
-    }
-
-    # Handle conditional blocks by removing the public share sections
-    # First pass: remove public share header block
     import re
+
+    # First: Replace specific template variables BEFORE removing conditionals
+    # This settings header has a conditional that needs to be replaced as a whole
+    html_content = html_content.replace(
+        '{% if is_public_share %}ALERT CONDITION{% else %}CAMERA SETTINGS{% endif %}',
+        'CAMERA SETTINGS'
+    )
+
+    # Replace other template variables
+    html_content = html_content.replace("{{ 'true' if is_public_share else 'false' }}", "false")
+    html_content = html_content.replace("{{ share_token if is_public_share else '' }}", "")
+    html_content = html_content.replace("{{ 'true' if (is_public_share and allow_edit_prompt) else 'false' }}", "false")
+    html_content = html_content.replace('{{ device_id }}', device_id)
+
+    # Second: Handle conditional blocks by removing the public share sections
     # Remove public share header (between {% if is_public_share %} and {% else %} in header)
     html_content = re.sub(
         r'<header>.*?{%\s*if\s+is_public_share\s*%}.*?{%\s*else\s*%}',
@@ -323,9 +326,6 @@ async def camera_dashboard_page(device_id: str) -> HTMLResponse:
     # Remove any remaining {% if not is_public_share %} and {% endif %}
     html_content = html_content.replace('{% if not is_public_share %}', '')
     html_content = html_content.replace('{% endif %}', '')
-
-    for placeholder, value in replacements.items():
-        html_content = html_content.replace(placeholder, value)
 
     return HTMLResponse(content=html_content)
 
