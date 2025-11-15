@@ -282,18 +282,47 @@ async def camera_dashboard_page(device_id: str) -> HTMLResponse:
     html_content = CAMERA_DASHBOARD_HTML.read_text(encoding="utf-8")
 
     # Replace template variables for authenticated (non-public) view
+    # For authenticated users: hide public share content, show authenticated content
     replacements = {
         "{{ 'true' if is_public_share else 'false' }}": "false",
-        "{% if is_public_share %}": "<!-- PUBLIC_SHARE_START ",
-        "{% else %}": " PUBLIC_SHARE_ELSE -->",
-        "{% endif %}": "<!-- PUBLIC_SHARE_END -->",
         "{{ share_token if is_public_share else '' }}": "",
         "{{ 'true' if (is_public_share and allow_edit_prompt) else 'false' }}": "false",
-        '{% if not is_public_share or (is_public_share and allow_edit_prompt) %}': "",
         "{% if is_public_share %}ALERT CONDITION{% else %}CAMERA SETTINGS{% endif %}": "CAMERA SETTINGS",
-        "{% if not is_public_share %}": "",
         '{{ device_id }}': device_id,
     }
+
+    # Handle conditional blocks by removing the public share sections
+    # First pass: remove public share header block
+    import re
+    # Remove public share header (between {% if is_public_share %} and {% else %} in header)
+    html_content = re.sub(
+        r'<header>.*?{%\s*if\s+is_public_share\s*%}.*?{%\s*else\s*%}',
+        '<header>',
+        html_content,
+        flags=re.DOTALL
+    )
+    # Remove the endif for header
+    html_content = html_content.replace('{% endif %}\n    </header>', '</header>')
+
+    # Remove settings panel condition wrapper
+    html_content = html_content.replace('{% if not is_public_share or (is_public_share and allow_edit_prompt) %}', '')
+
+    # Remove public share device ID in JavaScript (keep only authenticated version)
+    html_content = re.sub(
+        r'{%\s*if\s+is_public_share\s*%}\s*const deviceId = ".*?";\s*{%\s*else\s*%}',
+        '',
+        html_content,
+        flags=re.DOTALL
+    )
+    html_content = re.sub(
+        r'{%\s*endif\s*%}\s*// Modal DOM elements',
+        '// Modal DOM elements',
+        html_content
+    )
+
+    # Remove any remaining {% if not is_public_share %} and {% endif %}
+    html_content = html_content.replace('{% if not is_public_share %}', '')
+    html_content = html_content.replace('{% endif %}', '')
 
     for placeholder, value in replacements.items():
         html_content = html_content.replace(placeholder, value)
