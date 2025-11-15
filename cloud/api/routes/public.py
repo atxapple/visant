@@ -137,10 +137,15 @@ async def public_gallery_html(
     if share_link.allow_edit_prompt:
         html_content = html_content.replace('{% if not is_public_share or (is_public_share and allow_edit_prompt) %}', '')
 
-    # Keep public share device ID in JavaScript (remove authenticated version)
+    # Simplify JavaScript deviceId handling - replace the entire conditional block
+    # The template has: {% if is_public_share %}const deviceId = "...";{% else %}...{% endif %}
+    # We want just: const deviceId = "...";
+    device_id_js_block = f'const deviceId = "{share_link.device_id}";'
+
+    # Find and replace the device ID conditional block in JavaScript
     html_content = re.sub(
-        r'{%\s*if\s+is_public_share\s*%}\s*(const deviceId = ".*?";)\s*{%\s*else\s*%}.*?{%\s*endif\s*%}',
-        r'\1',
+        r'{%\s*if\s+is_public_share\s*%}.*?const\s+deviceId\s*=.*?;.*?{%\s*else\s*%}.*?{%\s*endif\s*%}\s*//\s*Modal\s+DOM\s+elements',
+        device_id_js_block + '\n        // Modal DOM elements',
         html_content,
         flags=re.DOTALL
     )
