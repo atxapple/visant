@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List
 from sqlalchemy import (
-    Column, String, DateTime, ForeignKey, Integer, Float, Boolean, Text, JSON, TypeDecorator, CHAR, Index
+    Column, String, DateTime, ForeignKey, Integer, Float, Boolean, Text, JSON, TypeDecorator, CHAR, Index, Numeric
 )
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
@@ -58,9 +58,13 @@ class Organization(Base):
 
     # Subscription (Phase 7)
     subscription_status = Column(String(50), default="free")  # free, active, past_due, canceled, unpaid
-    subscription_plan_id = Column(String(50), nullable=True)  # starter, home, pro
+    subscription_plan_id = Column(String(50), nullable=True)  # starter, home, pro, 1month, 6month
     allowed_devices = Column(Integer, default=0)
     active_devices_count = Column(Integer, default=0)
+
+    # Stripe integration
+    stripe_customer_id = Column(String(255), nullable=True, index=True)  # Stripe customer ID
+    stripe_subscription_id = Column(String(255), nullable=True)  # Active Stripe subscription ID
 
     # Activation code benefits
     code_benefit_ends_at = Column(DateTime, nullable=True)
@@ -71,6 +75,7 @@ class Organization(Base):
     devices = relationship("Device", back_populates="organization", cascade="all, delete-orphan")
     captures = relationship("Capture", back_populates="organization", cascade="all, delete-orphan")
     share_links = relationship("ShareLink", back_populates="organization", cascade="all, delete-orphan")
+    hardware_orders = relationship("HardwareOrder", back_populates="organization", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Organization(id={self.id}, name={self.name})>"
@@ -347,6 +352,59 @@ class ScheduledTrigger(Base):
         return f"<ScheduledTrigger(trigger_id={self.trigger_id}, device_id={self.device_id}, status={self.status})>"
 
 
+class HardwareOrder(Base):
+    """Hardware order with payment and activation tracking."""
+    __tablename__ = "hardware_orders"
+
+    # Order identifier
+    id = Column(GUID, primary_key=True, default=uuid.uuid4)
+    order_number = Column(String(50), unique=True, nullable=False, index=True)  # ORD-20241115-001
+
+    # Organization (nullable until device is activated and linked)
+    org_id = Column(GUID, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    # Pricing
+    plan_type = Column(String(20), nullable=False)  # "1month" or "6month"
+    total_paid = Column(Numeric(10, 2), nullable=False)  # $297.00 or $99.50
+    prepaid_months = Column(Integer, nullable=False)  # 6 or 1
+
+    # Customer information (collected at checkout)
+    customer_email = Column(String(255), nullable=False, index=True)
+    shipping_address = Column(JSON, nullable=False)  # {name, line1, line2, city, state, postal_code, country}
+
+    # Payment tracking
+    stripe_payment_intent_id = Column(String(255), nullable=True)
+    stripe_customer_id = Column(String(255), nullable=True)  # Saved for future billing
+    stripe_checkout_session_id = Column(String(255), nullable=True)
+
+    # Activation code
+    activation_code = Column(String(50), unique=True, nullable=False, index=True)
+    code_activated_at = Column(DateTime, nullable=True)
+    activated_by_user_id = Column(GUID, ForeignKey("users.id"), nullable=True)
+
+    # Subscription tracking (dates set when code is activated)
+    subscription_starts_at = Column(DateTime, nullable=True)  # When code activated
+    subscription_ends_at = Column(DateTime, nullable=True)  # When prepaid period ends
+    auto_renewal_starts_at = Column(DateTime, nullable=True)  # When monthly billing begins
+    stripe_subscription_id = Column(String(255), nullable=True)  # Created on activation
+
+    # Shipping
+    shipping_status = Column(String(50), default="pending", index=True)  # pending, shipped, delivered, canceled
+    tracking_number = Column(String(100), nullable=True)
+    shipped_at = Column(DateTime, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    organization = relationship("Organization", back_populates="hardware_orders")
+    activated_by = relationship("User", foreign_keys=[activated_by_user_id])
+
+    def __repr__(self):
+        return f"<HardwareOrder(order_number={self.order_number}, plan_type={self.plan_type}, status={self.shipping_status})>"
+
+
 # Create indexes for common query patterns
 # These will be created automatically by SQLAlchemy when tables are created
 # Additional composite indexes for performance:
@@ -372,3 +430,12 @@ Index('idx_code_redemptions_org', CodeRedemption.org_id, CodeRedemption.redeemed
 
 # Code redemptions: code (for usage tracking)
 Index('idx_code_redemptions_code', CodeRedemption.code, CodeRedemption.redeemed_at.desc())
+
+# Hardware orders: email (for lookup by customer email)
+Index('idx_hardware_orders_email', HardwareOrder.customer_email, HardwareOrder.created_at.desc())
+
+# Hardware orders: activation code (for validation)
+Index('idx_hardware_orders_activation_code', HardwareOrder.activation_code)
+
+# Hardware orders: shipping status (for admin panel filtering)
+Index('idx_hardware_orders_shipping_status', HardwareOrder.shipping_status, HardwareOrder.created_at.desc())

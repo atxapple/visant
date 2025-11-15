@@ -45,6 +45,9 @@ LOGIN_HTML = Path(__file__).parent / "templates" / "login.html"
 SIGNUP_HTML = Path(__file__).parent / "templates" / "signup.html"
 FORGOT_PASSWORD_HTML = Path(__file__).parent / "templates" / "forgot-password.html"
 RESET_PASSWORD_HTML = Path(__file__).parent / "templates" / "reset-password.html"
+ACTIVATE_HTML = Path(__file__).parent / "templates" / "activate.html"
+CHECKOUT_SUCCESS_HTML = Path(__file__).parent / "templates" / "checkout-success.html"
+CHECKOUT_CANCELED_HTML = Path(__file__).parent / "templates" / "checkout-canceled.html"
 CAMERAS_HTML = Path(__file__).parent / "templates" / "cameras.html"
 CAMERA_DASHBOARD_HTML = Path(__file__).parent / "templates" / "camera_dashboard.html"
 SHARES_HTML = Path(__file__).parent / "templates" / "shares.html"
@@ -214,6 +217,30 @@ async def reset_password_page() -> HTMLResponse:
     if not RESET_PASSWORD_HTML.exists():
         raise HTTPException(status_code=500, detail="Reset password template missing")
     return HTMLResponse(RESET_PASSWORD_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/activate", response_class=HTMLResponse)
+async def activate_page() -> HTMLResponse:
+    """Activation code page - requires user to be logged in."""
+    if not ACTIVATE_HTML.exists():
+        raise HTTPException(status_code=500, detail="Activation template missing")
+    return HTMLResponse(ACTIVATE_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/checkout/success", response_class=HTMLResponse)
+async def checkout_success_page() -> HTMLResponse:
+    """Checkout success page - shown after Stripe payment completes."""
+    if not CHECKOUT_SUCCESS_HTML.exists():
+        raise HTTPException(status_code=500, detail="Checkout success template missing")
+    return HTMLResponse(CHECKOUT_SUCCESS_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/checkout/canceled", response_class=HTMLResponse)
+async def checkout_canceled_page() -> HTMLResponse:
+    """Checkout canceled page - shown when user cancels payment."""
+    if not CHECKOUT_CANCELED_HTML.exists():
+        raise HTTPException(status_code=500, detail="Checkout canceled template missing")
+    return HTMLResponse(CHECKOUT_CANCELED_HTML.read_text(encoding="utf-8"))
 
 
 @router.get("/ui/shares", response_class=HTMLResponse)

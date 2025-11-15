@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activate Device - Visant</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .activate-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 480px;
+            padding: 40px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #667eea;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .info-box {
+            background: #f0f7ff;
+            border-left: 4px solid #667eea;
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+        }
+
+        .info-box h3 {
+            color: #667eea;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .info-box p {
+            color: #555;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group input::placeholder {
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: #efe;
+            color: #3a3;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .btn-activate {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+        }
+
+        .btn-activate:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+
+        .btn-activate:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-activate:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .subscription-details {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .subscription-details.show {
+            display: block;
+        }
+
+        .subscription-details h3 {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .subscription-details p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .subscription-details strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="activate-container">
+        <div class="logo">
+            <h1>Visant</h1>
+            <p>Activate Your Device</p>
+        </div>
+
+        <div class="info-box">
+            <h3>Welcome!</h3>
+            <p>Enter the activation code from your hardware package to activate your device and start your subscription.</p>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+
+        <form id="activateForm">
+            <div class="form-group">
+                <label for="activationCode">Activation Code</label>
+                <input
+                    type="text"
+                    id="activationCode"
+                    name="activationCode"
+                    placeholder="VISANT-ABC123"
+                    required
+                    maxlength="13"
+                    pattern="[A-Za-z0-9-]+"
+                >
+            </div>
+
+            <button type="submit" class="btn-activate" id="activateBtn">
+                Activate Device
+            </button>
+        </form>
+
+        <div class="subscription-details" id="subscriptionDetails">
+            <h3>Activation Successful!</h3>
+            <p><strong>Plan:</strong> <span id="planType"></span></p>
+            <p><strong>Subscription Active Until:</strong> <span id="subscriptionEnds"></span></p>
+            <p><strong>Next Billing:</strong> <span id="nextBilling"></span> at $49.50/month</p>
+            <p style="margin-top: 12px;">You can now proceed to add and configure your devices.</p>
+        </div>
+
+        <div class="footer">
+            <a href="/ui/cameras">Go to Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('activateForm');
+        const activateBtn = document.getElementById('activateBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const subscriptionDetails = document.getElementById('subscriptionDetails');
+        const activationCodeInput = document.getElementById('activationCode');
+
+        // Auto-format activation code as user types
+        activationCodeInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase();
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const activationCode = activationCodeInput.value.trim();
+
+            // Hide previous messages
+            errorMessage.classList.remove('show');
+            successMessage.classList.remove('show');
+            subscriptionDetails.classList.remove('show');
+
+            // Disable button during request
+            activateBtn.disabled = true;
+            activateBtn.textContent = 'Activating...';
+
+            try {
+                // Get JWT token from session storage
+                const token = sessionStorage.getItem('access_token');
+
+                if (!token) {
+                    throw new Error('Please log in first');
+                }
+
+                const response = await fetch('/api/activate-code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        activation_code: activationCode
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Success!
+                    successMessage.textContent = data.message;
+                    successMessage.classList.add('show');
+
+                    // Show subscription details
+                    const planType = data.plan_type === '6month' ? '6-Month Plan' : '1-Month Plan';
+                    const endsDate = new Date(data.subscription_ends_at).toLocaleDateString();
+
+                    document.getElementById('planType').textContent = planType;
+                    document.getElementById('subscriptionEnds').textContent = endsDate;
+                    document.getElementById('nextBilling').textContent = endsDate;
+                    subscriptionDetails.classList.add('show');
+
+                    // Hide form
+                    form.style.display = 'none';
+
+                    // Redirect to dashboard after 3 seconds
+                    setTimeout(() => {
+                        window.location.href = '/ui/cameras';
+                    }, 3000);
+                } else {
+                    // Error from API
+                    errorMessage.textContent = data.detail || 'Activation failed. Please try again.';
+                    errorMessage.classList.add('show');
+
+                    activateBtn.disabled = false;
+                    activateBtn.textContent = 'Activate Device';
+                }
+            } catch (error) {
+                errorMessage.textContent = error.message || 'An error occurred. Please try again.';
+                errorMessage.classList.add('show');
+
+                activateBtn.disabled = false;
+                activateBtn.textContent = 'Activate Device';
+
+                // If not logged in, redirect to login
+                if (error.message === 'Please log in first') {
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                }
+            }
+        });
+
+        // Check if user is logged in on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = sessionStorage.getItem('access_token');
+            if (!token) {
+                errorMessage.textContent = 'Please log in first to activate your device.';
+                errorMessage.classList.add('show');
+                activateBtn.disabled = true;
+
+                // Redirect to login after 2 seconds
+                setTimeout(() => {
+                    window.location.href = '/login';
+                }, 2000);
+            }
+        });
+    </script>
+</body>
+</html>

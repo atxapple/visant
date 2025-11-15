@@ -50,7 +50,7 @@ if __name__ == "__main__":
     # Create FastAPI app with multi-tenant architecture
     from cloud.api.database import Base, engine
     from cloud.api.server import create_app
-    from cloud.api.routes import auth, devices, captures, device_commands, admin_codes, capture_events, version, admin, shares, public
+    from cloud.api.routes import auth, devices, captures, device_commands, admin_codes, capture_events, version, admin, shares, public, billing
     from cloud.web import routes as web_routes
     from cloud.api.service import InferenceService
     from cloud.api.config_loader import load_config
@@ -241,6 +241,7 @@ if __name__ == "__main__":
     main_app.include_router(admin_codes.router)  # Admin: Activation code management
     main_app.include_router(admin.router)  # Admin: System management (users, devices, captures)
     main_app.include_router(version.router)  # Version tracking
+    main_app.include_router(billing.router)  # Billing: Hardware checkout and Stripe webhooks
     main_app.include_router(web_routes.router)  # Web UI routes (login, signup, dashboard)
 
     # Create old single-tenant app for compatibility (mounted at /legacy)
