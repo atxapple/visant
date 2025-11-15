@@ -277,7 +277,28 @@ async def camera_dashboard_page(device_id: str) -> HTMLResponse:
     """Individual camera dashboard - shows camera details and captures."""
     if not CAMERA_DASHBOARD_HTML.exists():
         raise HTTPException(status_code=500, detail="Camera dashboard template missing")
-    return HTMLResponse(CAMERA_DASHBOARD_HTML.read_text(encoding="utf-8"))
+
+    # Read template and replace variables for authenticated view
+    html_content = CAMERA_DASHBOARD_HTML.read_text(encoding="utf-8")
+
+    # Replace template variables for authenticated (non-public) view
+    replacements = {
+        "{{ 'true' if is_public_share else 'false' }}": "false",
+        "{% if is_public_share %}": "<!-- PUBLIC_SHARE_START ",
+        "{% else %}": " PUBLIC_SHARE_ELSE -->",
+        "{% endif %}": "<!-- PUBLIC_SHARE_END -->",
+        "{{ share_token if is_public_share else '' }}": "",
+        "{{ 'true' if (is_public_share and allow_edit_prompt) else 'false' }}": "false",
+        '{% if not is_public_share or (is_public_share and allow_edit_prompt) %}': "",
+        "{% if is_public_share %}ALERT CONDITION{% else %}CAMERA SETTINGS{% endif %}": "CAMERA SETTINGS",
+        "{% if not is_public_share %}": "",
+        '{{ device_id }}': device_id,
+    }
+
+    for placeholder, value in replacements.items():
+        html_content = html_content.replace(placeholder, value)
+
+    return HTMLResponse(content=html_content)
 
 
 @router.get("/ui", response_class=RedirectResponse)
