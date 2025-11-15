@@ -164,8 +164,7 @@ def create_share_link(
     db.refresh(share_link)
 
     # Generate share URL
-    # TODO: Get base URL from config
-    share_url = f"http://localhost:8000/s/{token}"
+    share_url = f"https://app.visant.ai/s/{token}"
 
     return {
         "token": token,
@@ -199,12 +198,11 @@ def list_share_links(
 
     share_links = query.order_by(ShareLink.created_at.desc()).all()
 
-    # TODO: Get base URL from config
     return {
         "share_links": [
             {
                 "token": sl.token,
-                "share_url": f"http://localhost:8000/s/{sl.token}",
+                "share_url": f"https://app.visant.ai/s/{sl.token}",
                 "device_id": sl.device_id,
                 "share_type": sl.share_type,
                 "created_at": sl.created_at,
@@ -268,7 +266,7 @@ def get_share_link(
 
     return {
         "token": share_link.token,
-        "share_url": f"http://localhost:8000/s/{share_link.token}",
+        "share_url": f"https://app.visant.ai/s/{share_link.token}",
         "device_id": share_link.device_id,
         "share_type": share_link.share_type,
         "created_at": share_link.created_at,
@@ -305,7 +303,7 @@ def get_share_link_qr_code(
         )
 
     # Generate share URL
-    share_url = f"http://localhost:8000/s/{token}"
+    share_url = f"https://app.visant.ai/s/{token}"
 
     # Generate QR code
     qr_code = generate_qr_code(share_url)
