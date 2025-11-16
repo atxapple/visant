@@ -2,6 +2,25 @@
 
 AI-powered visual monitoring platform with cloud-based anomaly detection. Multi-tenant SaaS for deploying camera devices that continuously monitor environments and send real-time alerts when anomalies are detected.
 
+## Features
+
+### Hardware + Subscription Model
+- **Stripe Integration** - Secure payment processing for hardware bundles
+- **Flexible Plans** - 1-month ($99.50) or 6-month ($297) subscription options
+- **Activation Code System** - Hardware activation linked to subscription
+- **Auto-Renewal** - Automatic monthly billing after prepaid period
+- **Email Notifications** - Order confirmation, shipping updates, payment alerts
+
+### Subscription Management
+- **Customer Portal** - Self-service billing management via Stripe
+- **Usage Tracking** - Device limits based on subscription tier
+- **Payment Recovery** - Automated payment retry and failure notifications
+
+### Multi-Tenant Architecture
+- Organization-based isolation
+- Role-based access control (admin, member, viewer)
+- Per-organization device and capture quotas
+
 ## Quick Start
 
 ```bash
@@ -37,7 +56,8 @@ Server will be available at `http://localhost:8000`
 
 ### Infrastructure
 - **Railway.app** - Cloud deployment platform
-- **SendGrid** - Transactional email service for alerts
+- **SendGrid** - Transactional email service for alerts and order notifications
+- **Stripe** - Payment processing and subscription management
 - **Persistent Volume** - `/mnt/data` for file storage
 
 ### Frontend
@@ -67,7 +87,15 @@ visant/
 │   │   │   ├── devices.py      # Device management
 │   │   │   ├── captures.py     # Image upload/retrieval
 │   │   │   ├── device_commands.py  # SSE command streaming
+│   │   │   ├── billing.py      # Stripe checkout & subscription webhooks
 │   │   │   └── admin_codes.py  # Activation code management
+│   │   │
+│   │   ├── services/            # Business logic services
+│   │   │   └── order_email_service.py  # Order & shipping notifications
+│   │   │
+│   │   ├── email_templates/     # SendGrid email templates
+│   │   │   ├── order_confirmation.html
+│   │   │   └── shipping_notification.html
 │   │   │
 │   │   ├── workers/             # Background services
 │   │   │   ├── command_hub.py  # SSE device communication hub

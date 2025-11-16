@@ -48,6 +48,7 @@ RESET_PASSWORD_HTML = Path(__file__).parent / "templates" / "reset-password.html
 ACTIVATE_HTML = Path(__file__).parent / "templates" / "activate.html"
 CHECKOUT_SUCCESS_HTML = Path(__file__).parent / "templates" / "checkout-success.html"
 CHECKOUT_CANCELED_HTML = Path(__file__).parent / "templates" / "checkout-canceled.html"
+BILLING_HTML = Path(__file__).parent / "templates" / "billing.html"
 CAMERAS_HTML = Path(__file__).parent / "templates" / "cameras.html"
 CAMERA_DASHBOARD_HTML = Path(__file__).parent / "templates" / "camera_dashboard.html"
 SHARES_HTML = Path(__file__).parent / "templates" / "shares.html"
@@ -241,6 +242,14 @@ async def checkout_canceled_page() -> HTMLResponse:
     if not CHECKOUT_CANCELED_HTML.exists():
         raise HTTPException(status_code=500, detail="Checkout canceled template missing")
     return HTMLResponse(CHECKOUT_CANCELED_HTML.read_text(encoding="utf-8"))
+
+
+@router.get("/ui/billing", response_class=HTMLResponse)
+async def billing_page() -> HTMLResponse:
+    """Billing and subscription management page."""
+    if not BILLING_HTML.exists():
+        raise HTTPException(status_code=500, detail="Billing template missing")
+    return HTMLResponse(BILLING_HTML.read_text(encoding="utf-8"))
 
 
 @router.get("/ui/shares", response_class=HTMLResponse)

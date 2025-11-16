@@ -13,6 +13,11 @@ import stripe
 
 from cloud.api.database import get_db, Organization, User, HardwareOrder
 from cloud.api.auth.dependencies import get_current_user, get_current_org
+from cloud.api.services.order_email_service import (
+    send_order_confirmation_email,
+    send_shipping_notification_email,
+    send_payment_failed_email
+)
 
 # Initialize Stripe
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
@@ -252,8 +257,25 @@ async def handle_checkout_completed(session: dict, db: Session):
     db.commit()
     db.refresh(order)
 
-    # TODO: Send confirmation email with activation code
+    # Send order confirmation email with activation code
     print(f"Order created: {order_number}, Activation code: {activation_code}, Email: {customer_email}")
+
+    try:
+        email_sent = send_order_confirmation_email(
+            to_email=customer_email,
+            order_number=order_number,
+            plan_type=plan_type,
+            amount_paid=amount_total,
+            activation_code=activation_code,
+            shipping_address=shipping_address,
+            order_date=datetime.utcnow()
+        )
+        if email_sent:
+            print(f"Order confirmation email sent to {customer_email}")
+        else:
+            print(f"Failed to send order confirmation email to {customer_email}")
+    except Exception as e:
+        print(f"Error sending order confirmation email: {e}")
 
     return order
 
@@ -291,8 +313,21 @@ async def handle_payment_failed(invoice: dict, db: Session):
         org.subscription_status = "past_due"
         db.commit()
 
-        # TODO: Send email notification
         print(f"Payment failed for org {org.id}, status set to past_due")
+
+        # Get user email to send notification
+        from cloud.api.database import User
+        user = db.query(User).filter(User.org_id == org.id).first()
+
+        if user:
+            try:
+                send_payment_failed_email(
+                    to_email=user.email,
+                    org_name=org.name
+                )
+                print(f"Payment failed email sent to {user.email}")
+            except Exception as e:
+                print(f"Error sending payment failed email: {e}")
 
 
 async def handle_subscription_deleted(subscription: dict, db: Session):

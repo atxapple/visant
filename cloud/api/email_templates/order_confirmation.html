@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation - Visant</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f6f8fa; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700;">Visant</h1>
+                            <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px; opacity: 0.9;">Order Confirmation</p>
+                        </td>
+                    </tr>
+
+                    <!-- Success Message -->
+                    <tr>
+                        <td style="padding: 40px 30px; text-align: center;">
+                            <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: #22c55e; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 12l2 2 4-4" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <circle cx="12" cy="12" r="10" stroke="#ffffff" stroke-width="2"/>
+                                </svg>
+                            </div>
+                            <h2 style="margin: 0 0 10px 0; color: #101820; font-size: 24px;">Thank You for Your Order!</h2>
+                            <p style="margin: 0; color: #6b7280; font-size: 16px;">Your payment was successful.</p>
+                        </td>
+                    </tr>
+
+                    <!-- Order Details -->
+                    <tr>
+                        <td style="padding: 0 30px 30px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-radius: 8px; padding: 20px;">
+                                <tr>
+                                    <td style="padding-bottom: 15px;">
+                                        <h3 style="margin: 0 0 15px 0; color: #101820; font-size: 18px;">Order Details</h3>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <table width="100%">
+                                            <tr>
+                                                <td style="color: #6b7280; font-size: 14px;">Order Number:</td>
+                                                <td align="right" style="color: #101820; font-weight: 600; font-size: 14px;">{{ORDER_NUMBER}}</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <table width="100%">
+                                            <tr>
+                                                <td style="color: #6b7280; font-size: 14px;">Plan:</td>
+                                                <td align="right" style="color: #101820; font-weight: 600; font-size: 14px;">{{PLAN_NAME}}</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
+                                        <table width="100%">
+                                            <tr>
+                                                <td style="color: #6b7280; font-size: 14px;">Amount Paid:</td>
+                                                <td align="right" style="color: #101820; font-weight: 600; font-size: 14px;">${{AMOUNT_PAID}}</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 0;">
+                                        <table width="100%">
+                                            <tr>
+                                                <td style="color: #6b7280; font-size: 14px;">Order Date:</td>
+                                                <td align="right" style="color: #101820; font-weight: 600; font-size: 14px;">{{ORDER_DATE}}</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Activation Code -->
+                    <tr>
+                        <td style="padding: 0 30px 30px;">
+                            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px;">
+                                <h3 style="margin: 0 0 10px 0; color: #92400e; font-size: 16px;">⭐ Your Activation Code</h3>
+                                <p style="margin: 0 0 15px 0; color: #78350f; font-size: 14px;">Use this code to activate your device when it arrives:</p>
+                                <div style="background: #ffffff; padding: 15px; border-radius: 6px; text-align: center;">
+                                    <code style="font-size: 24px; font-weight: 700; letter-spacing: 2px; color: #2563eb; font-family: 'Courier New', monospace;">{{ACTIVATION_CODE}}</code>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Next Steps -->
+                    <tr>
+                        <td style="padding: 0 30px 30px;">
+                            <h3 style="margin: 0 0 15px 0; color: #101820; font-size: 18px;">What's Next?</h3>
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td style="padding: 10px 0;">
+                                        <table width="100%">
+                                            <tr>
+                                                <td width="30" valign="top">
+                                                    <div style="width: 24px; height: 24px; background: #dbeafe; border-radius: 50%; text-align: center; line-height: 24px; color: #2563eb; font-weight: 700; font-size: 12px;">1</div>
+                                                </td>
+                                                <td style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                                    <strong style="color: #101820;">Hardware Shipping:</strong> Your camera will ship within 2-3 business days. You'll receive a tracking number via email.
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 0;">
+                                        <table width="100%">
+                                            <tr>
+                                                <td width="30" valign="top">
+                                                    <div style="width: 24px; height: 24px; background: #dbeafe; border-radius: 50%; text-align: center; line-height: 24px; color: #2563eb; font-weight: 700; font-size: 12px;">2</div>
+                                                </td>
+                                                <td style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                                    <strong style="color: #101820;">Receive Hardware:</strong> When your camera arrives, set it up following the included instructions.
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 0;">
+                                        <table width="100%">
+                                            <tr>
+                                                <td width="30" valign="top">
+                                                    <div style="width: 24px; height: 24px; background: #dbeafe; border-radius: 50%; text-align: center; line-height: 24px; color: #2563eb; font-weight: 700; font-size: 12px;">3</div>
+                                                </td>
+                                                <td style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                                    <strong style="color: #101820;">Activate:</strong> Visit <a href="https://app.visant.ai/activate" style="color: #2563eb; text-decoration: none;">app.visant.ai/activate</a> and enter your activation code above.
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 0;">
+                                        <table width="100%">
+                                            <tr>
+                                                <td width="30" valign="top">
+                                                    <div style="width: 24px; height: 24px; background: #dbeafe; border-radius: 50%; text-align: center; line-height: 24px; color: #2563eb; font-weight: 700; font-size: 12px;">4</div>
+                                                </td>
+                                                <td style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                                    <strong style="color: #101820;">Start Monitoring:</strong> Your subscription will begin, and you can start using your camera for AI-powered visual monitoring.
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Shipping Address -->
+                    <tr>
+                        <td style="padding: 0 30px 30px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-radius: 8px; padding: 20px;">
+                                <tr>
+                                    <td>
+                                        <h3 style="margin: 0 0 15px 0; color: #101820; font-size: 16px;">Shipping Address</h3>
+                                        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                            {{SHIPPING_NAME}}<br>
+                                            {{SHIPPING_ADDRESS_LINE1}}<br>
+                                            {{SHIPPING_ADDRESS_LINE2}}
+                                            {{SHIPPING_CITY}}, {{SHIPPING_STATE}} {{SHIPPING_POSTAL_CODE}}<br>
+                                            {{SHIPPING_COUNTRY}}
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td style="padding: 0 30px 30px; text-align: center;">
+                            <a href="https://app.visant.ai/ui/cameras" style="display: inline-block; padding: 14px 32px; background: #2563eb; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">Go to Dashboard</a>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 30px; background: #f9fafb; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 12px; text-align: center;">
+                                Questions? Contact us at <a href="mailto:support@visant.ai" style="color: #2563eb; text-decoration: none;">support@visant.ai</a>
+                            </p>
+                            <p style="margin: 0; color: #9ca3af; font-size: 11px; text-align: center;">
+                                © 2024 Visant. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
