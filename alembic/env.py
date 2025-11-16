@@ -16,7 +16,7 @@ load_dotenv()
 # Import Base from our models
 from cloud.api.database.base import Base
 from cloud.api.database.models import (
-    Organization, User, Device, Capture, ShareLink
+    Organization, User, Device, Capture
 )
 
 # This is the Alembic Config object

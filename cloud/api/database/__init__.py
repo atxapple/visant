@@ -8,7 +8,6 @@ from cloud.api.database.models import (
     Device,
     AlertDefinition,
     Capture,
-    ShareLink,
 )
 
 __all__ = [
@@ -21,5 +20,4 @@ __all__ = [
     "Device",
     "AlertDefinition",
     "Capture",
-    "ShareLink",
 ]

@@ -70,7 +70,6 @@ class Organization(Base):
     users = relationship("User", back_populates="organization", cascade="all, delete-orphan")
     devices = relationship("Device", back_populates="organization", cascade="all, delete-orphan")
     captures = relationship("Capture", back_populates="organization", cascade="all, delete-orphan")
-    share_links = relationship("ShareLink", back_populates="organization", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Organization(id={self.id}, name={self.name})>"
@@ -96,7 +95,6 @@ class User(Base):
 
     # Relationships
     organization = relationship("Organization", back_populates="users")
-    share_links_created = relationship("ShareLink", back_populates="creator", foreign_keys="ShareLink.created_by")
 
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, org_id={self.org_id})>"
@@ -132,7 +130,6 @@ class Device(Base):
     # Relationships
     organization = relationship("Organization", back_populates="devices")
     captures = relationship("Capture", back_populates="device", cascade="all, delete-orphan")
-    share_links = relationship("ShareLink", back_populates="device", cascade="all, delete-orphan")
     alert_definitions = relationship("AlertDefinition", back_populates="device", cascade="all, delete-orphan")
     activated_by = relationship("User", foreign_keys=[activated_by_user_id])
 
@@ -203,42 +200,6 @@ class Capture(Base):
 
     def __repr__(self):
         return f"<Capture(record_id={self.record_id}, device_id={self.device_id}, state={self.state})>"
-
-
-class ShareLink(Base):
-    """Public share link for device or captures."""
-    __tablename__ = "share_links"
-
-    token = Column(String(32), primary_key=True)
-    org_id = Column(GUID, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
-    device_id = Column(String(255), ForeignKey("devices.device_id", ondelete="CASCADE"), nullable=False, index=True)
-
-    # Sharing scope
-    share_type = Column(String(50), default="device")  # device, capture, date_range
-    capture_id = Column(String(255), nullable=True)  # If sharing single capture
-    start_date = Column(DateTime, nullable=True)     # If sharing date range
-    end_date = Column(DateTime, nullable=True)
-
-    # Access control
-    created_by = Column(GUID, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
-    expires_at = Column(DateTime, nullable=False, index=True)
-
-    # Security (optional for MVP)
-    password_hash = Column(String(255), nullable=True)
-    max_views = Column(Integer, nullable=True)
-
-    # Analytics
-    view_count = Column(Integer, default=0)
-    last_viewed_at = Column(DateTime, nullable=True)
-
-    # Relationships
-    organization = relationship("Organization", back_populates="share_links")
-    device = relationship("Device", back_populates="share_links")
-    creator = relationship("User", back_populates="share_links_created", foreign_keys=[created_by])
-
-    def __repr__(self):
-        return f"<ShareLink(token={self.token}, device_id={self.device_id}, expires_at={self.expires_at})>"
 
 
 class ActivationCode(Base):
@@ -357,8 +318,6 @@ Index('idx_captures_device_date', Capture.device_id, Capture.captured_at.desc())
 # Devices: org + last_seen (for device status dashboard)
 Index('idx_devices_org_last_seen', Device.org_id, Device.last_seen_at.desc())
 
-# Share links: expires_at (for cleanup job)
-Index('idx_share_links_expires', ShareLink.expires_at)
 
 # Activation codes: active + valid_until (for validation queries)
 Index('idx_activation_codes_active_valid', ActivationCode.active, ActivationCode.valid_until)

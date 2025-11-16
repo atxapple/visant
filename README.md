@@ -26,7 +26,6 @@ Server will be available at `http://localhost:8000`
 Recent additions (November 2025):
 - ✅ **Real-time capture event streaming** - WebSocket + SSE support for live updates
 - ✅ **Version tracking endpoint** - Monitor cloud and device versions via `/v1/version`
-- ✅ **Public sharing system** - Time-limited share links with QR codes
 - ✅ **Password reset flow** - Dedicated forgot password page with email-based reset
 - ✅ **Alert definition tracking** - Database-backed definitions with version history
 - ✅ **Railway deployment fixes** - Improved port binding and migration reliability
@@ -199,7 +198,6 @@ organizations (tenant root)
   │   ├─ alert_definitions (per-device AI definitions with version history)
   │   └─ captures (images + AI evaluation results, linked to definitions)
   ├─ activation_codes (promotional system)
-  ├─ share_links (public sharing)
   └─ scheduled_triggers (cloud-managed scheduling)
 ```
 
@@ -557,7 +555,7 @@ See `docs/PROJECT_PLAN.md` for detailed roadmap.
 The comprehensive project-level testing plan now lives in `docs/PROJECT_PLAN.md` (see “Comprehensive Test Strategy”). Highlights:
 
 - **Phase 0 Foundations**: pytest config, fixtures for uploads/DB/external stubs, and CI wiring with coverage gates.
-- **Phases 1‑3**: unit + API/integration coverage for ingestion, InferenceService, auth/device/share flows, plus CommandHub/TriggerScheduler/SSE+WS streams.
+- **Phases 1‑3**: unit + API/integration coverage for ingestion, InferenceService, auth/device flows, plus CommandHub/TriggerScheduler/SSE+WS streams.
 - **Phases 4‑5**: device-loop simulations, OkApiHttpClient smoke tests, Alembic migration guards, and multi-tenant regression/load suites.
 
 Follow those phases sequentially to restore confidence before enabling public beta.

@@ -348,16 +348,6 @@ Visant is a **multi-tenant SaaS platform** for AI-powered visual monitoring. Org
 - `redeemed_at` (TIMESTAMP)
 - **Unique:** `(code, org_id)` if one_per_user=true
 
-**share_links** (Not yet wired)
-- `id` (UUID, PK)
-- `token` (VARCHAR, unique)
-- `device_id` (VARCHAR, FK → devices)
-- `org_id` (UUID, FK → organizations)
-- `share_type` (ENUM: device, single_capture)
-- `capture_id` (UUID, nullable)
-- `expires_at` (TIMESTAMP)
-- `created_at`
-
 ---
 
 ## Data Flow
@@ -1061,10 +1051,6 @@ Upload: 200
 | **Performance** | Composite indexes | ✅ Complete |
 | | Query optimization | ✅ Complete |
 | | 90% load time reduction | ✅ Complete |
-| **Sharing** | Public share links | ✅ Complete |
-| | Public gallery | ✅ Complete |
-| | QR code generation | ✅ Complete |
-| | Share analytics | ✅ Complete |
 | **Real-Time** | SSE capture events | ✅ Complete |
 | | WebSocket updates | ✅ Complete |
 | | Live UI updates | ✅ Complete |
@@ -1103,7 +1089,6 @@ Upload: 200
 
 ### Recently Completed (November 2025)
 
-✅ **Public Sharing System** - Complete share link creation, public gallery, QR codes, analytics
 ✅ **Real-time Capture Streaming** - SSE/WebSocket endpoints, live UI updates
 ✅ **Version Tracking** - GET /v1/version endpoint with cloud + device versions
 ✅ **Password Reset Flow** - Dedicated forgot password page with email-based reset
@@ -1238,8 +1223,6 @@ visant/
 │   │   │   ├── scheduled_triggers.py
 │   │   │   ├── admin_codes.py
 │   │   │   ├── admin.py
-│   │   │   ├── shares.py        # ✅ Complete
-│   │   │   ├── public.py        # ✅ Complete
 │   │   │   └── version.py       # ✅ Complete
 │   │   ├── server.py            # Legacy v1.0 server (mounted at /legacy/*)
 │   │   └── service.py           # InferenceService

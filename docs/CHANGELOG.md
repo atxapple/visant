@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **Public Sharing System**: Removed incomplete sharing feature
+  - Deleted ShareLink database model and share_links table
+  - Removed `/v1/shares` API endpoints (shares.py)
+  - Removed `/public/share` endpoints (public.py)
+  - Removed share management UI template
+  - Feature was implemented but never mounted/accessible in production
+
 ### Changed
 - **Project Organization**: Reorganized repository structure
   - Moved test files to `tests/` directory

@@ -17,7 +17,6 @@
 **Recent Achievements** (November 2025):
 - ✅ **Real-time capture event streaming** (WebSocket + SSE endpoints) - 2025-11-11
 - ✅ **Version tracking endpoint** (GET /v1/version for cloud + device versions) - 2025-11-11
-- ✅ **Public sharing system** (Time-limited links, QR codes, complete UI) - 2025-11-10
 - ✅ **Password reset flow** (Dedicated forgot password page, email-based) - 2025-11-15
 - ✅ **Alert definition tracking** (Database-backed with version history) - 2025-11-13
 - ✅ **Railway deployment fixes** (Port binding, migration reliability) - 2025-11-16
@@ -387,11 +386,6 @@ Visual overview of all features across legacy and v2.0.
 | Similarity Detection | Duplicate skip | ✅ Yes | ✅ Code exists | - | `cloud/api/similarity_cache.py` |
 | Dedupe | Consecutive skip | ✅ Yes | ⚠️ Code exists | MEDIUM | `cloud/api/service.py` |
 | Streak Pruning | Storage optimization | ✅ Yes | ⚠️ Code exists | MEDIUM | `cloud/api/service.py` |
-| **Sharing & Growth** |
-| Public Sharing | Share links | ❌ None | ✅ Complete | - | `cloud/api/routes/shares.py` |
-| Public Gallery | No-auth view | ❌ None | ✅ Complete | - | `cloud/api/routes/public.py` |
-| QR Codes | Share links | ❌ None | ✅ Complete | - | `cloud/api/utils/qrcode_gen.py` |
-| Share Analytics | View tracking | ❌ None | ✅ Complete | - | `cloud/api/routes/shares.py` |
 | **Real-Time Features** |
 | SSE Streaming | Capture events | ✅ Yes | ✅ Complete | - | `cloud/api/routes/captures.py` |
 | WebSocket | Capture events | ✅ Yes | ✅ Complete | - | `cloud/api/routes/captures.py` |
@@ -772,21 +766,6 @@ GET    /v1/captures/{record_id}/status       # Poll evaluation status
 GET    /v1/captures/{record_id}/thumbnail    # Get thumbnail image
 GET    /v1/captures/{record_id}/image        # Get full image
 DELETE /v1/captures/{record_id}              # Delete capture
-```
-
-#### Share Links (✅ COMPLETE)
-```
-POST   /v1/shares                            # Create share link
-GET    /v1/shares                            # List org's share links
-DELETE /v1/shares/{share_id}                 # Revoke share link
-GET    /v1/shares/{share_id}/qr              # Get QR code for share
-```
-
-#### Public Endpoints (NO AUTH) (✅ COMPLETE)
-```
-GET    /public/share/{share_token}           # Public gallery HTML view
-GET    /v1/public/share/{share_token}        # Public gallery JSON API
-GET    /v1/public/share/{share_token}/qr     # Public QR code
 ```
 
 #### Admin

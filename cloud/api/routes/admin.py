@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from cloud.api.database import get_db, User, Device, Capture, Organization, ShareLink
+from cloud.api.database import get_db, User, Device, Capture, Organization
 from cloud.api.database.models import ActivationCode
 from cloud.api.auth.dependencies import get_admin_user
 from cloud.api.storage.config import UPLOADS_DIR
@@ -170,12 +170,6 @@ def delete_user(
         # Set activated_by_user_id to NULL for devices this user activated
         db.query(Device).filter(Device.activated_by_user_id == user_id).update(
             {"activated_by_user_id": None},
-            synchronize_session=False
-        )
-
-        # Set created_by to NULL for share links this user created
-        db.query(ShareLink).filter(ShareLink.created_by == user_id).update(
-            {"created_by": None},
             synchronize_session=False
         )
 
