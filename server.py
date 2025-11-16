@@ -417,10 +417,14 @@ if __name__ == "__main__":
         }
 
     # Start server
+    # Use PORT environment variable for Railway compatibility, default to 8000 for local dev
+    port = int(os.getenv("PORT", "8000"))
+    print(f"\nStarting server on port {port}...")
+
     uvicorn.run(
         main_app,
         host="0.0.0.0",
-        port=8000,
+        port=port,
         log_level="info",
         access_log=True
     )
