@@ -288,7 +288,7 @@ alembic history
 python -c "from version import __version__; print(__version__)"
 ```
 
-**Railway Deployment:** Migrations run automatically via `migrate.py` before server starts.
+**Railway Deployment:** Migrations run automatically via `scripts/db/migrate.py` before server starts.
 
 ---
 
@@ -394,7 +394,7 @@ python -c "from version import __version__; print(__version__)"
 # If mismatch, run migrations
 alembic upgrade head
 
-# Or on Railway, redeploy (migrate.py runs automatically)
+# Or on Railway, redeploy (scripts/db/migrate.py runs automatically)
 railway up
 ```
 

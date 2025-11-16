@@ -14,17 +14,19 @@
 
 **PRODUCTION READY** - Visant v2.0 is deployed and operational on Railway with full multi-tenant SaaS architecture.
 
-**Recent Achievements** (2025-11-11):
-- ✅ **Version tracking endpoint** (cloud + device version display)
-- ✅ **Real-time capture event streaming** (WebSocket + SSE endpoints)
-- ✅ **JWT authentication flow** (proper org_id lookup from database)
-- ✅ **Auto-refresh dashboard** (camera dashboard + main dashboard)
-- ✅ Railway deployment successful (PostgreSQL + persistent volume)
-- ✅ Performance optimization complete (90% load time reduction)
-- ✅ Requirements.txt fixed (email-validator, python-multipart dependencies)
-- ✅ Thumbnail serving with cache headers (<3s initial load, <1s cached)
-- ✅ Composite database indexes (optimized queries)
-- ✅ Multi-tenant architecture with complete org isolation
+**Recent Achievements** (November 2025):
+- ✅ **Real-time capture event streaming** (WebSocket + SSE endpoints) - 2025-11-11
+- ✅ **Version tracking endpoint** (GET /v1/version for cloud + device versions) - 2025-11-11
+- ✅ **Public sharing system** (Time-limited links, QR codes, complete UI) - 2025-11-10
+- ✅ **Password reset flow** (Dedicated forgot password page, email-based) - 2025-11-15
+- ✅ **Alert definition tracking** (Database-backed with version history) - 2025-11-13
+- ✅ **Railway deployment fixes** (Port binding, migration reliability) - 2025-11-16
+- ✅ **JWT authentication flow** (Proper org_id lookup from database)
+- ✅ **Auto-refresh dashboard** (Camera dashboard + main dashboard)
+- ✅ **Performance optimization** (90% load time reduction)
+- ✅ **Thumbnail serving** (Cache headers, <3s initial load, <1s cached)
+- ✅ **Composite database indexes** (Optimized capture queries)
+- ✅ **Multi-tenant architecture** (Complete organization isolation)
 
 **Next Phase**: Notification UI + Normal Description Management
 
@@ -39,10 +41,9 @@
 - ☁️ Production deployment (Railway PostgreSQL + volume storage)
 
 ### What's Missing (From Legacy System)
-- ❌ Notification configuration UI
+- ⚠️ Notification configuration UI (Global UI shipped, per-device pending)
 - ❌ Normal description management UI
-- ⏸️ Public sharing integration (deferred to Phase 4)
-- ⏸️ Manual trigger UI (deferred to Phase 4)
+- ⏸️ Manual trigger history/feedback (Endpoint + button live, history UI pending)
 - ⏸️ Datalake pruning admin panel (Phase 3 - Low priority)
 
 ---
@@ -387,23 +388,23 @@ Visual overview of all features across legacy and v2.0.
 | Dedupe | Consecutive skip | ✅ Yes | ⚠️ Code exists | MEDIUM | `cloud/api/service.py` |
 | Streak Pruning | Storage optimization | ✅ Yes | ⚠️ Code exists | MEDIUM | `cloud/api/service.py` |
 | **Sharing & Growth** |
-| Public Sharing | Share links | ❌ None | ⚠️ Code exists, not wired | ⚡ HIGH | `cloud/api/routes/shares.py` |
-| Public Gallery | No-auth view | ❌ None | ⚠️ Code exists | ⚡ HIGH | `cloud/api/routes/public.py` |
-| QR Codes | Share links | ❌ None | ⚠️ Code exists | HIGH | `cloud/api/utils/qrcode_gen.py` |
-| Share Analytics | View tracking | ❌ None | ⚠️ Partial | LOW | `cloud/api/routes/shares.py` |
+| Public Sharing | Share links | ❌ None | ✅ Complete | - | `cloud/api/routes/shares.py` |
+| Public Gallery | No-auth view | ❌ None | ✅ Complete | - | `cloud/api/routes/public.py` |
+| QR Codes | Share links | ❌ None | ✅ Complete | - | `cloud/api/utils/qrcode_gen.py` |
+| Share Analytics | View tracking | ❌ None | ✅ Complete | - | `cloud/api/routes/shares.py` |
 | **Real-Time Features** |
-| SSE Streaming | Manual triggers | ✅ Yes | ⚠️ Legacy only | HIGH | `cloud/api/server.py` L429-473 |
-| WebSocket | Capture events | ✅ Yes | ❌ Not wired | HIGH | `cloud/api/server.py` L523-560 |
-| Real-time UI | Live updates | ✅ Yes | ❌ Not wired | HIGH | `cloud/web/templates/index.html` |
-| Manual Triggers | On-demand capture | ✅ Yes | ⚠️ Legacy only | MEDIUM | `cloud/api/server.py` L409-427 |
+| SSE Streaming | Capture events | ✅ Yes | ✅ Complete | - | `cloud/api/routes/captures.py` |
+| WebSocket | Capture events | ✅ Yes | ✅ Complete | - | `cloud/api/routes/captures.py` |
+| Real-time UI | Live updates | ✅ Yes | ✅ Complete | - | `cloud/web/templates/index.html` |
+| Manual Triggers | On-demand capture | ✅ Yes | ⚠️ Partial (UI pending) | MEDIUM | `cloud/api/routes/device_commands.py` |
 | **Notifications** |
-| Email Alerts | SendGrid | ✅ Yes | ✅ Backend only | MEDIUM | `cloud/api/email_service.py` |
-| Notification UI | Settings page | ✅ Yes | ❌ Missing | MEDIUM | Need to create |
-| Alert Cooldown | Rate limiting | ✅ Yes | ⚠️ Code exists | MEDIUM | `cloud/api/service.py` |
+| Email Alerts | SendGrid | ✅ Yes | ✅ Complete | - | `cloud/api/email_service.py` |
+| Notification UI | Settings page | ✅ Yes | ⚠️ Partial (per-device pending) | MEDIUM | `cloud/web/templates/notifications.html` |
+| Alert Cooldown | Rate limiting | ✅ Yes | ✅ Complete | - | `cloud/api/service.py` |
 | **Admin Tools** |
 | Datalake Pruning | Disk management | ✅ Yes | ❌ Not exposed | LOW | `cloud/api/datalake_pruner.py` |
 | Timing Debug | Performance monitor | ✅ Yes | ❌ Not exposed | LOW | `cloud/api/timing_debug.py` |
-| Version Tracking | Cloud + device | ✅ Yes | ❌ Missing | LOW | `cloud/api/server.py` L400-407 |
+| Version Tracking | Cloud + device | ✅ Yes | ✅ Complete | - | `cloud/api/routes/version.py` |
 | Preferences | UI settings | ✅ Yes | ⚠️ Partial | LOW | `cloud/web/preferences.py` |
 | **Database & Storage** |
 | PostgreSQL | Multi-tenant DB | ❌ SQLite | ✅ Complete | - | `cloud/api/database/` |

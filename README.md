@@ -21,6 +21,16 @@ python server.py
 
 Server will be available at `http://localhost:8000`
 
+## What's New (v0.2.3)
+
+Recent additions (November 2025):
+- ✅ **Real-time capture event streaming** - WebSocket + SSE support for live updates
+- ✅ **Version tracking endpoint** - Monitor cloud and device versions via `/v1/version`
+- ✅ **Public sharing system** - Time-limited share links with QR codes
+- ✅ **Password reset flow** - Dedicated forgot password page with email-based reset
+- ✅ **Alert definition tracking** - Database-backed definitions with version history
+- ✅ **Railway deployment fixes** - Improved port binding and migration reliability
+
 ## Technology Stack
 
 ### Backend
@@ -526,16 +536,19 @@ Planned: Redis for API response caching
 
 ### Current Limitations
 
-1. **No test coverage** - Tests need to be re-established
-2. **Filesystem storage** - Not yet migrated to S3
-3. **Single-region deployment** - No CDN for images
-4. **Legacy routes** - `/legacy/*` routes still mounted
+1. **Test coverage needs expansion** - Tests archived, need re-establishment
+2. **Legacy routes coexistence** - `/legacy/*` routes still mounted (migration planned)
 
-### Incomplete Features
+### In Progress
 
-- Public sharing UI exists but not fully wired
-- Manual trigger button missing in multi-tenant UI
-- Notification configuration page not implemented
+- Per-device notification configuration UI
+- Normal description management enhancements
+- Manual trigger history/feedback UI
+
+### By Design (Not Issues)
+
+- **Filesystem storage** - Adequate for current scale, S3 not needed
+- **Single-region deployment** - Not critical for current usage
 
 See `docs/PROJECT_PLAN.md` for detailed roadmap.
 
