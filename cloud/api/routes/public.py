@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from typing import List, Optional
+from pathlib import Path
 from fastapi import APIRouter, HTTPException, status, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -12,8 +13,15 @@ from sqlalchemy import and_
 from cloud.api.database import get_db, ShareLink, Device, Capture, Organization
 from cloud.api.storage.presigned import generate_presigned_url
 from fastapi import Depends
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Public"])
+
+# Template configuration
+TEMPLATE_DIR = Path(__file__).parent.parent.parent / "web" / "templates"
+templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
 
 
 # Response Models
@@ -43,13 +51,11 @@ async def public_gallery_html(
     db: Session = Depends(get_db)
 ):
     """
-    Public gallery page - HTML view.
+    Public gallery page - HTML view using Jinja2 template.
 
     This is the viral growth page that anyone can access without login.
+    Uses the unified camera_dashboard.html template with is_public_share=True.
     """
-    # For now, return a simple HTML page
-    # TODO: Create proper Jinja2 template
-
     # Validate share link
     share_link = db.query(ShareLink).filter(ShareLink.token == token).first()
 
@@ -106,131 +112,18 @@ async def public_gallery_html(
     device = db.query(Device).filter(Device.device_id == share_link.device_id).first()
     org = db.query(Organization).filter(Organization.id == share_link.org_id).first()
 
-    # Get captures based on share type
-    # Only show completed evaluations in public gallery
-    captures_query = db.query(Capture).filter(
-        Capture.device_id == share_link.device_id,
-        Capture.org_id == share_link.org_id,
-        Capture.evaluation_status == "completed"  # Filter out pending/processing captures
-    )
+    # Prepare template context
+    context = {
+        "request": request,
+        "is_public_share": True,
+        "share_token": token,
+        "device_id": share_link.device_id,
+        "device_name": device.friendly_name if device else "Camera",
+        "allow_edit_prompt": share_link.allow_edit_prompt or False,
+    }
 
-    if share_link.share_type == "capture":
-        captures_query = captures_query.filter(Capture.record_id == share_link.capture_id)
-    elif share_link.share_type == "date_range":
-        captures_query = captures_query.filter(
-            and_(
-                Capture.captured_at >= share_link.start_date,
-                Capture.captured_at <= share_link.end_date
-            )
-        )
-
-    captures = captures_query.order_by(Capture.captured_at.desc()).limit(50).all()
-
-    # Generate simple HTML gallery
-    captures_html = ""
-    if captures:
-        for capture in captures:
-            # Generate pre-signed URL for image (1 hour expiry)
-            image_url = None
-            if capture.s3_image_key:
-                image_url = generate_presigned_url(capture.s3_image_key, expiration=3600)
-
-            # Generate thumbnail URL
-            thumbnail_url = None
-            if capture.s3_thumbnail_key:
-                thumbnail_url = generate_presigned_url(capture.s3_thumbnail_key, expiration=3600)
-
-            # Use thumbnail if available, otherwise full image
-            display_url = thumbnail_url or image_url
-
-            captures_html += f"""
-            <div style="border: 1px solid #ddd; padding: 10px; margin: 10px; border-radius: 8px;">
-                {f'<img src="{display_url}" style="max-width: 100%; height: auto; border-radius: 4px; margin-bottom: 10px;" />' if display_url else ''}
-                <p><strong>Captured:</strong> {capture.captured_at.strftime('%Y-%m-%d %H:%M:%S')}</p>
-                <p><strong>State:</strong> <span style="color: {'green' if capture.state == 'normal' else 'red'};">{capture.state}</span></p>
-                <p><strong>Score:</strong> {capture.score or 'N/A'}</p>
-                {f'<p><strong>Reason:</strong> {capture.reason}</p>' if capture.reason else ''}
-            </div>
-            """
-    else:
-        captures_html = "<p>No captures available yet.</p>"
-
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>{device.friendly_name if device else 'Device'} - {org.name if org else 'Organization'}</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body {{
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                max-width: 1200px;
-                margin: 0 auto;
-                padding: 20px;
-                background: #f5f5f5;
-            }}
-            .header {{
-                background: white;
-                padding: 20px;
-                border-radius: 8px;
-                margin-bottom: 20px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }}
-            .cta {{
-                background: #007bff;
-                color: white;
-                padding: 12px 24px;
-                border-radius: 6px;
-                text-decoration: none;
-                display: inline-block;
-                margin-top: 10px;
-            }}
-            .cta:hover {{
-                background: #0056b3;
-            }}
-            .gallery {{
-                background: white;
-                padding: 20px;
-                border-radius: 8px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }}
-            .footer {{
-                text-align: center;
-                margin-top: 40px;
-                color: #666;
-                font-size: 14px;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>{device.friendly_name if device else 'Device Gallery'}</h1>
-            <p style="color: #666;">{org.name if org else 'Organization'}</p>
-            <p style="font-size: 14px; color: #999;">
-                Shared via Visant • Expires: {share_link.expires_at.strftime('%Y-%m-%d %H:%M')} UTC
-            </p>
-            <a href="http://localhost:8000/docs" class="cta">
-                🚀 Get Visant for Your Cameras
-            </a>
-        </div>
-
-        <div class="gallery">
-            <h2>Recent Captures ({len(captures)})</h2>
-            {captures_html}
-        </div>
-
-        <div class="footer">
-            <p>Powered by <strong>Visant</strong> - AI-Powered Camera Monitoring</p>
-            <p>
-                <a href="http://localhost:8000/docs">Sign Up Free</a> •
-                <a href="http://localhost:8000/docs">Learn More</a>
-            </p>
-        </div>
-    </body>
-    </html>
-    """
-
-    return HTMLResponse(content=html_content)
+    # Render using unified camera dashboard template
+    return templates.TemplateResponse("camera_dashboard.html", context)
 
 
 @router.get("/api/s/{token}", response_model=PublicGalleryResponse)

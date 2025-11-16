@@ -10,6 +10,7 @@ from typing import Any, List, Optional, Sequence, Set
 
 from fastapi import APIRouter, HTTPException, Query, Request, Header, Depends
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 import jwt
@@ -54,6 +55,10 @@ ADMIN_DEVICES_HTML = Path(__file__).parent / "templates" / "admin_devices.html"
 ADMIN_CODES_HTML = Path(__file__).parent / "templates" / "admin_codes.html"
 ADMIN_HTML = Path(__file__).parent / "templates" / "admin.html"
 TIME_LOG_HTML = Path(__file__).parent / "templates" / "time_log.html"
+
+# Jinja2 template configuration
+TEMPLATE_DIR = Path(__file__).parent / "templates"
+templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
 
 # JWT verification for UI routes (optional - can be disabled for now)
 # Set SUPABASE_JWT_SECRET environment variable to enable authentication
@@ -273,11 +278,31 @@ async def admin_codes_page() -> HTMLResponse:
 
 
 @router.get("/ui/camera/{device_id}", response_class=HTMLResponse)
-async def camera_dashboard_page(device_id: str) -> HTMLResponse:
-    """Individual camera dashboard - shows camera details and captures."""
-    if not CAMERA_DASHBOARD_HTML.exists():
-        raise HTTPException(status_code=500, detail="Camera dashboard template missing")
-    return HTMLResponse(CAMERA_DASHBOARD_HTML.read_text(encoding="utf-8"))
+async def camera_dashboard_page(device_id: str, request: Request, db: Session = Depends(get_db)):
+    """
+    Individual camera dashboard - shows camera details and captures.
+
+    Uses unified camera_dashboard.html template with is_public_share=False.
+    """
+    from cloud.api.database import Device
+
+    # Get device info for display
+    device = db.query(Device).filter(Device.device_id == device_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail=f"Device {device_id} not found")
+
+    # Prepare template context for authenticated users
+    context = {
+        "request": request,
+        "is_public_share": False,
+        "share_token": None,
+        "device_id": device_id,
+        "device_name": device.friendly_name if device else device_id,
+        "allow_edit_prompt": False,  # Not applicable for authenticated users
+    }
+
+    # Render using unified camera dashboard template
+    return templates.TemplateResponse("camera_dashboard.html", context)
 
 
 @router.get("/ui", response_class=RedirectResponse)

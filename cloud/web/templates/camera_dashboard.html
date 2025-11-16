@@ -1,3 +1,12 @@
+{#
+    Template context variables (provided by both public and authenticated routes):
+    - is_public_share: bool - True if viewing via public share link
+    - share_token: str - Share link token (only for public shares)
+    - device_id: str - Camera device ID
+    - device_name: str - Camera friendly name
+    - allow_edit_prompt: bool - True if public user can edit alert definition (only for public shares)
+    - user: dict - Authenticated user info (only for authenticated users)
+#}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -907,15 +916,23 @@
     <!-- Header -->
     <header>
         <div class="header-left">
-            <a href="/ui/cameras" class="logo">Visant</a>
+            <a href="{% if is_public_share %}/{% else %}/ui/cameras{% endif %}" class="logo">Visant</a>
+            {% if not is_public_share %}
             <div class="breadcrumb">
                 <a href="/ui/cameras">← Cameras</a>
             </div>
+            {% endif %}
         </div>
         <div class="header-right">
+            {% if is_public_share %}
+            <a href="https://app.visant.ai" class="btn-logout" style="background: #2563eb; color: white; text-decoration: none;">
+                Get Visant Free
+            </a>
+            {% else %}
             <span id="cloudVersion" style="margin-right: 1rem; color: #6b7280; font-size: 0.875rem;"></span>
             <a id="userName" href="/ui/profile/settings" style="margin-right: 1rem; color: #374151; font-weight: 500; text-decoration: none; transition: color 0.2s;"></a>
             <button class="btn-logout" onclick="handleLogout()">Logout</button>
+            {% endif %}
         </div>
     </header>
 
@@ -927,6 +944,7 @@
                 <div class="camera-title-left">
                     <div class="camera-title-container">
                         <h1 id="cameraName" class="camera-title">Loading...</h1>
+                        {% if not is_public_share %}
                         <button id="btnEditName" class="btn-edit-name" onclick="startEditingName()" title="Rename camera">
                             ✏️
                         </button>
@@ -935,10 +953,13 @@
                             <button class="btn-save-name" onclick="saveCameraName()">Save</button>
                             <button class="btn-cancel-name" onclick="cancelEditingName()">Cancel</button>
                         </div>
+                        {% endif %}
                     </div>
+                    {% if not is_public_share %}
                     <button id="btnToggleSettings" class="btn-settings-header" onclick="toggleSettings()">
                         ⚙️ Settings
                     </button>
+                    {% endif %}
                 </div>
                 <div class="camera-status">
                     <span id="statusIndicator" class="status-indicator"></span>
@@ -948,7 +969,8 @@
             </div>
         </div>
 
-        <!-- Settings Panel (Collapsible) -->
+        <!-- Settings Panel (Collapsible) - Only for authenticated users -->
+        {% if not is_public_share %}
         <div id="settingsPanel">
             <h2 class="settings-header">
                 <span>CAMERA SETTINGS</span>
@@ -1048,6 +1070,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Recent Captures Section (Full Width) -->
         <div class="section">
@@ -1128,7 +1151,15 @@
 
     <script src="/static/js/auth.js"></script>
     <script>
-        // Require authentication
+        // Template variables from Jinja2 context
+        const isPublicShare = {{ 'true' if is_public_share else 'false' }};
+        const shareToken = {{ ("'" + share_token + "'") if is_public_share else 'null' }};
+        const deviceId = "{{ device_id }}";
+        const allowEditPrompt = {{ 'true' if allow_edit_prompt else 'false' }};
+
+        // Authentication handling
+        {% if not is_public_share %}
+        // Require authentication for authenticated users
         if (!auth.requireAuth()) {
             // Will redirect to login
         }
@@ -1138,10 +1169,7 @@
         if (user) {
             document.getElementById('userName').textContent = user.name || user.email || 'User';
         }
-
-        // Get device ID from URL path
-        const pathParts = window.location.pathname.split('/');
-        const deviceId = pathParts[pathParts.length - 1];
+        {% endif %}
         // Modal DOM elements
         const definitionOverlay = document.getElementById('definition-overlay');
         const definitionTitle = document.getElementById('definition-title');
@@ -1325,6 +1353,18 @@
 
         // Load device data
         async function loadDeviceData() {
+            if (isPublicShare) {
+                // For public shares, set basic device info from template
+                currentDevice = {
+                    device_id: deviceId,
+                    friendly_name: "{{ device_name }}"
+                };
+                renderDeviceHeader();
+                loadCaptures();
+                return;
+            }
+
+            // Authenticated user - load full device data
             try {
                 const response = await fetch(`/v1/devices/${deviceId}`, {
                     headers: auth.getAuthHeaders()
@@ -1340,7 +1380,7 @@
                 loadDeviceConfig();
                 loadCaptures();
 
-                // Connect to WebSocket for real-time capture updates
+                // Connect to WebSocket for real-time capture updates (authenticated only)
                 ensureCaptureStream(deviceId);
             } catch (error) {
                 console.error('Error loading device data:', error);
@@ -1388,6 +1428,18 @@
             document.getElementById('cameraName').textContent =
                 currentDevice.friendly_name || currentDevice.device_id;
 
+            // Hide connection status for public shares
+            if (isPublicShare) {
+                const statusIndicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                const lastSeen = document.getElementById('lastSeen');
+                if (statusIndicator) statusIndicator.style.display = 'none';
+                if (statusText) statusText.style.display = 'none';
+                if (lastSeen) lastSeen.style.display = 'none';
+                return;
+            }
+
+            // Authenticated users - show connection status
             const lastSeen = document.getElementById('lastSeen');
 
             if (currentDevice.last_seen_at) {
@@ -1670,7 +1722,16 @@
             try {
                 // Build query parameters from filters
                 const maxResults = document.getElementById('filterMaxResults').value || 20;
-                let url = `/v1/devices/${deviceId}/captures?limit=${maxResults}`;
+
+                // Use different endpoints for public vs authenticated
+                let url;
+                if (isPublicShare) {
+                    // Public share endpoint - no auth required
+                    url = `/api/s/${shareToken}?limit=${maxResults}`;
+                } else {
+                    // Authenticated endpoint
+                    url = `/v1/devices/${deviceId}/captures?limit=${maxResults}`;
+                }
 
                 // Add state filter parameters
                 const filterNormal = document.getElementById('filterNormal').checked;
@@ -1712,15 +1773,23 @@
                     url += `&to=${encodeURIComponent(utcToString)}`;
                 }
 
-                const response = await fetch(url, {
-                    headers: auth.getAuthHeaders()
-                });
+                // Fetch with conditional auth headers
+                const fetchOptions = isPublicShare ? {} : { headers: auth.getAuthHeaders() };
+                const response = await fetch(url, fetchOptions);
 
                 if (!response.ok) {
                     throw new Error('Failed to load captures');
                 }
 
-                allCaptures = await response.json();
+                // Handle different response structures
+                const data = await response.json();
+                if (isPublicShare) {
+                    // Public API returns { device_name, organization_name, captures, total, ... }
+                    allCaptures = data.captures || [];
+                } else {
+                    // Authenticated API returns array of captures directly
+                    allCaptures = data;
+                }
 
                 // Apply client-side state filtering if multiple (but not all) states are selected
                 let filteredCaptures = allCaptures;
