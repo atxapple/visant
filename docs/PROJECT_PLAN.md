@@ -774,17 +774,19 @@ GET    /v1/captures/{record_id}/image        # Get full image
 DELETE /v1/captures/{record_id}              # Delete capture
 ```
 
-#### Share Links (exists, not wired)
+#### Share Links (✅ COMPLETE)
 ```
-POST   /v1/devices/{id}/share                # Create share link
-GET    /v1/share-links                       # List org's share links
-DELETE /v1/share-links/{token}               # Revoke share link
+POST   /v1/shares                            # Create share link
+GET    /v1/shares                            # List org's share links
+DELETE /v1/shares/{share_id}                 # Revoke share link
+GET    /v1/shares/{share_id}/qr              # Get QR code for share
 ```
 
-#### Public Endpoints (NO AUTH) (exists, not wired)
+#### Public Endpoints (NO AUTH) (✅ COMPLETE)
 ```
-GET    /s/{token}                            # Public gallery HTML view
-GET    /api/s/{token}                        # Public gallery JSON API
+GET    /public/share/{share_token}           # Public gallery HTML view
+GET    /v1/public/share/{share_token}        # Public gallery JSON API
+GET    /v1/public/share/{share_token}/qr     # Public QR code
 ```
 
 #### Admin

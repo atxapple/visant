@@ -44,12 +44,11 @@ Visant is a **multi-tenant SaaS platform** for AI-powered visual monitoring. Org
 
 ### What's Missing (See PROJECT_PLAN.md for details)
 
-⚠️ **Public Sharing System** - Routes exist but not wired
-⚠️ **Real-time Streaming** - SSE/WebSocket for capture events
-⚠️ **Manual Triggers** - Multi-tenant version needed
-⚠️ **Notification UI** - Email alerts configured but no UI
-⚠️ **Advanced Filtering** - Similarity detection, streak pruning, deduplication
-⚠️ **Admin Tools** - Datalake pruning UI, performance monitoring
+⚠️ **Manual Trigger UI** - Endpoint exists, UI button needed
+⚠️ **Per-Device Notification UI** - Global settings complete, per-device config pending
+⚠️ **Normal Description Management** - Multi-tenant version needed
+⚠️ **Advanced Filtering** - Similarity detection, streak pruning (code exists, needs integration)
+⚠️ **Admin Tools** - Datalake pruning UI, performance monitoring dashboard
 
 ---
 
@@ -1062,13 +1061,19 @@ Upload: 200
 | **Performance** | Composite indexes | ✅ Complete |
 | | Query optimization | ✅ Complete |
 | | 90% load time reduction | ✅ Complete |
-| **Sharing** | Public share links | ⚠️ Code exists, not wired |
-| | Public gallery | ⚠️ Code exists, not wired |
-| **Real-Time** | SSE capture events | ❌ Legacy only |
-| | WebSocket updates | ❌ Legacy only |
-| **Manual Triggers** | Multi-tenant version | ❌ Not implemented |
-| **Notifications** | Email alerts | ✅ Backend only |
-| | UI management | ❌ Not implemented |
+| **Sharing** | Public share links | ✅ Complete |
+| | Public gallery | ✅ Complete |
+| | QR code generation | ✅ Complete |
+| | Share analytics | ✅ Complete |
+| **Real-Time** | SSE capture events | ✅ Complete |
+| | WebSocket updates | ✅ Complete |
+| | Live UI updates | ✅ Complete |
+| **Manual Triggers** | API endpoint | ✅ Complete |
+| | UI button | ⚠️ Partial (button exists, history pending) |
+| **Notifications** | Email alerts | ✅ Complete |
+| | Global UI settings | ✅ Complete |
+| | Per-device config | ⚠️ Partial (pending) |
+| **Version Tracking** | /v1/version endpoint | ✅ Complete |
 | **Admin Tools** | Datalake pruning UI | ❌ Not implemented |
 | | Performance monitoring | ❌ Not implemented |
 
@@ -1096,47 +1101,39 @@ Upload: 200
 
 ## Roadmap
 
+### Recently Completed (November 2025)
+
+✅ **Public Sharing System** - Complete share link creation, public gallery, QR codes, analytics
+✅ **Real-time Capture Streaming** - SSE/WebSocket endpoints, live UI updates
+✅ **Version Tracking** - GET /v1/version endpoint with cloud + device versions
+✅ **Password Reset Flow** - Dedicated forgot password page with email-based reset
+✅ **Alert Definition Tracking** - Database-backed definitions with version history
+
 ### Phase 1: Quick Wins (1-2 weeks)
 
 **Priority: HIGH**
 
-1. **Public Sharing System** ⚡ HIGHEST PRIORITY
-   - Wire `shares.py` and `public.py` routers
-   - Test share link creation flow
-   - Verify public gallery `/s/{token}` works without auth
-   - Add share management to UI
-
-2. **Real-time Capture Streaming**
-   - SSE endpoint: `/v1/capture-events/stream`
-   - WebSocket endpoint: `/ws/captures`
-   - Dashboard auto-refresh on new captures
-
-3. **Manual Trigger System**
-   - Multi-tenant version of `/v1/manual-trigger`
-   - UI button to trigger capture on-demand
-   - Real-time feedback via WebSocket
-
-4. **Version Tracking**
-   - Endpoint: `GET /v1/version`
-   - Return: git commit hash, build date, version number
+1. **Manual Trigger UI**
+   - Add trigger history view
+   - Show trigger feedback in UI
+   - Trigger button integration (already exists in legacy)
 
 ### Phase 2: Core Features (2-3 weeks)
 
 **Priority: MEDIUM**
 
-5. **Notification UI**
-   - Email alert management page
-   - Add/remove recipients
-   - Test email delivery
-   - Notification history
+2. **Per-Device Notification UI**
+   - Per-device email configuration
+   - Device-specific alert settings
+   - Notification preferences override
 
-6. **Normal Description Management**
+3. **Normal Description Management**
    - UI editor for "normal state" prompt
    - Per-organization customization
    - Real-time preview
    - Version history
 
-7. **Advanced Capture Filtering**
+4. **Advanced Capture Filtering**
    - Similarity detection (perceptual hash)
    - Streak pruning (delete redundant normals)
    - Deduplication logic
@@ -1146,31 +1143,31 @@ Upload: 200
 
 **Priority: LOW**
 
-8. **Datalake Pruning Admin Panel**
+5. **Datalake Pruning Admin Panel**
    - UI for pruning configuration
    - Manual prune trigger
    - Storage usage dashboard
    - Retention policy editor
 
-9. **Timing Debug / Performance Monitoring**
+6. **Timing Debug / Performance Monitoring**
    - Request timing logs
    - Slow query detection
    - AI latency tracking
    - Performance dashboard
 
-10. **UI Preferences & State Filtering**
+7. **UI Preferences & State Filtering**
     - Save filter preferences (per user)
     - Default view settings
     - Custom date ranges
     - Favorite devices
 
-11. **WebSocket Device Commands**
+8. **WebSocket Device Commands**
     - Two-way WebSocket for device control
     - Real-time command delivery
     - Device status updates
     - Connection monitoring
 
-12. **Legacy Compatibility Migration**
+9. **Legacy Compatibility Migration**
     - Migrate remaining legacy users
     - Deprecate `/legacy/*` routes
     - Remove `cloud/api/server.py`
@@ -1217,10 +1214,15 @@ visant/
 │   └── versions/               # Migration scripts
 │       ├── 8af79cab0d8d_initial_schema.py
 │       ├── 747d6fbf4733_add_evaluation_status.py
-│       └── aa246cbd4277_add_composite_index.py
-├── archive/                    # Archived old code
-│   ├── docs/                   # Old documentation
-│   └── tests/                  # Old test scripts
+│       ├── aa246cbd4277_add_composite_index.py
+│       └── db7d78dfcf08_add_alert_definitions.py
+├── archive/                    # Archived files
+│   ├── docs/                   # Historical documentation
+│   │   ├── README.md           # Archive index
+│   │   ├── CODE_REVIEW_SUMMARY_2025-11-12.md
+│   │   └── PRUNING_LOGIC_REVIEW.md
+│   └── scripts/                # Legacy scripts
+│       └── migrate_to_volume.py
 ├── cloud/                      # Cloud backend
 │   ├── ai/                     # AI classification
 │   │   ├── openai_client.py    # Agent1 (OpenAI)
@@ -1231,42 +1233,61 @@ visant/
 │   │   ├── routes/             # API endpoints
 │   │   │   ├── authentication.py
 │   │   │   ├── devices.py
-│   │   │   ├── captures.py
+│   │   │   ├── captures.py      # ✅ Real-time SSE/WebSocket
 │   │   │   ├── device_commands.py
 │   │   │   ├── scheduled_triggers.py
 │   │   │   ├── admin_codes.py
-│   │   │   ├── shares.py       # ⚠️ Not wired yet
-│   │   │   └── public.py       # ⚠️ Not wired yet
-│   │   ├── server.py           # Legacy v1.0 server
-│   │   └── service.py          # InferenceService
-│   ├── datalake/               # Storage layer
-│   │   └── storage.py          # File system operations
-│   └── web/                    # Web UI
-│       ├── routes.py           # Dashboard routes
-│       └── templates/          # Jinja2 templates
+│   │   │   ├── admin.py
+│   │   │   ├── shares.py        # ✅ Complete
+│   │   │   ├── public.py        # ✅ Complete
+│   │   │   └── version.py       # ✅ Complete
+│   │   ├── server.py            # Legacy v1.0 server (mounted at /legacy/*)
+│   │   └── service.py           # InferenceService
+│   ├── datalake/                # Storage layer
+│   │   └── storage.py           # File system operations
+│   └── web/                     # Web UI
+│       ├── routes.py            # Dashboard routes
+│       └── templates/           # Jinja2 templates
 │           ├── login.html
 │           ├── signup.html
+│           ├── forgot_password.html
+│           ├── reset_password.html
 │           ├── dashboard.html
-│           └── camera.html
-├── config/                     # Configuration files
-│   ├── cloud.example.json      # Example config
-│   └── normal_guidance.txt     # Normal state prompt
-├── deployment/                 # Deployment guides
-│   ├── RAILWAY_SETUP.md        # Railway deployment
-│   └── *.md                    # Device setup guides
-├── device/                     # Device client (future)
-│   └── main_v2.py              # SSE-based client
-├── scripts/                    # Utility scripts
-│   └── seed_test_devices.py    # Database seeding
-├── .env.example                # Environment variables template
-├── .gitignore                  # Git ignore rules
-├── alembic.ini                 # Alembic configuration
-├── PROJECT_PLAN.md             # Project roadmap
-├── PRODUCT_DESCRIPTION.md      # This file
-├── railway.json                # Railway deployment config
-├── Procfile                    # Railway start command
-├── requirements.txt            # Python dependencies
-└── test_server_v2.py           # Main entry point
+│           ├── camera.html
+│           └── notifications.html
+├── config/                      # Configuration files
+│   ├── cloud.example.json       # Example config
+│   └── normal_guidance.txt      # Normal state prompt
+├── deployment/                  # Deployment guides
+│   ├── RAILWAY_SETUP.md         # Railway deployment
+│   └── *.md                     # Device setup guides
+├── device/                      # Device client
+│   └── main_v2.py               # SSE-based client
+├── docs/                        # Documentation
+│   ├── CHANGELOG.md             # Version history
+│   ├── PROJECT_PLAN.md          # Project roadmap
+│   ├── PRODUCT_DESCRIPTION.md   # This file
+│   ├── RAILWAY_TESTING.md       # Railway deployment guide
+│   └── VERSIONING.md            # Versioning strategy
+├── scripts/                     # Utility scripts
+│   ├── db/                      # Database utilities
+│   │   └── migrate.py           # Alembic migration runner
+│   └── dev/                     # Development tools
+│       ├── check_ai_status.py
+│       ├── check_captures.py
+│       ├── check_device_config.py
+│       └── check_railway_db.py
+├── tests/                       # Test files
+│   ├── test_image_route.py
+│   ├── test_pruning_logic.py
+│   └── test_railway_path.py
+├── .env.example                 # Environment variables template
+├── .gitignore                   # Git ignore rules
+├── alembic.ini                  # Alembic configuration
+├── railway.json                 # Railway deployment config
+├── requirements.txt             # Python dependencies
+├── server.py                    # Main entry point
+└── version.py                   # Version tracking
 ```
 
 ---
@@ -1274,7 +1295,10 @@ visant/
 ## Support & Documentation
 
 **Project Documentation**
-- `PROJECT_PLAN.md` - Detailed roadmap and implementation status
+- `docs/PROJECT_PLAN.md` - Detailed roadmap and implementation status
+- `docs/CHANGELOG.md` - Version history and release notes
+- `docs/VERSIONING.md` - Versioning strategy and workflow
+- `docs/RAILWAY_TESTING.md` - Railway deployment and debugging guide
 - `deployment/RAILWAY_SETUP.md` - Step-by-step Railway deployment
 - `deployment/DEPLOYMENT.md` - Raspberry Pi device setup
 
@@ -1290,5 +1314,5 @@ visant/
 
 **Built with ❤️ for visual monitoring**
 
-*Last Updated: November 10, 2025*
+*Last Updated: November 16, 2025*
 *Version: 2.0 Multi-Tenant SaaS*
